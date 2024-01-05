@@ -27,13 +27,53 @@ spec:
     protocol: TCP
     port: 80
     targetPort: 80
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: external-service
+#   namespace: default
+# spec:
+#   type: ExternalName
+#   externalName: 192.168.1.152 # eg example.example.com
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: sonar-svc
+subsets:
+  - addresses:
+      - ip: 192.168.1.152
+    ports:
+      - port: 8989
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: sonar-external-service
-  namespace: default
+  name: sonar-svc
+selector:
+    app: sonar-ep
 spec:
-  type: ExternalName
-  externalName: 192.168.1.152
----
+  ports:
+    - port: 80
+      targetPort: 8989
+
+# ---
+# apiVersion: v1
+# kind: Endpoints
+# metadata:
+#   name: radar-ep
+# subsets:
+#   - addresses:
+#       - ip: 192.168.1.152
+#     ports:
+#       - port: 7878
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: radar-svc
+# spec:
+#   ports:
+#     - port: 80
+#       targetPort: 7878
