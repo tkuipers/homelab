@@ -1,8 +1,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ingress-routes
+  name: external-service-expose
   annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP" #important
     cert-manager.io/cluster-issuer: "letsencrypt-staging"
 spec:
   ingressClassName: public
@@ -13,6 +14,9 @@ spec:
     - hosts:
       - sonar.mushu.tkuipers.ca
       secretName: sonar-mushu-tkuipers-ca-tls
+    - hosts:
+      - radar.mushu.tkuipers.ca
+      secretName: radar-mushu-tkuipers-ca-tls
   rules:
   - host: tkuipers.ca
     http:
@@ -31,7 +35,17 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: sonar-external-service
+            name: sonar-svc
             port:
-              number: 8989
+              number: 80
+  # - host: radar.mushu.tkuipers.ca
+  #   http:
+  #     paths:
+  #     - path: /
+  #       pathType: Prefix
+  #       backend:
+  #         service:
+  #           name: radar-svc
+  #           port:
+  #             number: 80
     
