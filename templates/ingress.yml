@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: external-service-expose
+  name: insecure-service-expose
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP" #important
     cert-manager.io/cluster-issuer: "letsencrypt-staging"
@@ -17,6 +17,12 @@ spec:
     - hosts:
       - radar.mushu.tkuipers.ca
       secretName: radar-mushu-tkuipers-ca-tls
+    - hosts:
+      - plex.mushu.tkuipers.ca
+      secretName: plex-mushu-tkuipers-ca-tls
+    - hosts:
+      - chi-fu.tkuipers.ca
+      secretName: chi-fu-tkuipers-ca-tls
   rules:
   - host: tkuipers.ca
     http:
@@ -38,14 +44,60 @@ spec:
             name: sonar-svc
             port:
               number: 80
-  # - host: radar.mushu.tkuipers.ca
-  #   http:
-  #     paths:
-  #     - path: /
-  #       pathType: Prefix
-  #       backend:
-  #         service:
-  #           name: radar-svc
-  #           port:
-  #             number: 80
+  - host: radar.mushu.tkuipers.ca
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: radar-svc
+            port:
+              number: 80
+  - host: plex.mushu.tkuipers.ca
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: plex-svc
+            port:
+              number: 80
+  - host: chi-fu.tkuipers.ca
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: elk-svc
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: secure-service-expose
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS" #important
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts:
+      - lishang.tkuipers.ca
+      secretName: lishang-tkuipers-ca-tls
+  rules:
+  - host: lishang.tkuipers.ca
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: proxmox-svc
+            port:
+              number: 80
+
     
