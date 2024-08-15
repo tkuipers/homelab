@@ -157,3 +157,22 @@ spec:
   ports:
     - port: 80
       targetPort: 25565
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: stocker-svc
+subsets:
+  - addresses:
+      - ip: 192.168.1.200
+    ports:
+      - port: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stocker-svc
+spec:
+  ports:
+    - port: 80
+      targetPort: 8000
