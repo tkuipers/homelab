@@ -23,6 +23,9 @@ spec:
     - hosts:
       - hua.tkuipers.ca
       secretName: hua-tkuipers-ca-tls
+    - hosts:
+      - scrooge.tkuipers.ca
+      secretName: scrooge-tkuipers-ca-tls
   rules:
   - host: tkuipers.ca
     http:
@@ -72,6 +75,16 @@ spec:
         backend:
           service:
             name: minecraft-svc
+            port:
+              number: 80
+  - host: scrooge.tkuipers.ca
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: stocker-svc
             port:
               number: 80
 ---
