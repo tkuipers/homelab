@@ -30,3 +30,6 @@ dependencies:
 - name: cert-manager
   version: v1.13.3
   repository: https://charts.jetstack.io
+# - name: signoz
+#   repository: https://charts.signoz.io
+#   version: 0.50.0
