@@ -26,6 +26,15 @@ spec:
     - hosts:
       - scrooge.tkuipers.ca
       secretName: scrooge-tkuipers-ca-tls
+    - hosts:
+      - ariel.tkuipers.ca
+      secretName: ariel-tkuipers-ca-tls
+    - hosts:
+      - docker.tkuipers.ca
+      secretName: docker-tkuipers-ca-tls
+    - hosts:
+      - logs.tkuipers.ca
+      secretName: logs-tkuipers-ca-tls
   rules:
   - host: tkuipers.ca
     http:
@@ -37,6 +46,26 @@ spec:
               name: webserver-svc
               port:
                 number: 80
+  - host: ariel.tkuipers.ca
+    http:
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: ariel-svc
+              port:
+                number: 80
+  - host: docker.tkuipers.ca
+    http:
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: ariel-svc
+              port:
+                number: 5000
   - host: sonar.mushu.tkuipers.ca
     http:
       paths:
@@ -87,6 +116,17 @@ spec:
             name: stocker-svc
             port:
               number: 80
+  - host: logs.tkuipers.ca
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: openobserve
+            port:
+              number: 80
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
