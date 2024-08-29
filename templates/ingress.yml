@@ -4,6 +4,7 @@ metadata:
   name: insecure-service-expose
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: 5g
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: public
@@ -11,18 +12,6 @@ spec:
     - hosts:
       - tkuipers.ca
       secretName: tkuipers-ca-tls
-    - hosts:
-      - sonar.mushu.tkuipers.ca
-      secretName: sonar-mushu-tkuipers-ca-tls
-    - hosts:
-      - radar.mushu.tkuipers.ca
-      secretName: radar-mushu-tkuipers-ca-tls
-    - hosts:
-      - plex.mushu.tkuipers.ca
-      secretName: plex-mushu-tkuipers-ca-tls
-    - hosts:
-      - hua.tkuipers.ca
-      secretName: hua-tkuipers-ca-tls
     - hosts:
       - scrooge.tkuipers.ca
       secretName: scrooge-tkuipers-ca-tls
@@ -66,46 +55,6 @@ spec:
               name: ariel-svc
               port:
                 number: 5000
-  - host: sonar.mushu.tkuipers.ca
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: sonar-svc
-            port:
-              number: 80
-  - host: radar.mushu.tkuipers.ca
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: radar-svc
-            port:
-              number: 80
-  - host: plex.mushu.tkuipers.ca
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: plex-svc
-            port:
-              number: 80
-  - host: hua.tkuipers.ca
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: minecraft-svc
-            port:
-              number: 80
   - host: scrooge.tkuipers.ca
     http:
       paths:
@@ -141,9 +90,6 @@ spec:
     - hosts:
       - lishang.tkuipers.ca
       secretName: lishang-tkuipers-ca-tls
-    - hosts:
-      - chi-fu.tkuipers.ca
-      secretName: chi-fu-tkuipers-ca-tls
   rules:
   - host: lishang.tkuipers.ca
     http:
@@ -153,15 +99,5 @@ spec:
         backend:
           service:
             name: proxmox-svc
-            port:
-              number: 80
-  - host: chi-fu.tkuipers.ca
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: elk-svc
             port:
               number: 80
