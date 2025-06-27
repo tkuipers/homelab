@@ -1,0 +1,36 @@
+# sidero/servers.yaml
+# This file will contain a list of your physical servers.
+# Sidero will match booting machines to these definitions.
+---
+apiVersion: metal.sidero.dev/v1alpha1
+kind: Server
+metadata:
+  name: controlplane-01
+  labels:
+    # This label tells Sidero to use the 'home-infra-controlplane' ServerClass
+    metal.sidero.dev/server.class: home-infra-controlplane
+spec:
+  # Sidero can accept any machine that isn't already claimed.
+  # For better security, you should match on a specific MAC address.
+  accepted: true
+  # Example of matching by MAC address:
+  # bmc:
+  #   macAddress: "a8:a1:59:77:00:11"
+  configPatches:
+    - op: replace
+      path: /machine/network/hostname
+      value: controlplane-01
+---
+apiVersion: metal.sidero.dev/v1alpha1
+kind: Server
+metadata:
+  name: worker-gpu-01
+  labels:
+    # You would create a corresponding 'home-infra-worker' ServerClass
+    metal.sidero.dev/server.class: home-infra-worker-gpu
+spec:
+  accepted: true
+  configPatches:
+    - op: replace
+      path: /machine/network/hostname
+      value: worker-gpu-01 

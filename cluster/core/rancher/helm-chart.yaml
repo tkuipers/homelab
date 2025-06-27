@@ -1,0 +1,24 @@
+# This file is a placeholder for installing Rancher via a Helm chart.
+# If you use a GitOps tool like FluxCD, you would use a HelmRelease resource like the one below.
+# You will need to install FluxCD on your cluster for this to work.
+#
+# ---
+# apiVersion: helm.toolkit.fluxcd.io/v2beta1
+# kind: HelmRelease
+# metadata:
+#   name: rancher
+#   namespace: cattle-system
+# spec:
+#   interval: 5m
+#   chart:
+#     spec:
+#       chart: rancher
+#       sourceRef:
+#         kind: HelmRepository
+#         name: rancher-latest
+#         namespace: flux-system
+#       version: "2.8.2" # Check for latest version
+#   values:
+#     hostname: "rancher.your.domain"
+#     replicas: 1
+#     bootstrapPassword: "some-password" # It is recommended to use a secret for this 
