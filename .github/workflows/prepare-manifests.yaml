@@ -1,0 +1,46 @@
+name: Prepare Sidero Manifests
+
+on:
+  # Run on pushes to the main branch if relevant files change
+  push:
+    branches:
+      - main
+    paths:
+      - 'sidero/**'
+      - 'cluster/core/flux-system/flux.yaml'
+      - '.github/workflows/prepare-manifests.yaml'
+
+  # Allow manual triggering of this workflow
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      - name: Inject Flux Manifest into ServerClass
+        run: |
+          # Create a temporary directory for our final manifests
+          mkdir -p ./.artifacts/sidero
+          
+          # Copy the source Sidero files to the artifacts directory
+          cp sidero/*.yaml ./.artifacts/sidero/
+          
+          # Use yq to read the flux.yaml contents and inject them as a string
+          # into the serverclass file within the artifacts directory.
+          yq -i '.spec.configPatches[0].value[0].contents = load_str("cluster/core/flux-system/flux.yaml")' ./.artifacts/sidero/serverclass-controlplane.yaml
+          
+          echo "✅ Manifests prepared."
+          
+      - name: Upload Sidero Manifests Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepared-sidero-manifests
+          path: ./.artifacts/sidero/ 

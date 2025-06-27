@@ -1,0 +1,24 @@
+# cluster/core/flux-system/flux.yaml
+#
+# This file will contain the FULL output of the `flux bootstrap` command.
+# This single file contains all the components, CRDs, and sync resources
+# needed to get Flux running.
+#
+# You will generate the contents of this file with the command:
+#
+# flux bootstrap github \\
+#   --owner=tkuipers \\
+#   --repository=homelab \\
+#   --branch=main \\
+#   --path=./cluster \\
+#   --personal \\
+#   --export > cluster/core/flux-system/flux.yaml
+#
+# The entire contents of this generated file will be injected into the
+# Talos machine configuration by the Sidero Metal `ServerClass`.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flux-system
+# ... The rest of the generated resources will follow. 

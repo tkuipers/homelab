@@ -1,0 +1,24 @@
+# sidero/serverclass-controlplane.yaml
+apiVersion: metal.sidero.dev/v1alpha1
+kind: ServerClass
+metadata:
+  name: home-infra-controlplane
+spec:
+  # This is the base Talos configuration that Sidero will use for any
+  # server assigned to this class. It's merged with the talos/nodes/controlplane.yaml
+  # that you provide in a ConfigMap to Sidero.
+  config:
+    machine:
+      type: controlplane
+      install:
+        # For bare metal, you typically install Talos to disk.
+        disk: /dev/sda # IMPORTANT: Verify this is the correct disk on your server
+        image: ghcr.io/siderolabs/installer:v1.10.1 # Check for latest version
+  # The GitHub Action "Prepare Sidero Manifests" will inject the FluxCD manifest here.
+  configPatches:
+    - op: add
+      path: /cluster/inlineManifests
+      value:
+        - name: install-flux
+          # This content is populated automatically by the GitHub Actions workflow.
+          contents: "" 
