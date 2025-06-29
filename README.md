@@ -22,9 +22,12 @@ This setup uses **Sidero Metal** for provisioning and **FluxCD** for ongoing clu
 ## Getting Started: The Fully Automated Path
 
 1.  **Set up the Seed Cluster**:
-    -   On a separate machine (like a Raspberry Pi), install a lightweight Kubernetes distribution (e.g., `k3d`).
-    -   Install the Sidero Metal controller onto this seed cluster.
-    -   Configure your network's DHCP server to point PXE-booting clients to the Sidero service.
+    -   On a separate machine (like a Raspberry Pi), run the automated setup script. This will install `k3s`, the Sidero Metal controller, and apply your local server definitions.
+    -   Make sure you are in the root of this repository, then run:
+        ```bash
+        bash sidero/setup-seed-cluster.sh
+        ```
+    -   Once the script is complete, configure your network's DHCP server to point PXE-booting clients to the Sidero service.
 
 2.  **Prepare this Repository**:
     -   Update `sidero/servers.yaml` to define your physical machines, preferably matching them by MAC address for security.

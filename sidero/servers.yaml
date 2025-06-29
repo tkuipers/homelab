@@ -1,36 +1,22 @@
 # sidero/servers.yaml
-# This file will contain a list of your physical servers.
-# Sidero will match booting machines to these definitions.
 ---
-apiVersion: metal.sidero.dev/v1alpha1
+apiVersion: metal.sidero.dev/v1alpha2
 kind: Server
 metadata:
-  name: controlplane-01
-  labels:
-    # This label tells Sidero to use the 'home-infra-controlplane' ServerClass
-    metal.sidero.dev/server.class: home-infra-controlplane
+  # This name must match the UUID of the discovered server.
+  name: 4c4c4544-0038-4310-8036-b1c04f585631
 spec:
-  # Sidero can accept any machine that isn't already claimed.
-  # For better security, you should match on a specific MAC address.
+  # Accept the server to allow it to be used.
   accepted: true
-  # Example of matching by MAC address:
-  # bmc:
-  #   macAddress: "a8:a1:59:77:00:11"
-  configPatches:
-    - op: replace
-      path: /machine/network/hostname
-      value: controlplane-01
----
-apiVersion: metal.sidero.dev/v1alpha1
-kind: Server
-metadata:
-  name: worker-gpu-01
-  labels:
-    # You would create a corresponding 'home-infra-worker' ServerClass
-    metal.sidero.dev/server.class: home-infra-worker-gpu
-spec:
-  accepted: true
-  configPatches:
-    - op: replace
-      path: /machine/network/hostname
-      value: worker-gpu-01 
+
+  # Manually provide hardware details so the ServerClass can match it.
+  hardware:
+    system:
+      serialNumber: "18C6XV1"
+
+  # Provide the Baseboard Management Controller (BMC) credentials.
+  # This is required for Sidero to control the server's power state via IPMI.
+  bmc:
+    endpoint: 172.16.0.4
+    user: tyler-admin
+    pass: water123 

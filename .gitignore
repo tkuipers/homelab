@@ -10,3 +10,5 @@ charts/
 # General ignores
 .DS_Store
 .vscode/ 
+
+**/*.kubeconfig
