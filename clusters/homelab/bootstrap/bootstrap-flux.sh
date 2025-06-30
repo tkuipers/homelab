@@ -103,17 +103,24 @@ install_op_cli() {
     log_success "1Password CLI installed: $(op --version)"
 }
 
-# Login to 1Password if needed
-login_1password() {
-    # Test if we can actually use the 1Password CLI (not just if accounts are listed)
-    if op vault list >/dev/null 2>&1; then
-        log_info "Already logged in to 1Password"
-        return 0
+# Check if 1Password CLI is installed and signed in
+check_op_signin() {
+    log_info "Checking 1Password CLI status..."
+    if ! command -v op &> /dev/null; then
+        log_error "1Password CLI 'op' could not be found. Please install it."
+        exit 1
     fi
 
-    log_info "Please sign in to 1Password..."
-    eval $(op signin)
-    log_success "Logged in to 1Password"
+    # Loop until the user is successfully signed in.
+    while ! op vault list >/dev/null 2>&1; do
+        log_warning "Not signed in to 1Password, or the session is invalid."
+        log_info "Please use the following prompt to sign in."
+        # 'op signin' is interactive. If it fails (e.g., wrong password),
+        # the loop will repeat. If the user uses Ctrl+C, the script will exit.
+        eval $(op signin)
+    done
+
+    log_success "1Password CLI is installed and signed in."
 }
 
 # Install External Secrets Operator CRDs
@@ -199,7 +206,7 @@ create_secretstore() {
 create_flux_ssh_secret() {
     log_info "Creating Flux SSH ExternalSecret..."
     
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "$YAML_DIR/flux-ssh-externalsecret.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply -f "$YAML_DIR/flux-ssh-externalsecret.yaml" -n "$FLUX_NAMESPACE"
     
     log_success "Flux SSH ExternalSecret created"
 }
@@ -302,7 +309,7 @@ main() {
     
     # Install and setup 1Password CLI
     install_op_cli
-    login_1password
+    check_op_signin
     
     # Install External Secrets
     install_external_secrets_crds
