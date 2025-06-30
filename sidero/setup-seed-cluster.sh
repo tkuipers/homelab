@@ -101,6 +101,8 @@ kubectl apply -f sidero/talos-homelab.yaml
 echo "--- 6. Waiting for workload cluster to become ready ---"
 echo "This may take several minutes..."
 kubectl wait --for=condition=Ready -n default cluster/talos-homelab --timeout=1h
+
+
 # --- 7. Generate and Store Cluster Configs ---
 echo "--- 7. Generating and storing cluster configs ---"
 
@@ -121,40 +123,6 @@ talosctl --talosconfig cluster-configs/talosconfig kubeconfig --nodes $CONTROL_P
 
 # --- 8. Setup 1Password Integration ---
 echo "--- 8. Setting up 1Password integration ---"
-
-# This section sets up 1Password Connect integration for GitOps secret management.
-# 
-# REQUIRED SECRETS IN 1PASSWORD "Homelab" VAULT:
-# ================================================
-# 
-# 1. SSH Key for Git Repository Access (for FluxCD):
-#    - Title: "Homelab Git SSH Key"
-#    - Type: SSH Key
-#    - Private Key: Your SSH private key content
-#    - Public Key: Your SSH public key content
-#    - Used by: FluxCD for pulling from private Git repositories
-#
-# 2. Additional secrets you may want to store:
-#    - Database credentials
-#    - API tokens
-#    - TLS certificates
-#    - Application secrets
-#
-# The External Secrets Operator will sync these secrets from 1Password
-# into Kubernetes secrets that your applications can use.
-#
-# TO ADD SSH KEY TO VAULT (run these commands after signing in):
-# ============================================================
-# 1. Generate SSH key if you don't have one:
-#    ssh-keygen -t ed25519 -C "homelab-flux" -f ~/.ssh/homelab-flux
-# 
-# 2. Add SSH key to 1Password Homelab vault:
-#    op item create --category="SSH Key" --title="Homelab Git SSH Key" \
-#      --vault="Homelab" \
-#      private_key[password]=~/.ssh/homelab-flux \
-#      public_key[text]=~/.ssh/homelab-flux.pub
-#
-# 3. Add the public key to your Git repository's deploy keys or your user's SSH keys
 
 # Check if 1Password CLI is installed
 if ! command -v op &> /dev/null; then
@@ -193,13 +161,14 @@ if command -v op &> /dev/null; then
         echo "Creating 1Password Connect token for homelab cluster..."
         OP_CONNECT_TOKEN=$(op connect token create "Homelab Cluster - $(date '+%Y-%m-%d %H:%M:%S')" --server "homelab" --vault "Homelab")
         
-        # Store the token in the workload cluster
-        echo "Storing 1Password Connect token in workload cluster..."
+        # Store the credentials file in the workload cluster
+        echo "Storing 1Password Connect credentials in workload cluster..."
         kubectl --kubeconfig cluster-configs/kubeconfig create namespace external-secrets-system --dry-run=client -o yaml | kubectl --kubeconfig cluster-configs/kubeconfig apply -f -
         
-        kubectl --kubeconfig cluster-configs/kubeconfig create secret generic onepassword-connect-token \
-            --from-literal=token="$OP_CONNECT_TOKEN" \
-            -n external-secrets-system \
+        # Create the credentials secret in default namespace (where Connect pod runs)
+        kubectl --kubeconfig cluster-configs/kubeconfig create secret generic op-credentials \
+            --from-file=1password-credentials.json=./1password-credentials.json \
+            -n default \
             --dry-run=client -o yaml | kubectl --kubeconfig cluster-configs/kubeconfig apply -f -
         
         echo "1Password integration setup complete!"
