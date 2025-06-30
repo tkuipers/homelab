@@ -97,12 +97,122 @@ echo "--- 5. Apply the Cluster Manifest ---"
 echo "Applying the cluster manifest (sidero/talos-homelab.yaml)..."
 kubectl apply -f sidero/talos-homelab.yaml
 
-echo "Setup script finished."
-echo "Next steps:"
-echo "1. Monitor the Sidero controller logs to watch the provisioning."
-echo "2. Power on your bare-metal server (e.g., the Dell R620)."
-echo "3. Ensure it is configured to PXE boot."
-echo "4. The server should get an IP from dnsmasq and boot into the Sidero environment."
-echo "5. Monitor the Sidero logs and resources:"
-echo "   - sudo kubectl -n sidero-system get servers"
-echo "   - sudo kubectl -n sidero-system logs -f deployment/sidero-controller-manager" 
+# --- 6. Wait for Cluster to be Ready ---
+echo "--- 6. Waiting for workload cluster to become ready ---"
+echo "This may take several minutes..."
+kubectl wait --for=condition=Ready -n default cluster/talos-homelab --timeout=1h
+# --- 7. Generate and Store Cluster Configs ---
+echo "--- 7. Generating and storing cluster configs ---"
+
+# Create cluster configs directory if it doesn't exist
+mkdir -p cluster-configs
+
+# Generate talosconfig for the workload cluster
+echo "Generating talosconfig for workload cluster..."
+kubectl get secret -n default talos-homelab-talosconfig -o jsonpath='{.data.talosconfig}' | base64 -d > cluster-configs/talosconfig
+
+# Generate kubeconfig for the workload cluster  
+echo "Generating kubeconfig for workload cluster..."
+CONTROL_PLANE_IP="172.16.0.50"
+echo "Using control plane IP: $CONTROL_PLANE_IP"
+
+# Generate kubeconfig using talosctl
+talosctl --talosconfig cluster-configs/talosconfig kubeconfig --nodes $CONTROL_PLANE_IP cluster-configs/ --force
+
+# --- 8. Setup 1Password Integration ---
+echo "--- 8. Setting up 1Password integration ---"
+
+# This section sets up 1Password Connect integration for GitOps secret management.
+# 
+# REQUIRED SECRETS IN 1PASSWORD "Homelab" VAULT:
+# ================================================
+# 
+# 1. SSH Key for Git Repository Access (for FluxCD):
+#    - Title: "Homelab Git SSH Key"
+#    - Type: SSH Key
+#    - Private Key: Your SSH private key content
+#    - Public Key: Your SSH public key content
+#    - Used by: FluxCD for pulling from private Git repositories
+#
+# 2. Additional secrets you may want to store:
+#    - Database credentials
+#    - API tokens
+#    - TLS certificates
+#    - Application secrets
+#
+# The External Secrets Operator will sync these secrets from 1Password
+# into Kubernetes secrets that your applications can use.
+#
+# TO ADD SSH KEY TO VAULT (run these commands after signing in):
+# ============================================================
+# 1. Generate SSH key if you don't have one:
+#    ssh-keygen -t ed25519 -C "homelab-flux" -f ~/.ssh/homelab-flux
+# 
+# 2. Add SSH key to 1Password Homelab vault:
+#    op item create --category="SSH Key" --title="Homelab Git SSH Key" \
+#      --vault="Homelab" \
+#      private_key[password]=~/.ssh/homelab-flux \
+#      public_key[text]=~/.ssh/homelab-flux.pub
+#
+# 3. Add the public key to your Git repository's deploy keys or your user's SSH keys
+
+# Check if 1Password CLI is installed
+if ! command -v op &> /dev/null; then
+    echo "1Password CLI not found. Installing..."
+    # Download and install 1Password CLI using the correct URL format
+    curl -sSfL https://cache.agilebits.com/dist/1P/op2/pkg/v2.25.0/op_linux_amd64_v2.25.0.zip -o op.zip
+    unzip -q op.zip
+    sudo mv op /usr/local/bin/
+    rm -f op.zip
+    echo "1Password CLI installed successfully."
+fi
+
+if command -v op &> /dev/null; then
+    echo "1Password CLI found. Setting up integration..."
+    
+    # Check if already signed in by checking if account list has content
+    if [ -z "$(op account list)" ]; then
+        echo "No 1Password account configured. Let's add one..."
+        echo "Please enter your 1Password sign-in address (e.g., my.1password.com):"
+        read -r SIGNIN_ADDRESS
+        echo "Adding 1Password account..."
+        op account add --address "$SIGNIN_ADDRESS"
+        echo "Now signing in..."
+        eval $(op signin)
+    fi
+    
+    # Verify access to the Homelab vault (assumes it exists)
+    if ! op vault get "Homelab" &> /dev/null; then
+        echo "Error: Cannot access 'Homelab' vault in 1Password."
+        echo "Please ensure the 'Homelab' vault exists in your account."
+        echo "Skipping 1Password integration..."
+    else
+        echo "Successfully verified access to 'Homelab' vault."
+        
+        # Create a Connect token for the homelab cluster (assumes Connect server exists)
+        echo "Creating 1Password Connect token for homelab cluster..."
+        OP_CONNECT_TOKEN=$(op connect token create "Homelab Cluster - $(date '+%Y-%m-%d %H:%M:%S')" --server "homelab" --vault "Homelab")
+        
+        # Store the token in the workload cluster
+        echo "Storing 1Password Connect token in workload cluster..."
+        kubectl --kubeconfig cluster-configs/kubeconfig create namespace external-secrets-system --dry-run=client -o yaml | kubectl --kubeconfig cluster-configs/kubeconfig apply -f -
+        
+        kubectl --kubeconfig cluster-configs/kubeconfig create secret generic onepassword-connect-token \
+            --from-literal=token="$OP_CONNECT_TOKEN" \
+            -n external-secrets-system \
+            --dry-run=client -o yaml | kubectl --kubeconfig cluster-configs/kubeconfig apply -f -
+        
+        echo "1Password integration setup complete!"
+        echo "Connect token has been stored in the workload cluster."
+    fi
+fi
+
+echo ""
+echo "=== Setup Complete ==="
+echo "Workload cluster configs stored in: ./cluster-configs/"
+echo "- talosconfig: ./cluster-configs/talosconfig"  
+echo "- kubeconfig: ./cluster-configs/kubeconfig"
+echo ""
+echo "To use the workload cluster:"
+echo "  export KUBECONFIG=./cluster-configs/kubeconfig"
+echo "  kubectl get nodes"
