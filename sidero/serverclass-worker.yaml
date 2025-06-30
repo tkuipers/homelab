@@ -44,7 +44,7 @@ spec:
     - op: replace
       path: /cluster/proxy
       value:
-        disabled: true
+        disabled: false
     - op: replace
       path: /cluster/extraManifests
       value:
