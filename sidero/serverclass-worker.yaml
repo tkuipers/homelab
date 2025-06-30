@@ -1,0 +1,59 @@
+# sidero/serverclass-worker.yaml
+# This file defines a "class" of servers.
+# We are creating a class for our worker nodes.
+---
+apiVersion: metal.sidero.dev/v1alpha2
+kind: ServerClass
+metadata:
+  name: home-infra-worker
+spec:
+  # Reference the default environment created by Sidero.
+  environmentRef:
+    name: default
+    namespace: sidero-system
+  # the server's hardware details. If a server matches all qualifiers,
+  # it will be claimed by this ServerClass.
+  qualifiers:
+    hardware:
+      - system:
+          serialNumber: "4CE75036HH"
+  # After Talos is installed, instruct iPXE to exit so the server
+  # can boot from the local disk on the next reboot. This breaks the boot loop.
+  bootFromDiskMethod: http-404
+
+  # These patches are applied to the Talos machine configuration when a server
+  # from this class is provisioned.
+  configPatches:
+    - op: replace
+      path: /machine/type
+      value: worker
+    - op: replace
+      path: /machine/install/disk
+      value: /dev/sdb
+      # GRAB IMAGE FROM HERE: https://factory.talos.dev/?platform=metal&target=metal
+    - op: replace
+      path: /machine/install/image
+      value: factory.talos.dev/metal-installer/26124abcbd408be693df9fe852c80ef1e6cc178e34d7d7d8430a28d1130b4227:v1.10.4
+    - op: add
+      path: /machine/network/hostname
+      value: omen-worker1
+    - op: replace
+      path: /cluster/network/cni
+      value:
+        name: flannel
+    - op: replace
+      path: /cluster/proxy
+      value:
+        disabled: true
+    - op: replace
+      path: /cluster/extraManifests
+      value:
+        - https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+    - op: add
+      path: /machine/kernel
+      value:
+        modules:
+          - name: nvidia
+          - name: nvidia_uvm
+          - name: nvidia_drm
+          - name: nvidia_modeset

@@ -13,3 +13,5 @@ charts/
 
 **/*.kubeconfig
 **/*.txt
+kubeconfig**
+talosconfig**

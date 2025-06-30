@@ -19,4 +19,21 @@ spec:
   bmc:
     endpoint: 172.16.0.4
     user: tyler-admin
-    pass: water123 
+    pass: water123
+---
+apiVersion: metal.sidero.dev/v1alpha2
+kind: Server
+metadata:
+  # This name must match the UUID of the discovered server.
+  name: 81c94e11-1d4d-80d1-41be-100501472f4a
+spec:
+  # Accept the server to allow it to be used.
+  accepted: true
+
+  # Manually provide hardware details so the ServerClass can match it.
+  hardware:
+    system:
+      serialNumber: "4CE75036HH"
+
+  # BMC information is not available for this server.
+  # Sidero might not be able to manage power state. 

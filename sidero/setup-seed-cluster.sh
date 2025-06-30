@@ -85,6 +85,8 @@ kubectl wait --for=condition=Available -n sidero-system deployment/sidero-contro
 echo "--- 4. Applying Local Sidero Manifests ---"
 echo "Applying serverclass-controlplane.yaml..."
 kubectl apply -f sidero/serverclass-controlplane.yaml
+echo "Applying serverclass-worker.yaml..."
+kubectl apply -f sidero/serverclass-worker.yaml
 echo "Applying servers.yaml..."
 kubectl apply -f sidero/servers.yaml
 
