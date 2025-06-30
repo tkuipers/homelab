@@ -55,7 +55,7 @@ spec:
   controlPlaneConfig:
     controlplane:
       generateType: controlplane
-      talosVersion: v1.7.2
+      talosVersion: v1.10.4
   infrastructureTemplate:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha3
     kind: MetalMachineTemplate
@@ -73,7 +73,7 @@ spec:
   template:
     spec:
       generateType: join
-      talosVersion: v1.7.2
+      talosVersion: v1.10.4
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
@@ -82,7 +82,7 @@ metadata:
   namespace: default
 spec:
   clusterName: talos-homelab
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels: null
   template:

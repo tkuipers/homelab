@@ -12,3 +12,4 @@ charts/
 .vscode/ 
 
 **/*.kubeconfig
+**/*.txt
