@@ -14,4 +14,8 @@ spec:
       version: ">=4.0.0"
   install:
     createNamespace: true
-  targetNamespace: ingress-nginx 
+  targetNamespace: ingress-nginx
+  values:
+    controller:
+      service:
+        type: NodePort 
