@@ -82,7 +82,7 @@ metadata:
   namespace: default
 spec:
   clusterName: talos-homelab
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels: null
   template:
@@ -112,5 +112,5 @@ spec:
       serverClassRef:
         apiVersion: metal.sidero.dev/v1alpha2
         kind: ServerClass
-        name: any
+        name: home-infra-worker
         namespace: default
