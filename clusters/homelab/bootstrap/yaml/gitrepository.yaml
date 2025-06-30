@@ -7,6 +7,6 @@ spec:
   interval: 1m
   url: ssh://git@github.com/tkuipers/homelab.git
   ref:
-    branch: main
+    branch: talos-rebuild
   secretRef:
     name: flux-git-ssh 
