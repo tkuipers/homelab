@@ -5,4 +5,4 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: https://charts.gitops.weave.works 
+  url: https://helm.gitops.weave.works 
