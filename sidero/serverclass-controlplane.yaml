@@ -47,23 +47,7 @@ spec:
       path: /cluster/proxy
       value:
         disabled: false
-    # - op: replace
-    #   path: /machine/kubelet/extraArgs
-    #   value:
-    #     rotate-server-certificates: true
-    # - op: replace
-    #   path: /cluster/inlineManifests
-    #   value:
-    #     - name: cilium
-    #       contents: |- 
-    #         apiVersion: v1
-    #         kind: Namespace
-    #         metadata:
-    #             name: cilium
-    #             labels:
-    #               pod-security.kubernetes.io/enforce: "privileged"
     - op: replace
       path: /cluster/extraManifests
       value:
         - https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-        - https://github.com/fluxcd/flux2/releases/download/v2.6.3/install.yaml
