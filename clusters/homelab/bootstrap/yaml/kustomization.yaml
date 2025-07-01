@@ -4,7 +4,7 @@ metadata:
   name: homelab-cluster
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 1m
   path: "./clusters/homelab"
   prune: true
   sourceRef:
