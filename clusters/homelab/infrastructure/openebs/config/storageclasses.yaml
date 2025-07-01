@@ -1,0 +1,61 @@
+# Local storage classes - node-bound but high performance
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: openebs-single-node
+  annotations:
+    openebs.io/cas-type: lvm
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: local.csi.openebs.io
+parameters:
+  storage: "lvm"
+  volgroup: "lvmvg"  # This should match the VG on your nodes
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: openebs-hostpath-local
+  annotations:
+    openebs.io/cas-type: hostpath
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: openebs.io/local
+parameters:
+  storageType: "hostpath"
+  basePath: "/var/local/openebs"
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+
+---
+# Dynamic NFS storage class - uses local storage as backend but provides RWX
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: openebs-rwx
+  annotations:
+    openebs.io/cas-type: nfsrwx
+    storageclass.kubernetes.io/is-default-class: "false"
+    cas.openebs.io/config: |
+      - name: NFSServerType
+        value: "kernel"
+      - name: BackendStorageClass
+        value: "openebs-hostpath-local"
+      - name: LeaderElection
+        value: "false"
+      - name: NFSServerResourceRequests
+        value: |-
+          memory: "50Mi"
+          cpu: "50m"
+      - name: NFSServerResourceLimits  
+        value: |-
+          memory: "300Mi"
+          cpu: "200m"
+provisioner: openebs.io/nfsrwx
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true 

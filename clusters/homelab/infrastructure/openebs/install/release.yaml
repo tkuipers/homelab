@@ -26,7 +26,7 @@ spec:
     # Disable Mayastor (replicated storage) for 2-node cluster
     mayastor:
       enabled: false
-    # Enable local storage engines + NFS for shared access
+    # Enable local storage engines that work well on 2-node clusters
     engines:
       local:
         lvm:
@@ -39,9 +39,16 @@ spec:
       replicated:
         mayastor:
           enabled: false
-    # Enable NFS provisioner for ReadWriteMany volumes
-    nfs:
+    # Enable Dynamic NFS provisioner for ReadWriteMany volumes
+    # The NFS provisioner will use local storage (hostpath/LVM) as backends
+    nfs-provisioner:
       enabled: true
-    # Helper pod for NFS server management  
+    # Enable localpv-provisioner for dynamic hostpath and device volumes
+    localpv-provisioner:
+      enabled: true
+    # Node Disk Manager for discovering local storage
+    ndm:
+      enabled: true
+    # Helper components
     helper:
       enabled: true 
