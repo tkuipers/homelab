@@ -31,6 +31,14 @@ spec:
           enabled: true
         certManager:
           enabled: false
+        # Disable strict path validation to allow ACME challenges
+        annotations:
+          nginx.ingress.kubernetes.io/enable-annotation-validation: "false"
+        # Set failure policy to Ignore for ACME challenges
+        failurePolicy: Ignore
+      # Disable strict path type validation that blocks ACME challenges
+      config:
+        strict-validate-path-type: "false"
     rbac:
       create: true
       scope: false 
