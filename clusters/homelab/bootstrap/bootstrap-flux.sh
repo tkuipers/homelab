@@ -273,7 +273,7 @@ verify_installation() {
     fi
     
     # Check SecretStore
-    if kubectl --kubeconfig="$KUBECONFIG" get secretstore onepassword-store -n external-secrets-system >/dev/null 2>&1; then
+    if kubectl --kubeconfig="$KUBECONFIG" get clustersecretstore onepassword-store -n external-secrets-system >/dev/null 2>&1; then
         log_success "✓ 1Password SecretStore exists"
     else
         log_error "✗ 1Password SecretStore not found"
