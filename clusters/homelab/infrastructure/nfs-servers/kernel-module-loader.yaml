@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nfs-kernel-loader
+  namespace: nfs-servers
+spec:
+  selector:
+    matchLabels:
+      app: nfs-kernel-loader
+  template:
+    metadata:
+      labels:
+        app: nfs-kernel-loader
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+      containers:
+      - name: kernel-loader
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - |
+            echo "Loading NFS kernel modules on host..."
+            # Try to load the kernel modules
+            chroot /host modprobe nfsd || echo "Warning: could not load nfsd module"
+            chroot /host modprobe nfs || echo "Warning: could not load nfs module"
+            
+            # Check if they loaded
+            if chroot /host lsmod | grep -q nfsd; then
+              echo "SUCCESS: nfsd module loaded"
+            else
+              echo "FAILED: nfsd module not loaded"
+            fi
+            
+            if chroot /host lsmod | grep -q nfs; then
+              echo "SUCCESS: nfs module loaded"  
+            else
+              echo "FAILED: nfs module not loaded"
+            fi
+            
+            # Keep running to maintain modules
+            echo "Keeping modules loaded..."
+            while true; do
+              sleep 300
+              echo "Still running..."
+            done
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: host-root
+          mountPath: /host
+        - name: lib-modules
+          mountPath: /lib/modules
+          readOnly: true
+      volumes:
+      - name: host-root
+        hostPath:
+          path: /
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules 
