@@ -21,8 +21,14 @@ spec:
     ingress:
       enabled: true
       className: "nginx"
+      annotations:
+        cert-manager.io/cluster-issuer: selfsigned-issuer
       hosts:
         - host: flux.tkuipers.ca
           paths:
             - path: /
-              pathType: ImplementationSpecific 
+              pathType: ImplementationSpecific
+      tls:
+        - hosts:
+            - flux.tkuipers.ca
+          secretName: flux-tkuipers-ca-tls 
