@@ -4,4 +4,7 @@ kind: Namespace
 metadata:
   name: nfs-csi
   labels:
-    name: nfs-csi 
+    name: nfs-csi
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged 
