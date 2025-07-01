@@ -1,8 +1,0 @@
-apiVersion: openebs.io/v1beta2
-kind: DiskPool
-metadata:
-  name: controlplane-diskpool
-  namespace: openebs
-spec:
-  node: dell-r620
-  disks: ["/dev/sdb4"]  # The 2.4TB ephemeral partition 

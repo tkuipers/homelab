@@ -51,15 +51,11 @@ spec:
         - 172.16.0.52
     # USE THIS: https://www.talos.dev/v1.8/kubernetes-guides/configuration/replicated-local-storage-with-openebs/
     # Available storage: 127GB ephemeral (/dev/sdb4) + 1TB dedicated disk (/dev/sdc)
-    # The 1TB /dev/sdc disk can be used for OpenEBS DiskPool creation
-    - op: add
-      path: /machine/sysctls
-      value:
-        vm.nr_hugepages: "1024"
+    # The 1TB /dev/sdc disk can be used for local LVM storage
     - op: add
       path: /machine/nodeLabels
       value:
-        openebs.io/engine: mayastor
+        openebs.io/engine: local
     - op: add
       path: /machine/kubelet/extraMounts
       value:
