@@ -53,3 +53,7 @@ spec:
           - name: nvidia_uvm
           - name: nvidia_drm
           - name: nvidia_modeset
+    - op: add
+      path: /machine/certSANs
+      value:
+        - 172.16.0.52
