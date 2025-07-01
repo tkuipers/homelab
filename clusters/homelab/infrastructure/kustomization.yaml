@@ -5,3 +5,4 @@ resources:
   - ./cert-manager
   - ./nginx
   - ./metrics-server
+  - ./openebs
