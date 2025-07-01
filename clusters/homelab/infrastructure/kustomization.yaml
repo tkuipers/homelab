@@ -5,5 +5,5 @@ resources:
   - ./cert-manager
   - ./nginx
   - ./metrics-server
-  - ./openebs
+  - ./nfs-servers
   - ./nfs-csi
