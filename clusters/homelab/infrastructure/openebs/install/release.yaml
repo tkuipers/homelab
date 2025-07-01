@@ -1,0 +1,38 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: openebs
+  namespace: flux-system
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: openebs
+      sourceRef:
+        kind: HelmRepository
+        name: openebs
+        namespace: flux-system
+      version: "4.3.x"
+  targetNamespace: openebs
+  install:
+    createNamespace: false  # We create it explicitly with labels
+    timeout: 10m
+  upgrade:
+    timeout: 10m
+    remediation:
+      remediateLastFailure: true
+  releaseName: openebs
+  values:
+    # Talos-specific configuration
+    mayastor:
+      csi:
+        node:
+          initContainers:
+            enabled: false  # Talos has nvme_tcp module built-in
+    # Disable engines we don't need to reduce resource usage
+    engines:
+      local:
+        lvm:
+          enabled: false
+        zfs:
+          enabled: false 

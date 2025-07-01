@@ -1,0 +1,14 @@
+---
+# Test PVC to verify OpenEBS dual-replica storage is working
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openebs-test-pvc
+  namespace: openebs
+spec:
+  storageClassName: openebs-dual-replica
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi 

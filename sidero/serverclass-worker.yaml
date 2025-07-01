@@ -57,7 +57,9 @@ spec:
       path: /machine/certSANs
       value:
         - 172.16.0.52
-    # USEW THIS: https://www.talos.dev/v1.8/kubernetes-guides/configuration/replicated-local-storage-with-openebs/
+    # USE THIS: https://www.talos.dev/v1.8/kubernetes-guides/configuration/replicated-local-storage-with-openebs/
+    # Available storage: 127GB ephemeral (/dev/sdb4) + 1TB dedicated disk (/dev/sdc)
+    # The 1TB /dev/sdc disk can be used for OpenEBS DiskPool creation
     - op: add
       path: /machine/sysctls
       value:
@@ -73,7 +75,7 @@ spec:
           type: bind
           source: /var/local
           options:
-            - bind
+            - rbind
             - rshared
             - rw
     - op: add
