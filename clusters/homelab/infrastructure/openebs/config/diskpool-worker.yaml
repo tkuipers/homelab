@@ -1,8 +1,0 @@
-apiVersion: openebs.io/v1beta2
-kind: DiskPool
-metadata:
-  name: worker-diskpool
-  namespace: openebs
-spec:
-  node: omen-worker1
-  disks: ["/dev/sdc"]  # The 1TB dedicated disk on worker 
