@@ -5,6 +5,4 @@ resources:
   - ./cert-manager
   - ./nginx
   - ./metrics-server
-  - ./nfs-servers  # Re-enabled with kernel module fixes
-  - ./nfs-csi      # Re-enabled
-  # - ./local-storage  # Keep as backup option
+  - ./storage-test
