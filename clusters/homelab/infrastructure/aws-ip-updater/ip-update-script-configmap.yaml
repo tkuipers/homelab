@@ -70,10 +70,22 @@ data:
         fi
         
         # Get current DNS record IP
-        CURRENT_DNS_IP=$(aws route53 list-resource-record-sets \
-            --hosted-zone-id "$HOSTED_ZONE_ID" \
-            --query "ResourceRecordSets[?Name=='$record_name.' && Type=='A'].ResourceRecords[0].Value" \
-            --output text)
+        # Handle Route53's octal encoding of asterisk (* becomes \052)
+        QUERY_NAME="$record_name"
+        if [[ "$record_name" == *"*"* ]]; then
+            # Also check for the octal representation
+            OCTAL_NAME="${record_name//\*/\\052}"
+            echo "  Also checking octal representation: $OCTAL_NAME"
+            CURRENT_DNS_IP=$(aws route53 list-resource-record-sets \
+                --hosted-zone-id "$HOSTED_ZONE_ID" \
+                --query "ResourceRecordSets[?(Name=='$record_name.' || Name=='$OCTAL_NAME.') && Type=='A'].ResourceRecords[0].Value" \
+                --output text)
+        else
+            CURRENT_DNS_IP=$(aws route53 list-resource-record-sets \
+                --hosted-zone-id "$HOSTED_ZONE_ID" \
+                --query "ResourceRecordSets[?Name=='$record_name.' && Type=='A'].ResourceRecords[0].Value" \
+                --output text)
+        fi
         
         if [ "$CURRENT_DNS_IP" = "None" ] || [ -z "$CURRENT_DNS_IP" ]; then
             echo "  No existing A record found for $record_name - will create"
