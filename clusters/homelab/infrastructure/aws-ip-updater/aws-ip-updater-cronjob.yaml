@@ -4,7 +4,7 @@ metadata:
   name: aws-ip-updater
   namespace: aws-ip-updater
 spec:
-  schedule: "* * * * *"  # Every minute (for testing)
+  schedule: "*/5 * * * *"  # Every 5 minutes
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   concurrencyPolicy: Forbid
