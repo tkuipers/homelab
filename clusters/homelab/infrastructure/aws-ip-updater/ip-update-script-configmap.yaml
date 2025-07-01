@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ip-update-script
+  namespace: aws-ip-updater
+data:
+  update-ip.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    echo "$(date): Starting AWS IP update process..."
+    
+    # Get current public IP
+    echo "Getting current public IP..."
+    CURRENT_IP=$(curl -s https://ipv4.icanhazip.com/ || curl -s https://checkip.amazonaws.com/ || curl -s https://api.ipify.org/)
+    
+    if [[ ! "$CURRENT_IP" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        echo "ERROR: Failed to get valid public IP address. Got: $CURRENT_IP"
+        exit 1
+    fi
+    
+    echo "Current public IP: $CURRENT_IP"
+    
+    # Parse comma-separated record names
+    IFS=',' read -ra RECORD_NAMES <<< "$RECORD_NAME"
+    
+    # Remove any whitespace from record names
+    for i in "${!RECORD_NAMES[@]}"; do
+        RECORD_NAMES[i]=$(echo "${RECORD_NAMES[i]}" | xargs)
+    done
+    
+    echo "Will update ${#RECORD_NAMES[@]} DNS record(s): ${RECORD_NAMES[*]}"
+    
+    # Check if any records need updating
+    NEED_UPDATE=false
+    CHANGES_JSON=""
+    
+    for record_name in "${RECORD_NAMES[@]}"; do
+        echo "Checking DNS record for: $record_name"
+        
+        # Get current DNS record IP
+        CURRENT_DNS_IP=$(aws route53 list-resource-record-sets \
+            --hosted-zone-id "$HOSTED_ZONE_ID" \
+            --query "ResourceRecordSets[?Name=='$record_name.' && Type=='A'].ResourceRecords[0].Value" \
+            --output text)
+        
+        if [ "$CURRENT_DNS_IP" = "None" ] || [ -z "$CURRENT_DNS_IP" ]; then
+            echo "  No existing A record found for $record_name - will create"
+            NEED_UPDATE=true
+        elif [ "$CURRENT_IP" != "$CURRENT_DNS_IP" ]; then
+            echo "  Current DNS IP ($CURRENT_DNS_IP) differs from public IP ($CURRENT_IP) - will update"
+            NEED_UPDATE=true
+        else
+            echo "  DNS IP matches public IP - no update needed for $record_name"
+        fi
+        
+        # Add this record to the changes batch
+        if [ -n "$CHANGES_JSON" ]; then
+            CHANGES_JSON="$CHANGES_JSON,"
+        fi
+        
+        CHANGES_JSON="$CHANGES_JSON
+            {
+                \"Action\": \"UPSERT\",
+                \"ResourceRecordSet\": {
+                    \"Name\": \"$record_name\",
+                    \"Type\": \"A\",
+                    \"TTL\": 300,
+                    \"ResourceRecords\": [
+                        {
+                            \"Value\": \"$CURRENT_IP\"
+                        }
+                    ]
+                }
+            }"
+    done
+    
+    if [ "$NEED_UPDATE" = "false" ]; then
+        echo "All DNS records are up to date. No changes needed."
+        exit 0
+    fi
+    
+    echo "DNS records need updating. Submitting batch change..."
+    
+    # Create the change batch JSON
+    CHANGE_BATCH=$(cat <<EOF
+    {
+        "Comment": "Automatic IP update $(date) - Updated ${#RECORD_NAMES[@]} record(s)",
+        "Changes": [$CHANGES_JSON
+        ]
+    }
+    EOF
+    )
+    
+    # Update the DNS records
+    echo "Updating Route53 records..."
+    CHANGE_ID=$(aws route53 change-resource-record-sets \
+        --hosted-zone-id "$HOSTED_ZONE_ID" \
+        --change-batch "$CHANGE_BATCH" \
+        --query 'ChangeInfo.Id' \
+        --output text)
+    
+    echo "Route53 change submitted with ID: $CHANGE_ID"
+    
+    # Wait for the change to propagate
+    echo "Waiting for change to propagate..."
+    aws route53 wait resource-record-sets-changed --id "$CHANGE_ID"
+    
+    echo "$(date): Successfully updated ${#RECORD_NAMES[@]} DNS record(s) to IP $CURRENT_IP"
+    for record_name in "${RECORD_NAMES[@]}"; do
+        echo "  - $record_name"
+    done 
