@@ -1,18 +1,4 @@
 ---
-# Single replica storage class for high performance
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: openebs-single-replica
-provisioner: io.openebs.csi-mayastor
-parameters:
-  repl: "1"
-  protocol: "nvmf"
-  fsType: "ext4"
-allowVolumeExpansion: true
-volumeBindingMode: Immediate
-
----
 # Dual replica storage class for high availability
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
