@@ -9,7 +9,7 @@ metadata:
 provisioner: nfs.csi.k8s.io
 parameters:
   server: nfs-server-controlplane.nfs-servers.svc.cluster.local
-  share: /
+  share: /nfsshare
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 mountOptions:
@@ -27,7 +27,7 @@ metadata:
 provisioner: nfs.csi.k8s.io
 parameters:
   server: nfs-server-worker.nfs-servers.svc.cluster.local
-  share: /
+  share: /nfsshare
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 mountOptions:
@@ -45,7 +45,7 @@ metadata:
 provisioner: nfs.csi.k8s.io
 parameters:
   server: nfs-server-controlplane.nfs-servers.svc.cluster.local
-  share: /
+  share: /nfsshare
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 mountOptions:

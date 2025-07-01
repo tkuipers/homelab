@@ -3,5 +3,4 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - nfs-servers.yaml
-  - storageclasses.yaml
   - test-pvc.yaml 
