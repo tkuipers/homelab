@@ -6,9 +6,9 @@ metadata:
   name: openebs-test-pvc
   namespace: openebs
 spec:
-  storageClassName: openebs-dual-replica
   accessModes:
     - ReadWriteOnce
+  storageClassName: openebs-single-node  # Use local LVM storage
   resources:
     requests:
       storage: 1Gi 
