@@ -19,22 +19,36 @@ spec:
         kubernetes.io/hostname: dell-r620
       hostNetwork: true
       hostPID: true
+      initContainers:
+        - name: load-nfs-modules
+          image: alpine:latest
+          command: 
+            - /bin/sh
+            - -c
+            - |
+              echo "Loading NFS kernel modules..."
+              modprobe nfsd || echo "Failed to load nfsd module, continuing anyway"
+              modprobe nfs || echo "Failed to load nfs module, continuing anyway"
+              echo "Module loading complete"
+              ls -la /proc/fs/ || echo "Could not list /proc/fs/"
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - SYS_MODULE
+                - SYS_ADMIN
+          volumeMounts:
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
       volumes:
         - name: nfs-storage
           hostPath:
             path: /var/local/nfs-controlplane
             type: DirectoryOrCreate
-        - name: proc-fs-nfsd
-          hostPath:
-            path: /proc/fs/nfsd
-            type: DirectoryOrCreate
         - name: lib-modules
           hostPath:
             path: /lib/modules
-            type: Directory
-        - name: proc
-          hostPath:
-            path: /proc
             type: Directory
       containers:
         - name: nfs-server
@@ -54,19 +68,10 @@ spec:
             capabilities:
               add:
                 - SYS_ADMIN
-                - SYS_MODULE
                 - DAC_OVERRIDE
           volumeMounts:
             - mountPath: /nfsshare
               name: nfs-storage
-            - mountPath: /proc/fs/nfsd
-              name: proc-fs-nfsd
-            - mountPath: /lib/modules
-              name: lib-modules
-              readOnly: true
-            - mountPath: /host-proc
-              name: proc
-              readOnly: true
 ---
 apiVersion: v1
 kind: Service
@@ -108,22 +113,36 @@ spec:
         kubernetes.io/hostname: omen-worker1
       hostNetwork: true
       hostPID: true
+      initContainers:
+        - name: load-nfs-modules
+          image: alpine:latest
+          command: 
+            - /bin/sh
+            - -c
+            - |
+              echo "Loading NFS kernel modules..."
+              modprobe nfsd || echo "Failed to load nfsd module, continuing anyway"
+              modprobe nfs || echo "Failed to load nfs module, continuing anyway"
+              echo "Module loading complete"
+              ls -la /proc/fs/ || echo "Could not list /proc/fs/"
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - SYS_MODULE
+                - SYS_ADMIN
+          volumeMounts:
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
       volumes:
         - name: nfs-storage
           hostPath:
             path: /var/local/nfs-worker
             type: DirectoryOrCreate
-        - name: proc-fs-nfsd
-          hostPath:
-            path: /proc/fs/nfsd
-            type: DirectoryOrCreate
         - name: lib-modules
           hostPath:
             path: /lib/modules
-            type: Directory
-        - name: proc
-          hostPath:
-            path: /proc
             type: Directory
       containers:
         - name: nfs-server
@@ -143,19 +162,10 @@ spec:
             capabilities:
               add:
                 - SYS_ADMIN
-                - SYS_MODULE
                 - DAC_OVERRIDE
           volumeMounts:
             - mountPath: /nfsshare
               name: nfs-storage
-            - mountPath: /proc/fs/nfsd
-              name: proc-fs-nfsd
-            - mountPath: /lib/modules
-              name: lib-modules
-              readOnly: true
-            - mountPath: /host-proc
-              name: proc
-              readOnly: true
 ---
 apiVersion: v1
 kind: Service
