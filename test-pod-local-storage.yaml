@@ -1,0 +1,49 @@
+---
+# Test pod to verify OpenEBS local storage is working
+apiVersion: v1
+kind: Pod
+metadata:
+  name: openebs-local-storage-test
+  namespace: openebs
+spec:
+  containers:
+  - name: test-container
+    image: busybox:latest
+    command:
+    - sh
+    - -c
+    - |
+      echo "Testing OpenEBS local storage..."
+      echo "Current time: $(date)" > /data/test-file.txt
+      echo "Node: $NODE_NAME" >> /data/test-file.txt
+      echo "Storage test data written to /data/test-file.txt"
+      cat /data/test-file.txt
+      echo "Sleeping for 300 seconds to allow inspection..."
+      sleep 300
+    env:
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    volumeMounts:
+    - name: test-storage
+      mountPath: /data
+  volumes:
+  - name: test-storage
+    persistentVolumeClaim:
+      claimName: openebs-test-hostpath-pvc
+  restartPolicy: Never
+---
+# Simple hostpath PVC that should work immediately
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openebs-test-hostpath-pvc
+  namespace: openebs
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: openebs-hostpath-local  # Use hostpath instead of LVM
+  resources:
+    requests:
+      storage: 1Gi 

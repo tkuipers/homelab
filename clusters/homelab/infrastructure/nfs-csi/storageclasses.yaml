@@ -1,0 +1,53 @@
+# Storage class for Control Plane NFS server (2Ti capacity)
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-controlplane
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: nfs-server-controlplane.nfs-servers.svc.cluster.local
+  share: /
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+mountOptions:
+  - nfsvers=4.1
+  - nconnect=8  # Performance optimization
+
+---
+# Storage class for Worker NFS server (1Ti capacity)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-worker
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: nfs-server-worker.nfs-servers.svc.cluster.local
+  share: /
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+mountOptions:
+  - nfsvers=4.1
+  - nconnect=8  # Performance optimization
+
+---
+# General RWX storage class (uses control plane by default - largest capacity)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-rwx
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: nfs-server-controlplane.nfs-servers.svc.cluster.local
+  share: /
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+mountOptions:
+  - nfsvers=4.1
+  - nconnect=8 
