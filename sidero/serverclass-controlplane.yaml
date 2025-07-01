@@ -55,3 +55,14 @@ spec:
       path: /machine/certSANs
       value:
         - 172.16.0.50
+    - op: add
+      path: /cluster/apiServer/admissionControl/-
+      value:
+        name: PodSecurity
+        configuration:
+          apiVersion: pod-security.admission.config.k8s.io/v1beta1
+          kind: PodSecurityConfiguration
+          exemptions:
+            namespaces:
+            - openebs
+            - metallb-system
