@@ -1,22 +1,22 @@
-# Local StorageClasses for 2-node cluster
-# Using local storage engines instead of replicated Mayastor
+# Local storage configuration for OpenEBS
+# Since we're using a 2-node cluster, we use local storage instead of replicated Mayastor
 ---
-apiVersion: storage.k8s.io/v1
+apiVersion: v1
 kind: StorageClass
 metadata:
-  name: openebs-single-node
+  name: openebs-lvm-localpv
   namespace: openebs
 provisioner: local.csi.openebs.io
 parameters:
   storage: "lvm"
-  vgpattern: "vg-openebs-*"
+  vgpattern: "vg-openebs-*"  # Volume group pattern for LVM
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
 ---
-apiVersion: storage.k8s.io/v1  
+apiVersion: v1
 kind: StorageClass
 metadata:
-  name: openebs-hostpath-local
+  name: openebs-hostpath
   namespace: openebs
 provisioner: openebs.io/local
 parameters:

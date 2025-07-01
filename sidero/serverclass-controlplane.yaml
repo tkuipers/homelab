@@ -47,10 +47,6 @@ spec:
       path: /cluster/proxy
       value:
         disabled: false
-    - op: replace
-      path: /cluster/extraManifests
-      value:
-        - https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
     - op: add
       path: /machine/certSANs
       value:
