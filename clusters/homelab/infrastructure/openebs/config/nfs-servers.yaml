@@ -16,7 +16,7 @@ spec:
   resources:
     requests:
       storage: 2.2Ti  # Use most of control plane's 2.4TB available space
-  storageClassName: openebs-hostpath-local
+  storageClassName: openebs-hostpath
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -91,7 +91,7 @@ spec:
   resources:
     requests:
       storage: 1Ti  # Use most of worker's 1TB dedicated disk + available ephemeral storage
-  storageClassName: openebs-hostpath-local
+  storageClassName: openebs-hostpath
 ---
 apiVersion: apps/v1
 kind: Deployment
