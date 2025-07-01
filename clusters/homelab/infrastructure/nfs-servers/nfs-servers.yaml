@@ -17,11 +17,25 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
+      hostNetwork: true
+      hostPID: true
       volumes:
         - name: nfs-storage
           hostPath:
             path: /var/local/nfs-controlplane
             type: DirectoryOrCreate
+        - name: proc-fs-nfsd
+          hostPath:
+            path: /proc/fs/nfsd
+            type: DirectoryOrCreate
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+            type: Directory
+        - name: proc
+          hostPath:
+            path: /proc
+            type: Directory
       containers:
         - name: nfs-server
           image: itsthenetwork/nfs-server-alpine:latest
@@ -37,9 +51,22 @@ spec:
               containerPort: 111
           securityContext:
             privileged: true
+            capabilities:
+              add:
+                - SYS_ADMIN
+                - SYS_MODULE
+                - DAC_OVERRIDE
           volumeMounts:
             - mountPath: /nfsshare
               name: nfs-storage
+            - mountPath: /proc/fs/nfsd
+              name: proc-fs-nfsd
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
+            - mountPath: /host-proc
+              name: proc
+              readOnly: true
 ---
 apiVersion: v1
 kind: Service
@@ -79,11 +106,25 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
+      hostNetwork: true
+      hostPID: true
       volumes:
         - name: nfs-storage
           hostPath:
             path: /var/local/nfs-worker
             type: DirectoryOrCreate
+        - name: proc-fs-nfsd
+          hostPath:
+            path: /proc/fs/nfsd
+            type: DirectoryOrCreate
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+            type: Directory
+        - name: proc
+          hostPath:
+            path: /proc
+            type: Directory
       containers:
         - name: nfs-server
           image: itsthenetwork/nfs-server-alpine:latest
@@ -99,9 +140,22 @@ spec:
               containerPort: 111
           securityContext:
             privileged: true
+            capabilities:
+              add:
+                - SYS_ADMIN
+                - SYS_MODULE
+                - DAC_OVERRIDE
           volumeMounts:
             - mountPath: /nfsshare
               name: nfs-storage
+            - mountPath: /proc/fs/nfsd
+              name: proc-fs-nfsd
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
+            - mountPath: /host-proc
+              name: proc
+              readOnly: true
 ---
 apiVersion: v1
 kind: Service
