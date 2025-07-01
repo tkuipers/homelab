@@ -29,6 +29,9 @@ spec:
         node:
           initContainers:
             enabled: false  # Talos has nvme_tcp module built-in
+    # Configure etcd for 2-node cluster (single etcd instance)
+    etcd:
+      replicaCount: 1
     # Disable engines we don't need to reduce resource usage
     engines:
       local:
