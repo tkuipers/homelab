@@ -10,6 +10,25 @@ data:
     
     echo "$(date): Starting AWS IP update process..."
     
+    # Debug: Show AWS configuration (without secrets)
+    echo "=== Debug Information ==="
+    echo "AWS CLI version: $(aws --version)"
+    echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:4}****"
+    echo "AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION"
+    echo "HOSTED_ZONE_ID: $HOSTED_ZONE_ID"
+    echo "RECORD_NAME: $RECORD_NAME"
+    echo
+    
+    # Test AWS credentials
+    echo "Testing AWS credentials..."
+    if aws sts get-caller-identity; then
+        echo "✓ AWS credentials are valid"
+    else
+        echo "✗ AWS credentials failed"
+        exit 1
+    fi
+    echo
+    
     # Get current public IP
     echo "Getting current public IP..."
     CURRENT_IP=$(curl -s https://ipv4.icanhazip.com/ || curl -s https://checkip.amazonaws.com/ || curl -s https://api.ipify.org/)
@@ -37,6 +56,9 @@ data:
     
     for record_name in "${RECORD_NAMES[@]}"; do
         echo "Checking DNS record for: $record_name"
+        
+        # Debug: Show the exact command being run
+        echo "  Running: aws route53 list-resource-record-sets --hosted-zone-id '$HOSTED_ZONE_ID' --query \"ResourceRecordSets[?Name=='$record_name.' && Type=='A'].ResourceRecords[0].Value\" --output text"
         
         # Get current DNS record IP
         CURRENT_DNS_IP=$(aws route53 list-resource-record-sets \
