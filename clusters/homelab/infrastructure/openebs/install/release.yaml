@@ -26,7 +26,7 @@ spec:
     # Disable Mayastor (replicated storage) for 2-node cluster
     mayastor:
       enabled: false
-    # Enable local storage engines instead
+    # Enable local storage engines + NFS for shared access
     engines:
       local:
         lvm:
@@ -38,4 +38,10 @@ spec:
       # Disable replicated storage engines
       replicated:
         mayastor:
-          enabled: false 
+          enabled: false
+    # Enable NFS provisioner for ReadWriteMany volumes
+    nfs:
+      enabled: true
+    # Helper pod for NFS server management  
+    helper:
+      enabled: true 
