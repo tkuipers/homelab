@@ -21,4 +21,13 @@ spec:
         type: LoadBalancer
       ingressClassResource:
         name: nginx
-        enabled: true 
+        enabled: true
+      admissionWebhooks:
+        enabled: true
+        patch:
+          enabled: true
+        certManager:
+          enabled: false
+    rbac:
+      create: true
+      scope: false 
