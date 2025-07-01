@@ -1,20 +1,5 @@
 # Local storage classes - node-bound but high performance
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: openebs-single-node
-  annotations:
-    openebs.io/cas-type: lvm
-    storageclass.kubernetes.io/is-default-class: "false"
-provisioner: local.csi.openebs.io
-parameters:
-  storage: "lvm"
-  volgroup: "lvmvg"  # This should match the VG on your nodes
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
-allowVolumeExpansion: true
-
+# Note: openebs-single-node is created by OpenEBS itself, not managed here
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
