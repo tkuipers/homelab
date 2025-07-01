@@ -5,4 +5,4 @@ resources:
   - ./cert-manager
   - ./nginx
   - ./metrics-server
-  - ./storage-test
+  - ./aws-ip-updater

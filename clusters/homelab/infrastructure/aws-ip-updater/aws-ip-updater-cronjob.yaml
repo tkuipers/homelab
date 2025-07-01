@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: aws-ip-updater
+  namespace: aws-ip-updater
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: aws-ip-updater
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: aws-ip-updater
+            image: amazon/aws-cli:2.15.0
+            command: ["/bin/bash"]
+            args: ["/scripts/update-ip.sh"]
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_DEFAULT_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_REGION
+            - name: HOSTED_ZONE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: HOSTED_ZONE_ID
+            - name: RECORD_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: RECORD_NAME
+            volumeMounts:
+            - name: script-volume
+              mountPath: /scripts
+              readOnly: true
+            resources:
+              limits:
+                cpu: 100m
+                memory: 128Mi
+              requests:
+                cpu: 50m
+                memory: 64Mi
+          volumes:
+          - name: script-volume
+            configMap:
+              name: ip-update-script
+              defaultMode: 0755 
