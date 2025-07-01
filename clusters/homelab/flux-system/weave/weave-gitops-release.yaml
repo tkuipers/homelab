@@ -5,6 +5,9 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
+  dependsOn:
+    - name: ingress-nginx
+      namespace: flux-system
   chart:
     spec:
       chart: weave-gitops

@@ -5,6 +5,9 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
+  dependsOn:
+    - name: cert-manager-config
+      namespace: flux-system
   chart:
     spec:
       chart: ingress-nginx
