@@ -6,3 +6,4 @@ resources:
   - ./nginx
   - ./metrics-server
   - ./openebs
+  - ./nfs-csi

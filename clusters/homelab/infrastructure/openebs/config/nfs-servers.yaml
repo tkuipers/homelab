@@ -1,0 +1,155 @@
+# NFS Server for Control Plane Node (dell-r620)
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nfs-servers
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-server-controlplane-claim
+  namespace: nfs-servers
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2.2Ti  # Use most of control plane's 2.4TB available space
+  storageClassName: openebs-hostpath-local
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-server-controlplane
+  namespace: nfs-servers
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfs-server-controlplane
+  template:
+    metadata:
+      labels:
+        app: nfs-server-controlplane
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      volumes:
+        - name: nfs-vol
+          persistentVolumeClaim:
+            claimName: nfs-server-controlplane-claim
+      restartPolicy: Always
+      containers:
+        - name: nfs-server
+          image: itsthenetwork/nfs-server-alpine:latest
+          env:
+            - name: SHARED_DIRECTORY
+              value: /nfsshare
+          ports:
+            - name: nfs
+              containerPort: 2049
+            - name: mountd
+              containerPort: 20048
+            - name: rpcbind
+              containerPort: 111
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /nfsshare
+              name: nfs-vol
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfs-server-controlplane
+  namespace: nfs-servers
+spec:
+  type: ClusterIP
+  ports:
+    - name: nfs
+      port: 2049
+      targetPort: 2049
+    - name: mountd
+      port: 20048
+      targetPort: 20048
+    - name: rpcbind
+      port: 111
+      targetPort: 111
+  selector:
+    app: nfs-server-controlplane
+---
+# NFS Server for Worker Node (omen-worker1)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-server-worker-claim
+  namespace: nfs-servers
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Ti  # Use most of worker's 1TB dedicated disk + available ephemeral storage
+  storageClassName: openebs-hostpath-local
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-server-worker
+  namespace: nfs-servers
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfs-server-worker
+  template:
+    metadata:
+      labels:
+        app: nfs-server-worker
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      volumes:
+        - name: nfs-vol
+          persistentVolumeClaim:
+            claimName: nfs-server-worker-claim
+      restartPolicy: Always
+      containers:
+        - name: nfs-server
+          image: itsthenetwork/nfs-server-alpine:latest
+          env:
+            - name: SHARED_DIRECTORY
+              value: /nfsshare
+          ports:
+            - name: nfs
+              containerPort: 2049
+            - name: mountd
+              containerPort: 20048
+            - name: rpcbind
+              containerPort: 111
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /nfsshare
+              name: nfs-vol
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfs-server-worker
+  namespace: nfs-servers
+spec:
+  type: ClusterIP
+  ports:
+    - name: nfs
+      port: 2049
+      targetPort: 2049
+    - name: mountd
+      port: 20048
+      targetPort: 20048
+    - name: rpcbind
+      port: 111
+      targetPort: 111
+  selector:
+    app: nfs-server-worker 
