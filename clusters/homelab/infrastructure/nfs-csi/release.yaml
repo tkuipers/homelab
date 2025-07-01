@@ -12,7 +12,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: csi-driver-nfs
-        namespace: flux-system
+        namespace: nfs-csi
       version: "v4.6.0"
   install:
     createNamespace: false
