@@ -16,7 +16,9 @@ spec:
   targetNamespace: metallb-system
   install:
     createNamespace: true
+    timeout: 10m
   upgrade:
+    timeout: 10m
     remediation:
       remediateLastFailure: true
   releaseName: metallb 
