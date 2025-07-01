@@ -1,26 +1,4 @@
-# NFS Server for Control Plane Node (dell-r620)
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: nfs-servers
-  labels:
-    pod-security.kubernetes.io/enforce: privileged
-    pod-security.kubernetes.io/audit: privileged
-    pod-security.kubernetes.io/warn: privileged
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: nfs-server-controlplane-claim
-  namespace: nfs-servers
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 2.2Ti  # Use most of control plane's 2.4TB available space
-  storageClassName: openebs-hostpath
+# NFS Server for Control Plane Node (dell-r620) - 2.2Ti storage
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -40,10 +18,10 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
       volumes:
-        - name: nfs-vol
-          persistentVolumeClaim:
-            claimName: nfs-server-controlplane-claim
-      restartPolicy: Always
+        - name: nfs-storage
+          hostPath:
+            path: /var/local/nfs-controlplane
+            type: DirectoryOrCreate
       containers:
         - name: nfs-server
           image: itsthenetwork/nfs-server-alpine:latest
@@ -61,7 +39,7 @@ spec:
             privileged: true
           volumeMounts:
             - mountPath: /nfsshare
-              name: nfs-vol
+              name: nfs-storage
 ---
 apiVersion: v1
 kind: Service
@@ -83,20 +61,7 @@ spec:
   selector:
     app: nfs-server-controlplane
 ---
-# NFS Server for Worker Node (omen-worker1)
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: nfs-server-worker-claim
-  namespace: nfs-servers
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Ti  # Use most of worker's 1TB dedicated disk + available ephemeral storage
-  storageClassName: openebs-hostpath
----
+# NFS Server for Worker Node (omen-worker1) - 1Ti storage
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -115,10 +80,10 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
       volumes:
-        - name: nfs-vol
-          persistentVolumeClaim:
-            claimName: nfs-server-worker-claim
-      restartPolicy: Always
+        - name: nfs-storage
+          hostPath:
+            path: /var/local/nfs-worker
+            type: DirectoryOrCreate
       containers:
         - name: nfs-server
           image: itsthenetwork/nfs-server-alpine:latest
@@ -136,7 +101,7 @@ spec:
             privileged: true
           volumeMounts:
             - mountPath: /nfsshare
-              name: nfs-vol
+              name: nfs-storage
 ---
 apiVersion: v1
 kind: Service

@@ -1,38 +1,26 @@
-# NFS Storage Classes - backed by OpenEBS local storage
-# These provide ReadWriteMany access to storage on both nodes
-
+# StorageClass for Control Plane NFS Server (2.2Ti capacity)
 ---
-# Control Plane NFS Server (2.2Ti capacity)
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: nfs-controlplane
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "false"
 provisioner: nfs.csi.k8s.io
 parameters:
   server: nfs-server-controlplane.nfs-servers.svc.cluster.local
-  share: /
+  share: /nfsshare
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
-mountOptions:
-  - nfsvers=4.1
-  - nconnect=8
-
+allowVolumeExpansion: true
 ---
-# Worker NFS Server (1Ti capacity)
+# StorageClass for Worker NFS Server (1Ti capacity)
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: nfs-worker
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "false"
 provisioner: nfs.csi.k8s.io
 parameters:
   server: nfs-server-worker.nfs-servers.svc.cluster.local
-  share: /
+  share: /nfsshare
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
-mountOptions:
-  - nfsvers=4.1
-  - nconnect=8
+allowVolumeExpansion: true 
