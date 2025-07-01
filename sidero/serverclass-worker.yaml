@@ -37,14 +37,6 @@ spec:
     - op: add
       path: /machine/network/hostname
       value: omen-worker1
-    - op: replace
-      path: /cluster/network/cni
-      value:
-        name: flannel
-    - op: replace
-      path: /cluster/proxy
-      value:
-        disabled: false
     - op: add
       path: /machine/kernel
       value:
@@ -78,14 +70,3 @@ spec:
             - rbind
             - rshared
             - rw
-    - op: add
-      path: /cluster/apiServer/admissionControl/-
-      value:
-        name: PodSecurity
-        configuration:
-          apiVersion: pod-security.admission.config.k8s.io/v1beta1
-          kind: PodSecurityConfiguration
-          exemptions:
-            namespaces:
-            - openebs
-            - metallb-system
