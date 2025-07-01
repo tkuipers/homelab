@@ -1,46 +1,38 @@
-# Local storage classes - node-bound but high performance
-# Note: openebs-single-node is created by OpenEBS itself, not managed here
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: openebs-hostpath-local
-  annotations:
-    openebs.io/cas-type: hostpath
-    storageclass.kubernetes.io/is-default-class: "false"
-provisioner: openebs.io/local
-parameters:
-  storageType: "hostpath"
-  basePath: "/var/local/openebs"
-reclaimPolicy: Delete
-volumeBindingMode: WaitForFirstConsumer
-allowVolumeExpansion: true
+# NFS Storage Classes - backed by OpenEBS local storage
+# These provide ReadWriteMany access to storage on both nodes
 
 ---
-# Dynamic NFS storage class - uses local storage as backend but provides RWX
+# Control Plane NFS Server (2.2Ti capacity)
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: openebs-rwx
+  name: nfs-controlplane
   annotations:
-    openebs.io/cas-type: nfsrwx
     storageclass.kubernetes.io/is-default-class: "false"
-    cas.openebs.io/config: |
-      - name: NFSServerType
-        value: "kernel"
-      - name: BackendStorageClass
-        value: "openebs-hostpath-local"
-      - name: LeaderElection
-        value: "false"
-      - name: NFSServerResourceRequests
-        value: |-
-          memory: "50Mi"
-          cpu: "50m"
-      - name: NFSServerResourceLimits  
-        value: |-
-          memory: "300Mi"
-          cpu: "200m"
-provisioner: openebs.io/nfsrwx
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: nfs-server-controlplane.nfs-servers.svc.cluster.local
+  share: /
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
-allowVolumeExpansion: true 
+mountOptions:
+  - nfsvers=4.1
+  - nconnect=8
+
+---
+# Worker NFS Server (1Ti capacity)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-worker
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: nfs-server-worker.nfs-servers.svc.cluster.local
+  share: /
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+mountOptions:
+  - nfsvers=4.1
+  - nconnect=8
