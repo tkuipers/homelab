@@ -148,3 +148,7 @@ spec:
               sourceRef:
                 kind: GitRepository
                 name: homelab-repo
+    - op: add
+      path: /machine/certSANs
+      value:
+        - 172.16.0.50
