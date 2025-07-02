@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tcp-services
+  namespace: ingress-nginx
+data:
+  # Map external port 445 to timemachine service port 445
+  445: "timemachine/timemachine:445" 

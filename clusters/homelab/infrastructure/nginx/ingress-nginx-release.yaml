@@ -22,6 +22,15 @@ spec:
     controller:
       service:
         type: LoadBalancer
+        # Expose additional TCP ports
+        ports:
+          http: 80
+          https: 443
+          smb: 445
+        targetPorts:
+          http: http
+          https: https
+          smb: 445
       ingressClassResource:
         name: nginx
         enabled: true
@@ -36,9 +45,13 @@ spec:
           nginx.ingress.kubernetes.io/enable-annotation-validation: "false"
         # Set failure policy to Ignore for ACME challenges
         failurePolicy: Ignore
-      # Disable strict path type validation that blocks ACME challenges
+      # Enable TCP services
       config:
         strict-validate-path-type: "false"
+      # Reference the TCP services ConfigMap
+      tcp:
+        configMapNamespace: ingress-nginx
+        configMapName: tcp-services
     rbac:
       create: true
       scope: false 

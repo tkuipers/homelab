@@ -3,5 +3,6 @@ kind: Kustomization
 resources:
   - ingress-nginx-repo.yaml
   - ingress-nginx-release.yaml
+  - tcp-services-configmap.yaml
   - k8s-api-proxy.yaml
   - external-access-rbac.yaml 
