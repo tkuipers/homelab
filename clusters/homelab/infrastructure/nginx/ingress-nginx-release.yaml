@@ -19,7 +19,6 @@ spec:
     createNamespace: true
   targetNamespace: ingress-nginx
   values:
-    # Configure TCP services
     tcp:
       "445": "timemachine/timemachine:445"
     controller:
@@ -34,16 +33,11 @@ spec:
           enabled: true
         certManager:
           enabled: false
-        # Disable strict path validation to allow ACME challenges
         annotations:
           nginx.ingress.kubernetes.io/enable-annotation-validation: "false"
-        # Set failure policy to Ignore for ACME challenges
         failurePolicy: Ignore
-      # Enable TCP services
       config:
         strict-validate-path-type: "false"
-
-      # TCP services are now configured via the tcp: key above
     rbac:
       create: true
       scope: false 
