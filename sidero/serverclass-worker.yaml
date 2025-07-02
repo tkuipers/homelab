@@ -66,3 +66,13 @@ spec:
             - rbind
             - rshared
             - rw
+    # Local Path Provisioner User Volume Configuration
+    - op: add
+      path: /machine/userVolumes/-
+      value:
+        name: local-path-provisioner
+        provisioning:
+          diskSelector:
+            match: "disk.transport == 'megaraid_sas' && disk.size > 2u * TB"
+          minSize: 100GB
+          maxSize: 500GB
