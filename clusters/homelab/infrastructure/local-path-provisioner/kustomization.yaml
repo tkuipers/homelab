@@ -3,7 +3,6 @@ kind: Kustomization
 resources:
 - https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml
 - test-pod.yaml
-- namespace.yaml
 patches:
 - patch: |-
     kind: ConfigMap
@@ -27,4 +26,13 @@ patches:
     metadata:
       name: local-path
       annotations:
-        storageclass.kubernetes.io/is-default-class: "true" 
+        storageclass.kubernetes.io/is-default-class: "true"
+- patch: |-
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: local-path-storage
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
+        pod-security.kubernetes.io/audit: privileged 
