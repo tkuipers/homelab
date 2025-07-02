@@ -1,0 +1,8 @@
+apiVersion: v1alpha1
+kind: UserVolumeConfig
+name: local-path-provisioner
+provisioning:
+  diskSelector:
+    match: "disk.transport == 'megaraid_sas' && disk.size > 2u * TB"
+  minSize: 100GB
+  maxSize: 500GB 
