@@ -24,11 +24,20 @@ spec:
           protocol: TCP
         env:
         - name: TM_USERNAME
-          value: "timemachine"
+          valueFrom:
+            secretKeyRef:
+              name: timemachine-credentials
+              key: username
         - name: TM_GROUPNAME
-          value: "timemachine"
+          valueFrom:
+            secretKeyRef:
+              name: timemachine-credentials
+              key: username
         - name: PASSWORD
-          value: "timemachine"
+          valueFrom:
+            secretKeyRef:
+              name: timemachine-credentials
+              key: password
         - name: TM_UID
           value: "1000"
         - name: TM_GID
