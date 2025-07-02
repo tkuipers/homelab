@@ -1,9 +1,4 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-resources: []
-  # Add applications here
-  # Examples:
-  # - homepage/
-  # - jellyfin/
-  # - nextcloud/
-  # - game-servers/ 
+resources:
+  - timemachine/
