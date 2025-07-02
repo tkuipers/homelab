@@ -21,7 +21,7 @@ spec:
   values:
     # Configure TCP services
     tcp:
-      445: "timemachine/timemachine:445"
+      "445": "timemachine/timemachine:445"
     controller:
       service:
         type: LoadBalancer
