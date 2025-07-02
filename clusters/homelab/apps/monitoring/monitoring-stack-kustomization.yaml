@@ -7,7 +7,7 @@ spec:
   interval: 5m
   sourceRef:
     kind: GitRepository
-    name: flux-system
+    name: homelab-repo
   path: ./clusters/homelab/apps/monitoring/stack
   prune: true
   wait: true 
