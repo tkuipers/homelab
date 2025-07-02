@@ -27,6 +27,21 @@ spec:
               resources:
                 requests:
                   storage: 50Gi
+        # Fix permissions for hostPath storage
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          fsGroup: 0
+        # Init container to fix permissions
+        initContainers:
+          - name: fix-permissions
+            image: busybox:1.35
+            command: ['sh', '-c', 'chmod -R 777 /prometheus && chown -R 65534:65534 /prometheus']
+            volumeMounts:
+              - name: prometheus-monitoring-kube-prometheus-prometheus-db
+                mountPath: /prometheus
+            securityContext:
+              runAsUser: 0
         # Retention for metrics
         retention: 30d
         # Resource limits
@@ -35,8 +50,8 @@ spec:
             memory: 1Gi
             cpu: 500m
           limits:
-            memory: 2Gi
-            cpu: 1000m
+            memory: 4Gi
+            cpu: 2000m
         # Service monitor selector (monitor all services)
         serviceMonitorSelectorNilUsesHelmValues: false
         ruleSelectorNilUsesHelmValues: false
