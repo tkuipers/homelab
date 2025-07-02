@@ -49,8 +49,8 @@ spec:
       config:
         strict-validate-path-type: "false"
       # Reference the TCP services ConfigMap
-      extraArgs:
-        tcp-services-configmap: ingress-nginx/tcp-services
+      # extraArgs:
+      #   tcp-services-configmap: ingress-nginx/tcp-services
     rbac:
       create: true
       scope: false 
