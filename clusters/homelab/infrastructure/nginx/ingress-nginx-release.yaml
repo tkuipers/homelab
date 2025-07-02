@@ -19,18 +19,12 @@ spec:
     createNamespace: true
   targetNamespace: ingress-nginx
   values:
+    # Configure TCP services
+    tcp:
+      445: "timemachine/timemachine:445"
     controller:
       service:
         type: LoadBalancer
-        # Expose additional TCP ports
-        ports:
-          http: 80
-          https: 443
-          smb: 445
-        targetPorts:
-          http: http
-          https: https
-          smb: 445
       ingressClassResource:
         name: nginx
         enabled: true
@@ -49,9 +43,7 @@ spec:
       config:
         strict-validate-path-type: "false"
 
-      # Reference the TCP services ConfigMap
-      extraArgs:
-        tcp-services-configmap: ingress-nginx/tcp-services
+      # TCP services are now configured via the tcp: key above
     rbac:
       create: true
       scope: false 
