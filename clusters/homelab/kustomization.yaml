@@ -1,6 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  - infrastructure/cert-manager/install-kustomization.yaml
+  - infrastructure/cert-manager/config-kustomization.yaml
   - infrastructure
   - apps
   - flux-system
