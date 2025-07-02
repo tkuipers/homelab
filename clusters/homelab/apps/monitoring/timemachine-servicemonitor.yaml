@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: timemachine
+  namespace: monitoring
+  labels:
+    app: timemachine
+spec:
+  selector:
+    matchLabels:
+      app: timemachine
+  namespaceSelector:
+    matchNames:
+    - timemachine
+  endpoints:
+  - port: smb
+    interval: 30s
+    path: /metrics  # If the Time Machine container exposes metrics
+    # Note: mbentley/timemachine may not expose Prometheus metrics
+    # This is here as an example for future services 
