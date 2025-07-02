@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 128Mi
+  storageClassName: local-path
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+spec:
+  volumes:
+    - name: test-storage
+      persistentVolumeClaim:
+        claimName: test-pvc
+  containers:
+    - name: test-container
+      image: busybox
+      command: ["/bin/sh", "-c", "echo 'hello from your friends on the local path' > /data/test.txt; tail -f /dev/null"]
+      volumeMounts:
+        - name: test-storage
+          mountPath: /data 
