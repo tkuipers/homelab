@@ -4,6 +4,9 @@ resources:
   - namespace.yaml
   - prometheus-helm-repository.yaml
   - grafana-external-secret.yaml
+  - prometheus-persistentvolume.yaml
+  - grafana-persistentvolume.yaml
+  - alertmanager-persistentvolume.yaml
   - kube-prometheus-stack-release.yaml
   - grafana-ingress.yaml
   - prometheus-ingress.yaml
