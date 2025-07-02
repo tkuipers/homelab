@@ -121,61 +121,6 @@ echo "Using control plane IP: $CONTROL_PLANE_IP"
 # Generate kubeconfig using talosctl
 talosctl --talosconfig cluster-configs/talosconfig kubeconfig --nodes $CONTROL_PLANE_IP cluster-configs/ --force
 
-# --- 8. Setup 1Password Integration ---
-echo "--- 8. Setting up 1Password integration ---"
-
-# Check if 1Password CLI is installed
-if ! command -v op &> /dev/null; then
-    echo "1Password CLI not found. Installing..."
-    # Download and install 1Password CLI using the correct URL format
-    curl -sSfL https://cache.agilebits.com/dist/1P/op2/pkg/v2.25.0/op_linux_amd64_v2.25.0.zip -o op.zip
-    unzip -q op.zip
-    sudo mv op /usr/local/bin/
-    rm -f op.zip
-    echo "1Password CLI installed successfully."
-fi
-
-if command -v op &> /dev/null; then
-    echo "1Password CLI found. Setting up integration..."
-    
-    # Check if already signed in by checking if account list has content
-    if [ -z "$(op account list)" ]; then
-        echo "No 1Password account configured. Let's add one..."
-        echo "Please enter your 1Password sign-in address (e.g., my.1password.com):"
-        read -r SIGNIN_ADDRESS
-        echo "Adding 1Password account..."
-        op account add --address "$SIGNIN_ADDRESS"
-        echo "Now signing in..."
-        eval $(op signin)
-    fi
-    
-    # Verify access to the Homelab vault (assumes it exists)
-    if ! op vault get "Homelab" &> /dev/null; then
-        echo "Error: Cannot access 'Homelab' vault in 1Password."
-        echo "Please ensure the 'Homelab' vault exists in your account."
-        echo "Skipping 1Password integration..."
-    else
-        echo "Successfully verified access to 'Homelab' vault."
-        
-        # Create a Connect token for the homelab cluster (assumes Connect server exists)
-        echo "Creating 1Password Connect token for homelab cluster..."
-        OP_CONNECT_TOKEN=$(op connect token create "Homelab Cluster - $(date '+%Y-%m-%d %H:%M:%S')" --server "homelab" --vault "Homelab")
-        
-        # Store the credentials file in the workload cluster
-        echo "Storing 1Password Connect credentials in workload cluster..."
-        kubectl --kubeconfig cluster-configs/kubeconfig create namespace external-secrets-system --dry-run=client -o yaml | kubectl --kubeconfig cluster-configs/kubeconfig apply -f -
-        
-        # Create the credentials secret in default namespace (where Connect pod runs)
-        kubectl --kubeconfig cluster-configs/kubeconfig create secret generic op-credentials \
-            --from-file=1password-credentials.json=./1password-credentials.json \
-            -n default \
-            --dry-run=client -o yaml | kubectl --kubeconfig cluster-configs/kubeconfig apply -f -
-        
-        echo "1Password integration setup complete!"
-        echo "Connect token has been stored in the workload cluster."
-    fi
-fi
-
 echo ""
 echo "=== Setup Complete ==="
 echo "Workload cluster configs stored in: ./cluster-configs/"
