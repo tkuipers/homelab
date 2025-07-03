@@ -6,4 +6,4 @@ resources:
   - ./nginx
   - ./metrics-server
   - ./aws-ip-updater
-  - ./local-path-provisioner
+  # - ./local-path-provisioner
