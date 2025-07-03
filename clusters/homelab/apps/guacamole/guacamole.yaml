@@ -17,24 +17,36 @@ data:
     tar -xf guacamole-auth-jdbc.tar.gz
     
     # Wait for PostgreSQL to be ready
-    until pg_isready -h guacamole-postgres -U guacamole; do
+    until pg_isready -h guacamole-postgres -U $POSTGRES_USER; do
       echo "Waiting for PostgreSQL..."
       sleep 2
     done
     
+    # Debug: Test basic connection to postgres database first
+    echo "Testing connection to postgres database..."
+    psql -h guacamole-postgres -U $POSTGRES_USER -d postgres -c "SELECT version();"
+    
+    # Debug: List all databases
+    echo "Listing all databases..."
+    psql -h guacamole-postgres -U $POSTGRES_USER -d postgres -c "SELECT datname FROM pg_database;"
+    
+    # Test connection to target database
+    echo "Testing connection to target database: $POSTGRES_DATABASE"
+    psql -h guacamole-postgres -U $POSTGRES_USER -d $POSTGRES_DATABASE -c "SELECT version();"
+    
     # Check if database is already initialized
-    TABLES=$(PGPASSWORD=guacamole psql -h guacamole-postgres -U guacamole -d guacamole -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
+    TABLES=$(psql -h guacamole-postgres -U $POSTGRES_USER -d $POSTGRES_DATABASE -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
     
     if [ "$TABLES" -le 1 ]; then
       echo "Initializing Guacamole database..."
-      PGPASSWORD=guacamole psql -h guacamole-postgres -U guacamole -d guacamole -f guacamole-auth-jdbc-1.6.0/postgresql/schema/*.sql
+      psql -h guacamole-postgres -U $POSTGRES_USER -d $POSTGRES_DATABASE -f guacamole-auth-jdbc-1.6.0/postgresql/schema/*.sql
       
       echo "Setting custom admin password..."
       # Generate password hash from the secret
       PASSWORD_HASH=$(echo -n "$ADMIN_PASSWORD" | sha256sum | cut -d' ' -f1)
       
       # Update the admin user password in the database
-      PGPASSWORD=guacamole psql -h guacamole-postgres -U guacamole -d guacamole -c "
+      psql -h guacamole-postgres -U $POSTGRES_USER -d $POSTGRES_DATABASE -c "
         UPDATE guacamole_user 
         SET password_hash = decode('$PASSWORD_HASH', 'hex'),
             password_salt = null,
@@ -58,13 +70,18 @@ spec:
       initContainers:
       - name: wait-for-postgres
         image: postgres:15
-        command: ['sh', '-c', 'until pg_isready -h guacamole-postgres -U guacamole; do sleep 2; done']
+        command: ['sh', '-c', 'until pg_isready -h guacamole-postgres -U $POSTGRES_USER; do sleep 2; done']
         env:
         - name: PGPASSWORD
           valueFrom:
             secretKeyRef:
               name: guacamole-postgres-secret
               key: postgres-password
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: username
       containers:
       - name: db-init
         image: postgres:15
@@ -75,6 +92,16 @@ spec:
             secretKeyRef:
               name: guacamole-postgres-secret
               key: postgres-password
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: username
+        - name: POSTGRES_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: database
         - name: ADMIN_PASSWORD
           valueFrom:
             secretKeyRef:
