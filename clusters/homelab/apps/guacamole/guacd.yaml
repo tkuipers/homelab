@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guacd
+  namespace: guacamole
+  labels:
+    app: guacd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guacd
+  template:
+    metadata:
+      labels:
+        app: guacd
+    spec:
+      containers:
+      - name: guacd
+        image: guacamole/guacd:1.6.0
+        ports:
+        - containerPort: 4822
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guacd
+  namespace: guacamole
+  labels:
+    app: guacd
+spec:
+  ports:
+  - port: 4822
+    targetPort: 4822
+    protocol: TCP
+  selector:
+    app: guacd
+  type: ClusterIP 

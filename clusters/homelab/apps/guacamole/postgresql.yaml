@@ -1,0 +1,82 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: guacamole-postgres-pvc
+  namespace: guacamole
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+  volumeName: guacamole-postgres-pv
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guacamole-postgres
+  namespace: guacamole
+  labels:
+    app: guacamole-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guacamole-postgres
+  template:
+    metadata:
+      labels:
+        app: guacamole-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: database
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: password
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: guacamole-postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guacamole-postgres
+  namespace: guacamole
+  labels:
+    app: guacamole-postgres
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+  selector:
+    app: guacamole-postgres
+  type: ClusterIP 
