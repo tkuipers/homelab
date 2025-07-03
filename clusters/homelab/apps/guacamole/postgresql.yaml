@@ -77,8 +77,6 @@ spec:
             secretKeyRef:
               name: guacamole-postgres-secret
               key: postgres-password
-        - name: POSTGRES_INITDB_ARGS
-          value: "--auth-host=md5 --auth-local=trust"
         volumeMounts:
         - name: postgres-storage
           mountPath: /var/lib/postgresql/data
