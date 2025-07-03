@@ -9,8 +9,11 @@ data:
     #!/bin/bash
     set -e
     
+    # Install curl if not available
+    apt-get update && apt-get install -y curl && apt-get install -y tar && apt-get install -y postgresql-client
+    
     # Download and extract the schema SQL
-    wget -O guacamole-auth-jdbc.tar.gz "https://archive.apache.org/dist/guacamole/1.6.0/binary/guacamole-auth-jdbc-1.6.0.tar.gz"
+    curl -L -o guacamole-auth-jdbc.tar.gz "https://archive.apache.org/dist/guacamole/1.6.0/binary/guacamole-auth-jdbc-1.6.0.tar.gz"
     tar -xf guacamole-auth-jdbc.tar.gz
     
     # Wait for PostgreSQL to be ready
