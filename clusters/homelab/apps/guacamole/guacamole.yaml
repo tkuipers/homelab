@@ -22,6 +22,12 @@ data:
       sleep 2
     done
     
+    # DEBUG: Show what credentials we're using
+    echo "DEBUG: POSTGRES_USER='$POSTGRES_USER'"
+    echo "DEBUG: POSTGRES_DATABASE='$POSTGRES_DATABASE'"
+    echo "DEBUG: PGPASSWORD='$PGPASSWORD'"
+    echo "DEBUG: Password length: ${#PGPASSWORD}"
+    
     # Debug: Test basic connection to postgres database first
     echo "Testing connection to postgres database..."
     psql -h guacamole-postgres -U $POSTGRES_USER -d postgres -c "SELECT version();"
