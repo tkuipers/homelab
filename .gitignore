@@ -20,4 +20,6 @@ talosconfig**
 cluster-configs/
 
 **credentials**
+!**credentials**.yaml
+!**setup**credentials**.sh
 op.sig

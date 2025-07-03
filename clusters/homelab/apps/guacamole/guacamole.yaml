@@ -1,0 +1,169 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guacamole-init-script
+  namespace: guacamole
+data:
+  init-db.sh: |
+    #!/bin/bash
+    set -e
+    
+    # Download and extract the schema SQL
+    wget -O guacamole-auth-jdbc.tar.gz "https://archive.apache.org/dist/guacamole/1.6.0/binary/guacamole-auth-jdbc-1.6.0.tar.gz"
+    tar -xf guacamole-auth-jdbc.tar.gz
+    
+    # Wait for PostgreSQL to be ready
+    until pg_isready -h guacamole-postgres -U guacamole; do
+      echo "Waiting for PostgreSQL..."
+      sleep 2
+    done
+    
+    # Check if database is already initialized
+    TABLES=$(PGPASSWORD=guacamole psql -h guacamole-postgres -U guacamole -d guacamole -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
+    
+    if [ "$TABLES" -le 1 ]; then
+      echo "Initializing Guacamole database..."
+      PGPASSWORD=guacamole psql -h guacamole-postgres -U guacamole -d guacamole -f guacamole-auth-jdbc-1.6.0/postgresql/schema/*.sql
+      
+      echo "Setting custom admin password..."
+      # Generate password hash from the secret
+      PASSWORD_HASH=$(echo -n "$ADMIN_PASSWORD" | sha256sum | cut -d' ' -f1)
+      
+      # Update the admin user password in the database
+      PGPASSWORD=guacamole psql -h guacamole-postgres -U guacamole -d guacamole -c "
+        UPDATE guacamole_user 
+        SET password_hash = decode('$PASSWORD_HASH', 'hex'),
+            password_salt = null,
+            password_date = CURRENT_TIMESTAMP
+        WHERE username = 'guacadmin';
+      "
+      
+      echo "Database initialized successfully with custom password"
+    else
+      echo "Database already initialized, skipping..."
+    fi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: guacamole-db-init
+  namespace: guacamole
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15
+        command: ['sh', '-c', 'until pg_isready -h guacamole-postgres -U guacamole; do sleep 2; done']
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: password
+      containers:
+      - name: db-init
+        image: postgres:15
+        command: ["/bin/bash", "/scripts/init-db.sh"]
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: password
+        - name: ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-admin-secret
+              key: admin-password
+        volumeMounts:
+        - name: init-script
+          mountPath: /scripts
+      volumes:
+      - name: init-script
+        configMap:
+          name: guacamole-init-script
+          defaultMode: 0755
+      restartPolicy: OnFailure
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guacamole
+  namespace: guacamole
+  labels:
+    app: guacamole
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guacamole
+  template:
+    metadata:
+      labels:
+        app: guacamole
+    spec:
+      containers:
+      - name: guacamole
+        image: guacamole/guacamole:1.6.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: GUACD_HOSTNAME
+          value: "guacd"
+        - name: GUACD_PORT
+          value: "4822"
+        - name: POSTGRES_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: database
+        - name: POSTGRES_HOSTNAME
+          value: "guacamole-postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: password
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: guacamole-postgres-secret
+              key: username
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /guacamole
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /guacamole
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guacamole
+  namespace: guacamole
+  labels:
+    app: guacamole
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: guacamole
+  type: ClusterIP 
