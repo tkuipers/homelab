@@ -150,21 +150,21 @@ spec:
           value: "guacd"
         - name: GUACD_PORT
           value: "4822"
-        - name: POSTGRES_DATABASE
+        - name: POSTGRESQL_DATABASE
           valueFrom:
             secretKeyRef:
               name: guacamole-postgres-secret
               key: database
-        - name: POSTGRES_HOSTNAME
+        - name: POSTGRESQL_HOSTNAME
           value: "guacamole-postgres"
-        - name: POSTGRES_PORT
-          value: 5432
-        - name: POSTGRES_PASSWORD
+        - name: POSTGRESQL_PORT
+          value: "5432"
+        - name: POSTGRESQL_PASSWORD
           valueFrom:
             secretKeyRef:
               name: guacamole-postgres-secret
               key: postgres-password
-        - name: POSTGRES_USER
+        - name: POSTGRESQL_USERNAME
           valueFrom:
             secretKeyRef:
               name: guacamole-postgres-secret
