@@ -46,23 +46,44 @@ data:
     if [ "$TABLES" -le 1 ]; then
       echo "Initializing Guacamole database..."
       psql -h guacamole-postgres -U $POSTGRES_USER -d $POSTGRES_DATABASE -f guacamole-auth-jdbc-1.6.0/postgresql/schema/*.sql
-      
-      echo "Setting custom admin password..."
-      # Generate password hash from the secret
-      PASSWORD_HASH=$(echo -n "$ADMIN_PASSWORD" | sha256sum | cut -d' ' -f1)
-      
-      # Update the admin user password in the database
+      echo "Database schema initialized"
+    else
+      echo "Database already initialized, skipping schema creation..."
+    fi
+    
+    # Always ensure admin user exists and has correct password
+    echo "Setting/updating admin password..."
+    # Generate password hash from the secret
+    PASSWORD_HASH=$(echo -n "$ADMIN_PASSWORD" | sha256sum | cut -d' ' -f1)
+    
+    # Check if admin user exists
+    ADMIN_EXISTS=$(psql -h guacamole-postgres -U $POSTGRES_USER -d $POSTGRES_DATABASE -t -c "SELECT COUNT(*) FROM guacamole_user u JOIN guacamole_entity e ON u.entity_id = e.entity_id WHERE e.name = 'guacadmin';")
+    
+    if [ "$ADMIN_EXISTS" -eq 0 ]; then
+      echo "Creating admin user..."
+      # Create admin user
+      psql -h guacamole-postgres -U $POSTGRES_USER -d $POSTGRES_DATABASE -c "
+        INSERT INTO guacamole_entity (name, type) VALUES ('guacadmin', 'USER');
+        INSERT INTO guacamole_user (entity_id, password_hash, password_salt, password_date) 
+        VALUES (
+          (SELECT entity_id FROM guacamole_entity WHERE name = 'guacadmin'),
+          decode('$PASSWORD_HASH', 'hex'),
+          null,
+          CURRENT_TIMESTAMP
+        );
+      "
+      echo "Admin user created successfully"
+    else
+      echo "Updating existing admin user password..."
+      # Update existing admin user password
       psql -h guacamole-postgres -U $POSTGRES_USER -d $POSTGRES_DATABASE -c "
         UPDATE guacamole_user 
         SET password_hash = decode('$PASSWORD_HASH', 'hex'),
             password_salt = null,
             password_date = CURRENT_TIMESTAMP
-        WHERE username = 'guacadmin';
+        WHERE entity_id = (SELECT entity_id FROM guacamole_entity WHERE name = 'guacadmin');
       "
-      
-      echo "Database initialized successfully with custom password"
-    else
-      echo "Database already initialized, skipping..."
+      echo "Admin password updated successfully"
     fi
 ---
 apiVersion: batch/v1
