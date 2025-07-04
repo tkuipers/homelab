@@ -158,7 +158,7 @@ spec:
         - name: POSTGRES_HOSTNAME
           value: "guacamole-postgres"
         - name: POSTGRES_PORT
-          value: "5432"
+          value: 5432
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
