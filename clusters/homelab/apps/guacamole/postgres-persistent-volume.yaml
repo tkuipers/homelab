@@ -8,6 +8,6 @@ spec:
     storage: 8Gi
   accessModes:
     - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
+  persistentVolumeReclaimPolicy: Delete
   hostPath:
     path: /var/lib/guacamole-postgres  # Directory on the node for PostgreSQL data 
