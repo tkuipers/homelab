@@ -30,7 +30,7 @@ spec:
   values:
     namespace: pterodactyl
     global:
-      panelUrl: "games.tkuipers.ca"
+      panelUrl: "dino.tkuipers.ca"
     panel:
       enabled: true
       appKey: "placeholder"  # Will be overridden by valuesFrom
@@ -50,7 +50,7 @@ spec:
         SESSION_DRIVER: "redis"
         QUEUE_CONNECTION: "redis"
         MAIL_DRIVER: "log"
-        MAIL_FROM: "noreply@games.tkuipers.ca"
+        MAIL_FROM: "noreply@dino.tkuipers.ca"
         MAIL_FROM_NAME: "Pterodactyl Panel"
       database:
         host: "pterodactyl-pterodactyl-mysql"
@@ -139,7 +139,7 @@ spec:
       autoConfig:
         enabled: true
         location:
-          long: "Production Wings Location - games.tkuipers.ca"
+          long: "Production Wings Location - dino.tkuipers.ca"
         node:
           memory: 16384  # 16GB
           memoryOverallocate: 0
