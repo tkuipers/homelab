@@ -163,7 +163,7 @@ spec:
       persistence:
         enabled: true
         hostPath: "/var/lib/pterodactyl/docker"
-          size: 100Gi
+        size: 100Gi
     mysql:
       enabled: true
       image:
