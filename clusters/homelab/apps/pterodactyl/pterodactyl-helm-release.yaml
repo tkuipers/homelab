@@ -1,0 +1,208 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: pterodactyl
+  namespace: flux-system
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: "."
+      sourceRef:
+        kind: GitRepository
+        name: pterodactyl-helm
+  install:
+    createNamespace: true
+  targetNamespace: pterodactyl
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: pterodactyl-credentials
+  values:
+    namespace: pterodactyl
+    global:
+      panelUrl: "games.tkuipers.ca"
+          panel:
+        enabled: true
+        appKey: "${app-key}"
+      image:
+        repository: "ghcr.io/pterodactyl/panel"
+        tag: "latest"
+        pullPolicy: "IfNotPresent"
+      replicaCount: 1
+      service:
+        type: ClusterIP
+        port: 80
+      env:
+        APP_TIMEZONE: "America/Edmonton"
+        APP_ENV: "production"
+        APP_DEBUG: false
+        CACHE_DRIVER: "redis"
+        SESSION_DRIVER: "redis"
+        QUEUE_CONNECTION: "redis"
+        MAIL_DRIVER: "log"
+        MAIL_FROM: "noreply@games.tkuipers.ca"
+        MAIL_FROM_NAME: "Pterodactyl Panel"
+              database:
+          host: "pterodactyl-mysql"
+          port: 3306
+          database: "pterodactyl"
+          username: "pterodactyl"
+          password: "${database-password}"
+      redis:
+        host: "pterodactyl-redis"
+        port: 6379
+      ingress:
+        enabled: true
+        className: "nginx"
+        annotations:
+          # Modern cert-manager annotations
+          cert-manager.io/cluster-issuer: "letsencrypt-prod"
+          # Nginx ingress annotations
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+          # WebSocket support for real-time Panel features
+          nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+          nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+          nginx.ingress.kubernetes.io/websocket-services: "pterodactyl-panel"
+        tls: true
+      resources:
+        limits:
+          cpu: 2000m
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+      persistence:
+        enabled: true
+        hostPath: "/var/lib/pterodactyl/panel"
+        size: 10Gi
+    queueWorker:
+      enabled: true
+      replicaCount: 1
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+    wings:
+      enabled: true
+      servers:
+        - name: wings-0
+          portRange:
+            start: 25565
+            end: 25585
+      api:
+        port: 8080
+      service:
+        type: ClusterIP
+        port: 8080
+      ingress:
+        enabled: true
+      image:
+        repository: "ghcr.io/pterodactyl/wings"
+        tag: "latest"
+        pullPolicy: "IfNotPresent"
+      env:
+        TZ: "America/Edmonton"
+        WINGS_DEBUG: false
+      
+      resources:
+        limits:
+          cpu: 2000m
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+      proxy:
+        enabled: true
+        type: "nginx"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+
+      autoConfig:
+        enabled: true
+        location:
+          long: "Production Wings Location - games.tkuipers.ca"
+        node:
+          memory: 16384  # 16GB
+          memoryOverallocate: 0
+          disk: 102400   # 100GB
+          diskOverallocate: 0
+          uploadSize: 1000  # 1GB
+
+      persistence:
+        docker:
+          enabled: true
+          hostPath: "/var/lib/pterodactyl/shared-docker" 
+          size: 500Gi
+        data:
+          enabled: true
+          hostPath: "/var/lib/pterodactyl/wings/data"
+          size: 100Gi
+    docker:
+      enabled: true
+      image:
+        repository: "docker"
+        tag: "dind"
+        pullPolicy: "IfNotPresent"
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+      persistence:
+        enabled: true
+        hostPath: "/var/lib/pterodactyl/docker"
+          size: 100Gi
+    mysql:
+      enabled: true
+      image:
+        repository: "mysql"
+        tag: "8.0"
+        pullPolicy: "IfNotPresent"
+      rootPassword: "${mysql-root-password}"
+      resources:
+        limits:
+          cpu: 2000m
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+      persistence:
+        enabled: true
+        hostPath: "/var/lib/pterodactyl/mysql"
+        size: 20Gi
+    redis:
+      enabled: true
+      image:
+        repository: "redis"
+        tag: "7-alpine"
+        pullPolicy: "IfNotPresent"
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+      persistence:
+        enabled: true
+        hostPath: "/var/lib/pterodactyl/redis"
+        size: 5Gi
+    gameServers:
+      service:
+        enabled: true
+        type: LoadBalancer
+        loadBalancerIP: "172.16.0.151"
+        annotations:
+          metallb.universe.tf/address-pool: "default-pool" 
