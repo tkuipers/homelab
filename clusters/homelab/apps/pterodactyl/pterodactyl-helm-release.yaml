@@ -15,16 +15,25 @@ spec:
     createNamespace: true
   targetNamespace: pterodactyl
   valuesFrom:
-    substituteFrom:
-      - kind: Secret
-        name: pterodactyl-credentials
+    - kind: Secret
+      name: pterodactyl-credentials
+      targetPath: panel.appKey
+      valuesKey: app-key
+    - kind: Secret
+      name: pterodactyl-credentials  
+      targetPath: panel.database.password
+      valuesKey: database-password
+    - kind: Secret
+      name: pterodactyl-credentials
+      targetPath: mysql.rootPassword
+      valuesKey: mysql-root-password
   values:
     namespace: pterodactyl
     global:
       panelUrl: "games.tkuipers.ca"
     panel:
       enabled: true
-      appKey: "${app-key}"
+      appKey: "placeholder"  # Will be overridden by valuesFrom
       image:
         repository: "ghcr.io/pterodactyl/panel"
         tag: "latest"
@@ -48,7 +57,7 @@ spec:
         port: 3306
         database: "pterodactyl"
         username: "pterodactyl"
-        password: "${database-password}"
+        password: "placeholder"  # Will be overridden by valuesFrom
       redis:
         host: "pterodactyl-redis"
         port: 6379
@@ -170,7 +179,7 @@ spec:
         repository: "mysql"
         tag: "8.0"
         pullPolicy: "IfNotPresent"
-      rootPassword: "${mysql-root-password}"
+      rootPassword: "placeholder"  # Will be overridden by valuesFrom
       resources:
         limits:
           cpu: 2000m
