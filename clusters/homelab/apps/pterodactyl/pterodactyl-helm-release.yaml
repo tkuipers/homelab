@@ -14,7 +14,7 @@ spec:
   install:
     createNamespace: true
   targetNamespace: pterodactyl
-  postBuild:
+  valuesFrom:
     substituteFrom:
       - kind: Secret
         name: pterodactyl-credentials
