@@ -22,9 +22,9 @@ spec:
     namespace: pterodactyl
     global:
       panelUrl: "games.tkuipers.ca"
-          panel:
-        enabled: true
-        appKey: "${app-key}"
+    panel:
+      enabled: true
+      appKey: "${app-key}"
       image:
         repository: "ghcr.io/pterodactyl/panel"
         tag: "latest"
@@ -43,12 +43,12 @@ spec:
         MAIL_DRIVER: "log"
         MAIL_FROM: "noreply@games.tkuipers.ca"
         MAIL_FROM_NAME: "Pterodactyl Panel"
-              database:
-          host: "pterodactyl-mysql"
-          port: 3306
-          database: "pterodactyl"
-          username: "pterodactyl"
-          password: "${database-password}"
+      database:
+        host: "pterodactyl-mysql"
+        port: 3306
+        database: "pterodactyl"
+        username: "pterodactyl"
+        password: "${database-password}"
       redis:
         host: "pterodactyl-redis"
         port: 6379
@@ -90,10 +90,10 @@ spec:
     wings:
       enabled: true
       servers:
-        - name: wings-0
-          portRange:
-            start: 25565
-            end: 25585
+      - name: wings-0
+        portRange:
+          start: 25565
+          end: 25585
       api:
         port: 8080
       service:
