@@ -4,3 +4,4 @@ resources:
   - timemachine/
   - monitoring/
   # - guacamole/
+  - pterodactyl/
