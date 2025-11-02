@@ -212,6 +212,6 @@ spec:
       service:
         enabled: true
         type: LoadBalancer
-        loadBalancerIP: "172.16.0.151"
+        loadBalancerIP: "10.0.0.151"
         annotations:
           metallb.universe.tf/address-pool: "default-pool" 

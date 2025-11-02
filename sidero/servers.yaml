@@ -17,7 +17,7 @@ spec:
   # Provide the Baseboard Management Controller (BMC) credentials.
   # This is required for Sidero to control the server's power state via IPMI.
   bmc:
-    endpoint: 172.16.0.4
+    endpoint: 10.0.0.3
     user: tyler-admin
     pass: water123
 ---
