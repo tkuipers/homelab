@@ -127,7 +127,7 @@ check_op_signin() {
 install_external_secrets_crds() {
     log_info "Installing External Secrets Operator CRDs..."
     
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "https://raw.githubusercontent.com/external-secrets/external-secrets/main/deploy/crds/bundle.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side --force-conflicts -f "https://raw.githubusercontent.com/external-secrets/external-secrets/main/deploy/crds/bundle.yaml"
     
     log_success "External Secrets CRDs installed"
 }
@@ -137,9 +137,9 @@ install_external_secrets_operator() {
     log_info "Installing External Secrets Operator..."
     
     # Create external-secrets-system namespace first
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "$YAML_DIR/external-secrets-namespace.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side --force-conflicts -f "$YAML_DIR/external-secrets-namespace.yaml"
     
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "https://github.com/external-secrets/external-secrets/releases/download/$EXTERNAL_SECRETS_VERSION/external-secrets.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side --force-conflicts -f "https://github.com/external-secrets/external-secrets/releases/download/$EXTERNAL_SECRETS_VERSION/external-secrets.yaml"
     
     # Wait for External Secrets to be ready
     log_info "Waiting for External Secrets operator to be ready..."
@@ -171,10 +171,10 @@ deploy_1password_connect() {
     fi
     
     # Deploy 1Password Connect
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "https://raw.githubusercontent.com/1Password/connect/refs/heads/main/examples/kubernetes/op-connect-deployment.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side -f "https://raw.githubusercontent.com/1Password/connect/refs/heads/main/examples/kubernetes/op-connect-deployment.yaml"
     
     # Create service for 1Password Connect
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "$YAML_DIR/op-connect-service.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side -f "$YAML_DIR/op-connect-service.yaml"
     
     # Wait for 1Password Connect to be ready
     log_info "Waiting for 1Password Connect to be ready..."
@@ -194,10 +194,10 @@ create_secretstore() {
     kubectl --kubeconfig="$KUBECONFIG" create secret generic onepassword-connect-token \
         --from-literal=token="$OP_CONNECT_TOKEN" \
         -n external-secrets-system \
-        --dry-run=client -o yaml | kubectl --kubeconfig="$KUBECONFIG" apply -f -
+        --dry-run=client -o yaml | kubectl --kubeconfig="$KUBECONFIG" apply --server-side -f -
     
     # Create SecretStore
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "$YAML_DIR/secretstore.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side -f "$YAML_DIR/secretstore.yaml"
     
     log_success "1Password SecretStore created"
 }
@@ -206,7 +206,7 @@ create_secretstore() {
 create_flux_ssh_secret() {
     log_info "Creating Flux SSH ExternalSecret..."
     
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "$YAML_DIR/flux-ssh-externalsecret.yaml" -n "$FLUX_NAMESPACE"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side -f "$YAML_DIR/flux-ssh-externalsecret.yaml" -n "$FLUX_NAMESPACE"
     
     log_success "Flux SSH ExternalSecret created"
 }
@@ -216,7 +216,7 @@ bootstrap_flux() {
     log_info "Bootstrapping FluxCD..."
     
     # Create flux-system namespace
-    kubectl --kubeconfig="$KUBECONFIG" create namespace "$FLUX_NAMESPACE" --dry-run=client -o yaml | kubectl --kubeconfig="$KUBECONFIG" apply -f -
+    kubectl --kubeconfig="$KUBECONFIG" create namespace "$FLUX_NAMESPACE" --dry-run=client -o yaml | kubectl --kubeconfig="$KUBECONFIG" apply --server-side --force-conflicts -f -
     
     # Wait for SSH secret to be created by External Secrets
     log_info "Waiting for SSH secret to be synced by External Secrets..."
@@ -234,7 +234,7 @@ bootstrap_flux() {
     log_success "SSH secret is ready"
     
     # Install FluxCD CRDs and controllers
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "https://github.com/fluxcd/flux2/releases/download/v2.6.3/install.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side --force-conflicts -f "https://github.com/fluxcd/flux2/releases/download/v2.6.3/install.yaml"
     
     # Wait for Flux controllers to be ready
     log_info "Waiting for FluxCD controllers to be ready..."
@@ -245,11 +245,11 @@ bootstrap_flux() {
     
     # Create GitRepository
     log_info "Creating Flux GitRepository..."
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "$YAML_DIR/gitrepository.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side --force-conflicts -f "$YAML_DIR/gitrepository.yaml"
     
     # Create main Kustomization
     log_info "Creating Flux Kustomization..."
-    kubectl --kubeconfig="$KUBECONFIG" apply -f "$YAML_DIR/kustomization.yaml"
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side --force-conflicts -f "$YAML_DIR/kustomization.yaml"
     
     log_success "FluxCD bootstrapped successfully"
 }

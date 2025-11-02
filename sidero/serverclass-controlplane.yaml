@@ -50,7 +50,7 @@ spec:
     - op: add
       path: /machine/certSANs
       value:
-        - 172.16.0.50
+        - 10.0.0.50
     # OpenEBS Configuration for Control Plane (2.4TB available)
     - op: add
       path: /machine/nodeLabels
