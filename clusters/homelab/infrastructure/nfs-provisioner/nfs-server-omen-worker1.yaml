@@ -13,8 +13,6 @@ spec:
       labels:
         app: nfs-server-omen-worker1
     spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
       imagePullSecrets:
