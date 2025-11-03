@@ -45,7 +45,7 @@ spec:
         - name: GANESHA_LOGFILE
           value: STDOUT
         - name: GANESHA_OPTIONS
-          value: "NFS_Commit = 0; NFS_Protocols = 4; "
+          value: "NFS_Commit = 0; NFS_Protocols = 4; allow_set_io_flusher_fail = true; "
         securityContext:
           capabilities:
             add: ["SYS_ADMIN", "DAC_READ_SEARCH"]
