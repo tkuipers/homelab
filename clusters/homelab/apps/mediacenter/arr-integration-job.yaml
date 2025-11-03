@@ -204,7 +204,8 @@ spec:
             eval INDEXER_URL=\$INDEXER${IDX}_URL
             eval INDEXER_APIKEY=\$INDEXER${IDX}_APIKEY
             
-            if [ -n "${INDEXER_NAME:-}" ] && [ -n "${INDEXER_URL:-}" ] && [ -n "${INDEXER_APIKEY:-}" ]; then
+            # Only require name and URL (API key optional for open indexers)
+            if [ -n "${INDEXER_NAME:-}" ] && [ -n "${INDEXER_URL:-}" ]; then
               if [ ! -f /prowlarr-config/.indexer${IDX}-added ]; then
                 # Generate unique name using hash of URL
                 INDEXER_HASH=$(echo -n "$INDEXER_URL" | md5sum | cut -d' ' -f1 | cut -c1-8)
