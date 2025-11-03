@@ -6,6 +6,11 @@ resources:
   - jellyfin-deployment.yaml
   - jellyfin-service.yaml
   - jellyfin-ingress.yaml
+  - prowlarr-indexers-external-secret.yaml
+  - prowlarr-bootstrap-configmap.yaml
+  - prowlarr-deployment.yaml
+  - prowlarr-service.yaml
+  - prowlarr-ingress.yaml
   - sonarr-deployment.yaml
   - sonarr-service.yaml
   - sonarr-ingress.yaml
