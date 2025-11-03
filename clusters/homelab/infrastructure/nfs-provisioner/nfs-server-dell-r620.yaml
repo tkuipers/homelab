@@ -26,50 +26,24 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         kubernetes.io/hostname: dell-r620
-      initContainers:
-      - name: setup-mtab
-        image: busybox:latest
-        command: ['sh', '-c', 'echo -e "/dev/root / ext4 rw,relatime 0 0\n/dev/root /export ext4 rw,relatime 0 0" > /etc/mtab']
-        volumeMounts:
-        - name: mtab
-          mountPath: /etc/mtab
       containers:
       - name: nfs-server
-        image: hectorm/nfs-ganesha:latest
+        image: erichough/nfs-server:latest
         env:
-        - name: GANESHA_EXPORT_ID
-          value: "1"
-        - name: GANESHA_EXPORT
-          value: /export
-        - name: GANESHA_PSEUDO
-          value: /export
-        - name: GANESHA_ACCESS_TYPE
-          value: RW
-        - name: GANESHA_SQUASH
-          value: "no_root_squash"
-        - name: GANESHA_FSAL
-          value: VFS
-        - name: GANESHA_LOGFILE
-          value: STDOUT
-        - name: GANESHA_OPTIONS
-          value: "NFS_Commit = 0; NFS_Protocols = 4; allow_set_io_flusher_fail = true; "
+        - name: NFS_EXPORT_0
+          value: "/export *(rw,no_subtree_check,no_root_squash,fsid=0)"
         securityContext:
           privileged: true
           capabilities:
-            add: ["SYS_ADMIN", "DAC_READ_SEARCH"]
+            add: ["SYS_ADMIN", "SETPCAP"]
         volumeMounts:
         - name: export
           mountPath: /export
-        - name: mtab
-          mountPath: /etc/mtab
-          readOnly: true
       volumes:
       - name: export
         hostPath:
           path: /var/persist/nfs-dell-r620
           type: DirectoryOrCreate
-      - name: mtab
-        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
