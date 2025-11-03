@@ -18,7 +18,7 @@ spec:
       kubernetes.io/hostname: omen-worker1
     nfs:
       server: nfs-server-omen-worker1.nfs-provisioner.svc.cluster.local
-      path: /export
+      path: /exports
     storageClass:
       name: nfs-omen-worker1
       defaultClass: false
