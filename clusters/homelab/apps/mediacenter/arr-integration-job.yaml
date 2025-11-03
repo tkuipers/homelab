@@ -376,10 +376,8 @@ spec:
         volumeMounts:
         - name: sonarr-config
           mountPath: /sonarr-config
-          readOnly: true
         - name: radarr-config
           mountPath: /radarr-config
-          readOnly: true
         - name: prowlarr-config
           mountPath: /prowlarr-config
       volumes:
