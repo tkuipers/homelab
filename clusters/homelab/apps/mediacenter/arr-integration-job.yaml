@@ -203,6 +203,29 @@ data:
             else:
                 self.log(f"Path mapping may already exist in {service_name} (this is fine)", "SUCCESS")
                 
+        def add_root_folder(self, service_name: str, service_url: str, api_key: str, path: str):
+            self.log(f"Adding root folder {path} to {service_name}...")
+            
+            # Check if root folder already exists
+            status, folders = self.api_request(f"{service_url}/api/v3/rootfolder", api_key)
+            if status == 200:
+                for folder in folders:
+                    if folder.get("path") == path:
+                        self.log(f"Root folder {path} already exists in {service_name}", "SUCCESS")
+                        return
+            
+            payload = {"path": path}
+            
+            status, body = self.api_request(f"{service_url}/api/v3/rootfolder", api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"Root folder {path} added to {service_name}", "SUCCESS")
+            else:
+                error_msg = str(body)
+                if "already" in error_msg.lower():
+                    self.log(f"Root folder {path} already exists in {service_name}", "SUCCESS")
+                else:
+                    self.log(f"Failed to add root folder to {service_name}: {body}", "WARNING")
+                
         def run(self):
             print("=" * 60)
             print("   Arr Stack Integration Setup")
@@ -250,6 +273,11 @@ data:
             # Add path mappings
             self.add_path_mapping("Sonarr", self.sonarr_url, self.sonarr_api_key)
             self.add_path_mapping("Radarr", self.radarr_url, self.radarr_api_key)
+            print()
+            
+            # Add root folders
+            self.add_root_folder("Sonarr", self.sonarr_url, self.sonarr_api_key, "/media/tv")
+            self.add_root_folder("Radarr", self.radarr_url, self.radarr_api_key, "/media/movies")
             print()
             
             # Trigger sync
