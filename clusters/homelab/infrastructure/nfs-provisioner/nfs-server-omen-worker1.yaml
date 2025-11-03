@@ -17,34 +17,11 @@ spec:
         kubernetes.io/hostname: omen-worker1
       containers:
       - name: nfs-server
-        image: gcr.io/k8s-staging-nfs-ganesha/nfs-server
-        ports:
-        - name: nfs
-          containerPort: 2049
-        - name: nfs-udp
-          containerPort: 2049
-          protocol: UDP
-        - name: rpcbind
-          containerPort: 111
-        - name: rpcbind-udp
-          containerPort: 111
-          protocol: UDP
-        - name: mountd
-          containerPort: 20048
-        - name: mountd-udp
-          containerPort: 20048
-          protocol: UDP
+        image: gcr.io/google_containers/volume-nfs:latest
         securityContext:
-          runAsUser: 0
-          runAsGroup: 0
-          capabilities:
-            add: ["SYS_ADMIN", "DAC_READ_SEARCH"]
-        args:
-        - "-fsid=0"
-        - "-grace-time=90"
-        - "- Lease-time=90"
-        - "-export-addr=0.0.0.0"
-        - "/exports"
+          privileged: true
+        ports:
+        - containerPort: 2049
         volumeMounts:
         - name: export
           mountPath: /exports
