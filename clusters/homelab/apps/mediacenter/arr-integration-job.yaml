@@ -214,6 +214,8 @@ spec:
                   "name": "'"$INDEXER_UNIQUE_NAME"'",
                   "implementation": "Newznab",
                   "configContract": "NewznabSettings",
+                  "enable": true,
+                  "redirect": true,
                   "appProfileId": '"$APP_PROFILE_ID"',
                   "fields": [
                     {"name": "baseUrl", "value": "'"$INDEXER1_URL"'"},
