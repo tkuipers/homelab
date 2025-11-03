@@ -23,8 +23,8 @@ spec:
         - |
           apk add --no-cache nfs-utils
           echo "/exports *(rw,sync,no_subtree_check,no_root_squash)" > /etc/exports
-          /usr/sbin/rpcbind -w -f &
-          /usr/sbin/nfsd --de-bug 8 --no-udp --no-nfs-v2 --no-nfs-v3 -G 600 -t 1
+          /sbin/rpcbind -w -f &
+          /sbin/nfsd --debug 8 --no-udp --no-nfs-v2 --no-nfs-v3 -G 600 -t 1
         securityContext:
           privileged: true
         volumeMounts:
