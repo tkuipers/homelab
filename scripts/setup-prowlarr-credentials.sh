@@ -11,10 +11,10 @@ ITEM_CATEGORY="login"
 INDEXERS=(
     "NZBGeek|Popular general Usenet indexer with great retention|https://api.nzbgeek.info"
     "NZBFinder|Comprehensive Usenet indexer with excellent API|https://nzbfinder.ws"
-    "DrunkenSlug|High-quality Usenet indexer with active community|https://api.drunkenslug.com"
-    "AnimeTosho|Specialized in anime, Japanese media, and Asian content|https://feed.animetosho.org"
-    "6box|Asian content specialist - Chinese dramas, K-dramas, and Asian TV|https://6box.me"
-    "NinjaCentral|Well-rounded Usenet indexer with good coverage|https://ninjacentral.co.za"
+    "Binsearch|Free open Usenet search engine - no registration required|https://binsearch.info"
+    "NZBIndex|Free open NZB indexer with good coverage|https://www.nzbindex.com"
+    "NZBKing|Open Usenet indexer - free access|https://nzbking.com"
+    "Newznab|Generic Newznab indexer - configure your own endpoint|https://your-indexer.com"
 )
 
 # Helper function to get indexer name
