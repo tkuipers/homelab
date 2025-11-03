@@ -41,10 +41,10 @@ spec:
             sleep 10
           done
           
-          # Wait for qBittorrent
-          echo "Waiting for qBittorrent..."
-          until curl -sf http://qbittorrent:8080 > /dev/null 2>&1; do
-            echo "  qBittorrent not ready, waiting..."
+          # Wait for Transmission
+          echo "Waiting for Transmission..."
+          until curl -sf http://transmission:9091 > /dev/null 2>&1; do
+            echo "  Transmission not ready, waiting..."
             sleep 10
           done
           
@@ -231,9 +231,9 @@ spec:
             echo "No indexer credentials provided, skipping indexer setup"
           fi
           
-          # Configure qBittorrent in Sonarr
-          if [ ! -f /sonarr-config/.qbittorrent-added ]; then
-            echo "Adding qBittorrent to Sonarr..."
+          # Configure Transmission in Sonarr
+          if [ ! -f /sonarr-config/.transmission-added ]; then
+            echo "Adding Transmission to Sonarr..."
             
             RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://sonarr:8989/api/v3/downloadclient" \
               -H "X-Api-Key: $SONARR_API_KEY" \
@@ -242,15 +242,16 @@ spec:
                 "enable": true,
                 "protocol": "torrent",
                 "priority": 1,
-                "name": "qBittorrent",
+                "name": "Transmission",
                 "fields": [
-                  {"name": "host", "value": "qbittorrent"},
-                  {"name": "port", "value": 8080},
+                  {"name": "host", "value": "transmission"},
+                  {"name": "port", "value": 9091},
+                  {"name": "urlBase", "value": "/transmission/"},
                   {"name": "category", "value": "sonarr"}
                 ],
-                "implementationName": "qBittorrent",
-                "implementation": "QBittorrent",
-                "configContract": "QBittorrentSettings",
+                "implementationName": "Transmission",
+                "implementation": "Transmission",
+                "configContract": "TransmissionSettings",
                 "tags": []
               }')
             
@@ -258,20 +259,20 @@ spec:
             BODY=$(echo "$RESPONSE" | sed '$d')
             
             if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ qBittorrent added to Sonarr!"
-              touch /sonarr-config/.qbittorrent-added
+              echo "✓ Transmission added to Sonarr!"
+              touch /sonarr-config/.transmission-added
             elif echo "$BODY" | grep -q "already exists"; then
-              echo "✓ qBittorrent already exists in Sonarr"
-              touch /sonarr-config/.qbittorrent-added
+              echo "✓ Transmission already exists in Sonarr"
+              touch /sonarr-config/.transmission-added
             else
-              echo "✗ Failed to add qBittorrent to Sonarr (HTTP $HTTP_CODE)"
+              echo "✗ Failed to add Transmission to Sonarr (HTTP $HTTP_CODE)"
               echo "Response: $BODY"
             fi
           fi
           
-          # Configure qBittorrent in Radarr
-          if [ ! -f /radarr-config/.qbittorrent-added ]; then
-            echo "Adding qBittorrent to Radarr..."
+          # Configure Transmission in Radarr
+          if [ ! -f /radarr-config/.transmission-added ]; then
+            echo "Adding Transmission to Radarr..."
             
             RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://radarr:7878/api/v3/downloadclient" \
               -H "X-Api-Key: $RADARR_API_KEY" \
@@ -280,15 +281,16 @@ spec:
                 "enable": true,
                 "protocol": "torrent",
                 "priority": 1,
-                "name": "qBittorrent",
+                "name": "Transmission",
                 "fields": [
-                  {"name": "host", "value": "qbittorrent"},
-                  {"name": "port", "value": 8080},
+                  {"name": "host", "value": "transmission"},
+                  {"name": "port", "value": 9091},
+                  {"name": "urlBase", "value": "/transmission/"},
                   {"name": "category", "value": "radarr"}
                 ],
-                "implementationName": "qBittorrent",
-                "implementation": "QBittorrent",
-                "configContract": "QBittorrentSettings",
+                "implementationName": "Transmission",
+                "implementation": "Transmission",
+                "configContract": "TransmissionSettings",
                 "tags": []
               }')
             
@@ -296,13 +298,13 @@ spec:
             BODY=$(echo "$RESPONSE" | sed '$d')
             
             if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ qBittorrent added to Radarr!"
-              touch /radarr-config/.qbittorrent-added
+              echo "✓ Transmission added to Radarr!"
+              touch /radarr-config/.transmission-added
             elif echo "$BODY" | grep -q "already exists"; then
-              echo "✓ qBittorrent already exists in Radarr"
-              touch /radarr-config/.qbittorrent-added
+              echo "✓ Transmission already exists in Radarr"
+              touch /radarr-config/.transmission-added
             else
-              echo "✗ Failed to add qBittorrent to Radarr (HTTP $HTTP_CODE)"
+              echo "✗ Failed to add Transmission to Radarr (HTTP $HTTP_CODE)"
               echo "Response: $BODY"
             fi
           fi
@@ -316,8 +318,8 @@ spec:
           echo "=== Setup Complete! ==="
           echo "✓ Sonarr linked to Prowlarr"
           echo "✓ Radarr linked to Prowlarr"
-          echo "✓ qBittorrent added to Sonarr"
-          echo "✓ qBittorrent added to Radarr"
+          echo "✓ Transmission added to Sonarr"
+          echo "✓ Transmission added to Radarr"
           echo "✓ Indexers will be automatically synced to both"
           echo "✓ Your media stack is fully integrated!"
         env:
