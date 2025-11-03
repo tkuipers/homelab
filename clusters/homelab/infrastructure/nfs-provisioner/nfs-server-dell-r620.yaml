@@ -26,14 +26,17 @@ spec:
         kubernetes.io/hostname: dell-r620
       containers:
       - name: nfs-server
-        image: gcr.io/google_containers/volume-nfs:latest
+        image: ghcr.io/democratic-csi/nfs-server
         securityContext:
-          privileged: true
+          runAsUser: 0
+          runAsGroup: 0
+          capabilities:
+            add: ["SYS_ADMIN", "DAC_READ_SEARCH"]
         ports:
         - containerPort: 2049
         volumeMounts:
         - name: export
-          mountPath: /exports
+          mountPath: /export
       volumes:
       - name: export
         hostPath:
