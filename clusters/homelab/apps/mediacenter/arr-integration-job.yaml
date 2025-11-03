@@ -41,6 +41,13 @@ spec:
             sleep 10
           done
           
+          # Wait for qBittorrent
+          echo "Waiting for qBittorrent..."
+          until curl -sf http://qbittorrent:8080 > /dev/null 2>&1; do
+            echo "  qBittorrent not ready, waiting..."
+            sleep 10
+          done
+          
           echo "All services are ready!"
           
           # Extract Sonarr API key
@@ -224,6 +231,86 @@ spec:
             echo "No indexer credentials provided, skipping indexer setup"
           fi
           
+          # Configure qBittorrent in Sonarr
+          if [ ! -f /sonarr-config/.qbittorrent-added ]; then
+            echo "Adding qBittorrent to Sonarr..."
+            
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://sonarr:8989/api/v3/downloadclient" \
+              -H "X-Api-Key: $SONARR_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "enable": true,
+                "protocol": "torrent",
+                "priority": 1,
+                "name": "qBittorrent",
+                "fields": [
+                  {"name": "host", "value": "qbittorrent"},
+                  {"name": "port", "value": 8080},
+                  {"name": "username", "value": "admin"},
+                  {"name": "password", "value": "adminadmin"},
+                  {"name": "category", "value": "sonarr"}
+                ],
+                "implementationName": "qBittorrent",
+                "implementation": "QBittorrent",
+                "configContract": "QBittorrentSettings",
+                "tags": []
+              }')
+            
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+            
+            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+              echo "✓ qBittorrent added to Sonarr!"
+              touch /sonarr-config/.qbittorrent-added
+            elif echo "$BODY" | grep -q "already exists"; then
+              echo "✓ qBittorrent already exists in Sonarr"
+              touch /sonarr-config/.qbittorrent-added
+            else
+              echo "✗ Failed to add qBittorrent to Sonarr (HTTP $HTTP_CODE)"
+              echo "Response: $BODY"
+            fi
+          fi
+          
+          # Configure qBittorrent in Radarr
+          if [ ! -f /radarr-config/.qbittorrent-added ]; then
+            echo "Adding qBittorrent to Radarr..."
+            
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://radarr:7878/api/v3/downloadclient" \
+              -H "X-Api-Key: $RADARR_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "enable": true,
+                "protocol": "torrent",
+                "priority": 1,
+                "name": "qBittorrent",
+                "fields": [
+                  {"name": "host", "value": "qbittorrent"},
+                  {"name": "port", "value": 8080},
+                  {"name": "username", "value": "admin"},
+                  {"name": "password", "value": "adminadmin"},
+                  {"name": "category", "value": "radarr"}
+                ],
+                "implementationName": "qBittorrent",
+                "implementation": "QBittorrent",
+                "configContract": "QBittorrentSettings",
+                "tags": []
+              }')
+            
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+            
+            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+              echo "✓ qBittorrent added to Radarr!"
+              touch /radarr-config/.qbittorrent-added
+            elif echo "$BODY" | grep -q "already exists"; then
+              echo "✓ qBittorrent already exists in Radarr"
+              touch /radarr-config/.qbittorrent-added
+            else
+              echo "✗ Failed to add qBittorrent to Radarr (HTTP $HTTP_CODE)"
+              echo "Response: $BODY"
+            fi
+          fi
+          
           # Trigger sync from Prowlarr to all apps
           echo "Triggering indexer sync to all apps..."
           curl -X POST "http://prowlarr:9696/api/v1/applications/sync" \
@@ -233,6 +320,8 @@ spec:
           echo "=== Setup Complete! ==="
           echo "✓ Sonarr linked to Prowlarr"
           echo "✓ Radarr linked to Prowlarr"
+          echo "✓ qBittorrent added to Sonarr"
+          echo "✓ qBittorrent added to Radarr"
           echo "✓ Indexers will be automatically synced to both"
           echo "✓ Your media stack is fully integrated!"
         env:

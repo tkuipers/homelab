@@ -38,6 +38,36 @@ spec:
           value: "America/Los_Angeles"
         - name: WEBUI_PORT
           value: "8080"
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - |
+                # Wait for qBittorrent to initialize
+                sleep 30
+                
+                # Update qBittorrent config to disable seeding
+                CONFIG_FILE="/config/qBittorrent/qBittorrent.conf"
+                if [ -f "$CONFIG_FILE" ]; then
+                  # Backup original
+                  cp "$CONFIG_FILE" "$CONFIG_FILE.bak"
+                  
+                  # Set ratio limit to 0 (stop seeding immediately)
+                  sed -i 's/MaxRatio=.*/MaxRatio=0/' "$CONFIG_FILE" || echo "MaxRatio=0" >> "$CONFIG_FILE"
+                  sed -i 's/MaxRatioAction=.*/MaxRatioAction=0/' "$CONFIG_FILE" || echo "MaxRatioAction=0" >> "$CONFIG_FILE"
+                  
+                  # Set seeding time limit to 1 minute
+                  sed -i 's/MaxSeedingMinutes=.*/MaxSeedingMinutes=1/' "$CONFIG_FILE" || echo "MaxSeedingMinutes=1" >> "$CONFIG_FILE"
+                  
+                  # Enable the limits
+                  sed -i 's/GlobalMaxRatio=.*/GlobalMaxRatio=0/' "$CONFIG_FILE" || echo "GlobalMaxRatio=0" >> "$CONFIG_FILE"
+                  
+                  echo "qBittorrent configured to not seed"
+                else
+                  echo "Config file not found yet, will use defaults"
+                fi
         volumeMounts:
         - name: config
           mountPath: /config
@@ -52,6 +82,18 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "2000m"
+      initContainers:
+      - name: create-downloads-dir
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /media/downloads
+          chmod 777 /media/downloads
+        volumeMounts:
+        - name: media
+          mountPath: /media
       volumes:
       - name: config
         hostPath:
