@@ -46,12 +46,12 @@ spec:
           name: smb
         securityContext:
           capabilities:
-            add: ["DAC_READ_SEARCH"]
+            add: ["DAC_READ_SEARCH", "NET_BIND_SERVICE", "NET_BROADCAST"]
         volumeMounts:
         - name: export
           mountPath: /data
         - name: samba-config
-          mountPath: /external
+          mountPath: /external/avahi
       volumes:
       - name: export
         hostPath:
