@@ -192,6 +192,17 @@ spec:
             if [ ! -f /prowlarr-config/.indexer1-added ]; then
               echo "Adding indexer: $INDEXER1_NAME"
               
+              # Get the default app profile ID
+              APP_PROFILE_ID=$(curl -s "http://prowlarr:9696/api/v1/appprofile" \
+                -H "X-Api-Key: $PROWLARR_API_KEY" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
+              
+              if [ -z "$APP_PROFILE_ID" ]; then
+                echo "Could not get app profile ID, using default 1"
+                APP_PROFILE_ID=1
+              fi
+              
+              echo "Using App Profile ID: $APP_PROFILE_ID"
+              
               RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/indexer" \
                 -H "X-Api-Key: $PROWLARR_API_KEY" \
                 -H "Content-Type: application/json" \
@@ -199,6 +210,7 @@ spec:
                   "name": "'"$INDEXER1_NAME"'",
                   "implementation": "Newznab",
                   "configContract": "NewznabSettings",
+                  "appProfileId": '"$APP_PROFILE_ID"',
                   "fields": [
                     {"name": "baseUrl", "value": "'"$INDEXER1_URL"'"},
                     {"name": "apiKey", "value": "'"$INDEXER1_APIKEY"'"},
