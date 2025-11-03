@@ -26,6 +26,18 @@ spec:
         kubernetes.io/hostname: dell-r620
       imagePullSecrets:
       - name: ghcr-secret
+      initContainers:
+      - name: fix-permissions
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          chown -R 1000:1000 /data
+          chmod -R 777 /data
+        volumeMounts:
+        - name: export
+          mountPath: /data
       containers:
       - name: samba-server
         image: ghcr.io/servercontainers/samba:latest
@@ -38,7 +50,7 @@ spec:
         - name: UID_smbuser
           value: "1000"
         - name: SAMBA_VOLUME_CONFIG_shared
-          value: "[shared]; path=/data; valid users = smbuser; guest ok = no; read only = no; browseable = yes"
+          value: "[shared]; path=/data; valid users = smbuser; guest ok = no; read only = no; browseable = yes; force user = smbuser; create mask = 0777; directory mask = 0777"
         ports:
         - containerPort: 445
           name: smb
