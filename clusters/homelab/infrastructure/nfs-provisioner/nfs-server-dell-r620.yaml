@@ -23,31 +23,45 @@ spec:
         app: nfs-server-dell-r620
     spec:
       nodeSelector:
-        kubernetes.io/hostname: dell-r620
+        kubernetes.ioio/hostname: dell-r620
       containers:
       - name: nfs-server
-        image: itsthenetwork/nfs-server-alpine:latest
-        env:
-        - name: SHARED_DIRECTORY
-          value: /exports
-        securityContext:
-          privileged: true
+        image: gcr.io/k8s-staging-nfs-ganesha/nfs-server
         ports:
-        - containerPort: 2049
+        - name: nfs
+          containerPort: 2049
+        - name: nfs-udp
+          containerPort: 2049
+          protocol: UDP
+        - name: rpcbind
+          containerPort: 111
+        - name: rpcbind-udp
+          containerPort: 111
+          protocol: UDP
+        - name: mountd
+          containerPort: 20048
+        - name: mountd-udp
+          containerPort: 20048
+          protocol: UDP
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          capabilities:
+            add: ["SYS_ADMIN", "DAC_READ_SEARCH"]
+        args:
+        - "-fsid=0"
+        - "-grace-time=90"
+        - "- Lease-time=90"
+        - "-export-addr=0.0.0.0"
+        - "/exports"
         volumeMounts:
         - name: export
           mountPath: /exports
-        - name: nfsd-fs
-          mountPath: /proc/fs/nfsd
       volumes:
       - name: export
         hostPath:
           path: /var/persist/nfs-dell-r620
           type: DirectoryOrCreate
-      - name: nfsd-fs
-        hostPath:
-          path: /proc/fs/nfsd
-          type: Directory
 ---
 apiVersion: v1
 kind: Service
