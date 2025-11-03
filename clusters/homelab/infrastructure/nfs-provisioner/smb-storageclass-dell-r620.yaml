@@ -1,0 +1,22 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: smb-dell-r620
+provisioner: smb.csi.k8s.io
+parameters:
+  source: "//samba-server-dell-r620.nfs-provisioner.svc.cluster.local/shared"
+  csi.storage.k8s.io/node-stage-secret-name: "samba-credentials"
+  csi.storage.k8s.io/node-stage-secret-namespace: "nfs-provisioner"
+  csi.storage.k8s.io/provisioner-secret-name: "samba-credentials"
+  csi.storage.k8s.io/provisioner-secret-namespace: "nfs-provisioner"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - vers=3.0
+  - mfsymlinks
+  - cache=strict
+  - noserverino
+

@@ -165,6 +165,7 @@ create_or_update_item() {
         log_info "Updating existing item..."
         
         op item edit "$ITEM_NAME" --vault="$VAULT_NAME" \
+            "username[text]=smbuser" \
             "password[password]=$PASSWORD"
         
         log_success "Item '$ITEM_NAME' updated successfully"
@@ -174,6 +175,7 @@ create_or_update_item() {
         op item create --vault="$VAULT_NAME" \
             --category="$ITEM_CATEGORY" \
             --title="$ITEM_NAME" \
+            "username[text]=smbuser" \
             "password[password]=$PASSWORD"
         
         log_success "Item '$ITEM_NAME' created successfully"

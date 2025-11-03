@@ -3,8 +3,9 @@ kind: Kustomization
 resources:
   - ghcr-credentials-external-secret.yaml
   - samba-credentials-external-secret.yaml
-  - nfs-server-dell-r620.yaml
-  - nfs-server-omen-worker1.yaml
-  - helm-repository.yaml
-  - nfs-provisioner-dell-r620.yaml
-  - nfs-provisioner-omen-worker1.yaml
+  - samba-server-dell-r620.yaml
+  - samba-server-omen-worker1.yaml
+  - smb-csi-helm-repository.yaml
+  - smb-csi-driver-release.yaml
+  - smb-storageclass-omen-worker1.yaml
+  - smb-storageclass-dell-r620.yaml
