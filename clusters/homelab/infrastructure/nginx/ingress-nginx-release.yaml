@@ -24,6 +24,7 @@ spec:
     controller:
       service:
         type: LoadBalancer
+        loadBalancerIP: 10.0.0.70
       ingressClassResource:
         name: nginx
         enabled: true
