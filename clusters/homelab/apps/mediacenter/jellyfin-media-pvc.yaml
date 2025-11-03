@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-media
+  namespace: mediacenter
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: smb-dell-r620
+  resources:
+    requests:
+      storage: 1Ti
+
