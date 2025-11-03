@@ -16,6 +16,7 @@ resources:
   - radarr-deployment.yaml
   - radarr-service.yaml
   - radarr-ingress.yaml
+  - transmission-credentials-external-secret.yaml
   - transmission-settings-configmap.yaml
   - transmission-deployment.yaml
   - transmission-service.yaml

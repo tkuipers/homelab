@@ -247,6 +247,8 @@ spec:
                   {"name": "host", "value": "transmission"},
                   {"name": "port", "value": 9091},
                   {"name": "urlBase", "value": "/transmission/"},
+                  {"name": "username", "value": "'"$TRANSMISSION_USER"'"},
+                  {"name": "password", "value": "'"$TRANSMISSION_PASS"'"},
                   {"name": "category", "value": "sonarr"}
                 ],
                 "implementationName": "Transmission",
@@ -286,6 +288,8 @@ spec:
                   {"name": "host", "value": "transmission"},
                   {"name": "port", "value": 9091},
                   {"name": "urlBase", "value": "/transmission/"},
+                  {"name": "username", "value": "'"$TRANSMISSION_USER"'"},
+                  {"name": "password", "value": "'"$TRANSMISSION_PASS"'"},
                   {"name": "category", "value": "radarr"}
                 ],
                 "implementationName": "Transmission",
@@ -323,6 +327,16 @@ spec:
           echo "✓ Indexers will be automatically synced to both"
           echo "✓ Your media stack is fully integrated!"
         env:
+        - name: TRANSMISSION_USER
+          valueFrom:
+            secretKeyRef:
+              name: transmission-credentials
+              key: username
+        - name: TRANSMISSION_PASS
+          valueFrom:
+            secretKeyRef:
+              name: transmission-credentials
+              key: password
         - name: INDEXER1_NAME
           valueFrom:
             secretKeyRef:
