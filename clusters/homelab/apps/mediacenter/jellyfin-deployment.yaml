@@ -41,6 +41,8 @@ spec:
           mountPath: /cache
         - name: media
           mountPath: /media
+        - name: transcodes
+          mountPath: /config/transcodes
         resources:
           requests:
             memory: "1Gi"
@@ -50,11 +52,15 @@ spec:
             cpu: "2000m"
       volumes:
       - name: config
-        persistentVolumeClaim:
-          claimName: jellyfin-config
+        hostPath:
+          path: /var/persist/jellyfin-config
+          type: DirectoryOrCreate
       - name: cache
         emptyDir: {}
       - name: media
         persistentVolumeClaim:
           claimName: jellyfin-media
+      - name: transcodes
+        emptyDir:
+          sizeLimit: 50Gi
 
