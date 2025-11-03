@@ -1,399 +1,290 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arr-integration-script
+  namespace: mediacenter
+data:
+  setup.py: |
+    #!/usr/bin/env python3
+    import os
+    import sys
+    import time
+    import json
+    import hashlib
+    import urllib.request
+    import urllib.error
+    import xml.etree.ElementTree as ET
+    from typing import Optional, Dict, Any
+    
+    class ArrIntegration:
+        def __init__(self):
+            self.sonarr_url = "http://sonarr:8989"
+            self.radarr_url = "http://radarr:7878"
+            self.prowlarr_url = "http://prowlarr:9696"
+            self.transmission_url = "http://transmission:9091"
+            
+            self.transmission_user = os.getenv("TRANSMISSION_USER")
+            self.transmission_pass = os.getenv("TRANSMISSION_PASS")
+            
+            self.sonarr_api_key = None
+            self.radarr_api_key = None
+            self.prowlarr_api_key = None
+            
+        def log(self, message: str, level: str = "INFO"):
+            symbols = {"INFO": "ℹ", "SUCCESS": "✓", "ERROR": "✗", "WARNING": "⚠"}
+            print(f"{symbols.get(level, 'ℹ')} {message}")
+            
+        def wait_for_service(self, name: str, url: str, accept_401: bool = False):
+            self.log(f"Waiting for {name}...")
+            while True:
+                try:
+                    req = urllib.request.Request(url)
+                    response = urllib.request.urlopen(req, timeout=2)
+                    self.log(f"{name} is ready", "SUCCESS")
+                    break
+                except urllib.error.HTTPError as e:
+                    if accept_401 and e.code == 401:
+                        self.log(f"{name} is ready", "SUCCESS")
+                        break
+                except:
+                    pass
+                time.sleep(2)
+                
+        def api_request(self, url: str, api_key: str, method: str = "GET", data: Optional[Dict] = None) -> tuple[int, Any]:
+            headers = {"X-Api-Key": api_key, "Content-Type": "application/json"}
+            request_data = json.dumps(data).encode() if data else None
+            req = urllib.request.Request(url, data=request_data, headers=headers, method=method)
+            
+            try:
+                response = urllib.request.urlopen(req)
+                body = json.loads(response.read().decode())
+                return response.status, body
+            except urllib.error.HTTPError as e:
+                try:
+                    body = json.loads(e.read().decode())
+                except:
+                    body = {"error": e.reason}
+                return e.code, body
+                
+        def extract_api_key(self, config_path: str, service_name: str) -> str:
+            self.log(f"Extracting {service_name} API key...")
+            try:
+                tree = ET.parse(config_path)
+                root = tree.getroot()
+                api_key = root.find(".//ApiKey").text
+                if api_key:
+                    self.log(f"{service_name} API key extracted", "SUCCESS")
+                    return api_key
+            except Exception as e:
+                self.log(f"Failed to extract {service_name} API key: {e}", "ERROR")
+                sys.exit(1)
+                
+        def setup_prowlarr_app(self, name: str, url: str, api_key: str, categories: list, implementation: str):
+            self.log(f"Configuring {name} in Prowlarr...")
+            
+            # Check if already exists
+            status, apps = self.api_request(f"{self.prowlarr_url}/api/v1/applications", self.prowlarr_api_key)
+            if status == 200:
+                for app in apps:
+                    if app.get("name") == name:
+                        self.log(f"{name} already configured in Prowlarr", "SUCCESS")
+                        return
+                        
+            # Add new application
+            payload = {
+                "name": name,
+                "syncLevel": "fullSync",
+                "implementation": implementation,
+                "configContract": f"{implementation}Settings",
+                "fields": [
+                    {"name": "prowlarrUrl", "value": self.prowlarr_url},
+                    {"name": "baseUrl", "value": url},
+                    {"name": "apiKey", "value": api_key},
+                    {"name": "syncCategories", "value": categories}
+                ],
+                "tags": []
+            }
+            
+            status, body = self.api_request(f"{self.prowlarr_url}/api/v1/applications", self.prowlarr_api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"{name} successfully linked to Prowlarr", "SUCCESS")
+            else:
+                error_msg = body.get("error", body)
+                if "already exists" in str(error_msg).lower() or "unique" in str(error_msg).lower():
+                    self.log(f"{name} already configured in Prowlarr", "SUCCESS")
+                else:
+                    self.log(f"Failed to link {name}: {error_msg}", "WARNING")
+                    
+        def add_indexer(self, name: str, url: str, api_key: str, app_profile_id: int):
+            # Generate unique name
+            hash_suffix = hashlib.md5(url.encode()).hexdigest()[:8]
+            unique_name = f"{name}-{hash_suffix}"
+            
+            self.log(f"Adding indexer: {unique_name}")
+            
+            payload = {
+                "name": unique_name,
+                "implementation": "Newznab",
+                "configContract": "NewznabSettings",
+                "enable": True,
+                "redirect": True,
+                "appProfileId": app_profile_id,
+                "fields": [
+                    {"name": "baseUrl", "value": url},
+                    {"name": "apiKey", "value": api_key or ""},
+                    {"name": "categories", "value": [5000, 5030, 5040]}
+                ],
+                "enableRss": True,
+                "enableAutomaticSearch": True,
+                "enableInteractiveSearch": True,
+                "protocol": "usenet",
+                "priority": 25
+            }
+            
+            status, body = self.api_request(f"{self.prowlarr_url}/api/v1/indexer", self.prowlarr_api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"Indexer {name} successfully added", "SUCCESS")
+            else:
+                error_msg = str(body)
+                if "already exists" in error_msg.lower() or "unique" in error_msg.lower():
+                    self.log(f"Indexer {name} already configured", "SUCCESS")
+                elif "unable to connect" in error_msg.lower() or "404" in error_msg:
+                    self.log(f"Indexer {name} not compatible (no API endpoint)", "WARNING")
+                else:
+                    self.log(f"Failed to add indexer {name}: {body}", "WARNING")
+                    
+        def add_download_client(self, service_name: str, service_url: str, api_key: str, category: str):
+            self.log(f"Adding Transmission to {service_name}...")
+            
+            payload = {
+                "enable": True,
+                "protocol": "torrent",
+                "priority": 1,
+                "removeCompletedDownloads": True,
+                "removeFailedDownloads": True,
+                "name": "Transmission",
+                "fields": [
+                    {"name": "host", "value": "transmission"},
+                    {"name": "port", "value": 9091},
+                    {"name": "urlBase", "value": "/transmission/"},
+                    {"name": "username", "value": self.transmission_user},
+                    {"name": "password", "value": self.transmission_pass},
+                    {"name": "category", "value": category}
+                ],
+                "implementationName": "Transmission",
+                "implementation": "Transmission",
+                "configContract": "TransmissionSettings",
+                "tags": []
+            }
+            
+            status, body = self.api_request(f"{service_url}/api/v3/downloadclient", api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"Transmission added to {service_name}", "SUCCESS")
+            else:
+                error_msg = str(body)
+                if "already exists" in error_msg.lower() or "unique" in error_msg.lower():
+                    self.log(f"Transmission already configured in {service_name}", "SUCCESS")
+                else:
+                    self.log(f"Failed to add Transmission to {service_name}: {body}", "WARNING")
+                    
+        def add_path_mapping(self, service_name: str, service_url: str, api_key: str):
+            self.log(f"Adding remote path mapping to {service_name}...")
+            
+            payload = {
+                "host": "transmission",
+                "remotePath": "/downloads/",
+                "localPath": "/media/downloads/"
+            }
+            
+            status, body = self.api_request(f"{service_url}/api/v3/remotepathmapping", api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"Remote path mapping added to {service_name}", "SUCCESS")
+            else:
+                self.log(f"Path mapping may already exist in {service_name} (this is fine)", "SUCCESS")
+                
+        def run(self):
+            print("=" * 60)
+            print("   Arr Stack Integration Setup")
+            print("=" * 60)
+            print()
+            
+            # Wait for all services
+            self.wait_for_service("Sonarr", f"{self.sonarr_url}/api/v3/health")
+            self.wait_for_service("Radarr", f"{self.radarr_url}/api/v3/health")
+            self.wait_for_service("Prowlarr", f"{self.prowlarr_url}/api/v1/health")
+            self.wait_for_service("Transmission", self.transmission_url, accept_401=True)
+            print()
+            
+            # Extract API keys
+            self.sonarr_api_key = self.extract_api_key("/sonarr-config/config.xml", "Sonarr")
+            self.radarr_api_key = self.extract_api_key("/radarr-config/config.xml", "Radarr")
+            self.prowlarr_api_key = self.extract_api_key("/prowlarr-config/config.xml", "Prowlarr")
+            print()
+            
+            # Link apps to Prowlarr
+            self.setup_prowlarr_app("Sonarr", self.sonarr_url, self.sonarr_api_key, [5000, 5030, 5040], "Sonarr")
+            self.setup_prowlarr_app("Radarr", self.radarr_url, self.radarr_api_key, [2000, 2030, 2040, 2045, 2050], "Radarr")
+            print()
+            
+            # Get app profile ID
+            status, profiles = self.api_request(f"{self.prowlarr_url}/api/v1/appprofile", self.prowlarr_api_key)
+            app_profile_id = profiles[0]["id"] if status == 200 and profiles else 1
+            self.log(f"Using App Profile ID: {app_profile_id}")
+            
+            # Add indexers
+            for i in range(1, 7):
+                name = os.getenv(f"INDEXER{i}_NAME")
+                url = os.getenv(f"INDEXER{i}_URL")
+                api_key = os.getenv(f"INDEXER{i}_APIKEY", "")
+                
+                if name and url:
+                    self.add_indexer(name, url, api_key, app_profile_id)
+            print()
+            
+            # Configure Transmission
+            self.add_download_client("Sonarr", self.sonarr_url, self.sonarr_api_key, "tv-sonarr")
+            self.add_download_client("Radarr", self.radarr_url, self.radarr_api_key, "radarr")
+            print()
+            
+            # Add path mappings
+            self.add_path_mapping("Sonarr", self.sonarr_url, self.sonarr_api_key)
+            self.add_path_mapping("Radarr", self.radarr_url, self.radarr_api_key)
+            print()
+            
+            # Trigger sync
+            self.log("Triggering indexer sync...")
+            self.api_request(f"{self.prowlarr_url}/api/v1/applications/sync", self.prowlarr_api_key, "POST")
+            
+            print()
+            print("=" * 60)
+            print("   Setup Complete!")
+            print("=" * 60)
+            self.log("Sonarr linked to Prowlarr", "SUCCESS")
+            self.log("Radarr linked to Prowlarr", "SUCCESS")
+            self.log("Transmission configured in both", "SUCCESS")
+            self.log("Remote path mappings configured", "SUCCESS")
+            self.log("Your media stack is fully integrated!", "SUCCESS")
+            
+    if __name__ == "__main__":
+        integration = ArrIntegration()
+        integration.run()
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: arr-integration-setup
   namespace: mediacenter
 spec:
-  ttlSecondsAfterFinished: 3600
+  ttlSecondsAfterFinished: 86400
   template:
     spec:
       restartPolicy: OnFailure
       containers:
       - name: setup
-        image: curlimages/curl:latest
+        image: python:3.11-slim
         command:
-        - /bin/sh
-        - -c
-        - |
-          set -e
-          
-          echo "=== Arr Stack Integration Setup ==="
-          echo "Waiting for services to be ready..."
-          
-          # Wait for Sonarr
-          echo "Waiting for Sonarr..."
-          until curl -sf http://sonarr:8989/ping > /dev/null 2>&1; do
-            echo "  Sonarr not ready, waiting..."
-            sleep 10
-          done
-          
-          # Wait for Radarr
-          echo "Waiting for Radarr..."
-          until curl -sf http://radarr:7878/ping > /dev/null 2>&1; do
-            echo "  Radarr not ready, waiting..."
-            sleep 10
-          done
-          
-          # Wait for Prowlarr
-          echo "Waiting for Prowlarr..."
-          until curl -sf http://prowlarr:9696/ping > /dev/null 2>&1; do
-            echo "  Prowlarr not ready, waiting..."
-            sleep 10
-          done
-          
-          # Wait for Transmission
-          echo "Waiting for Transmission..."
-          until curl -s -o /dev/null -w "%{http_code}" http://transmission:9091 | grep -q "401\|200"; do
-            echo "  Transmission not ready, waiting..."
-            sleep 10
-          done
-          
-          echo "All services are ready!"
-          
-          # Extract Sonarr API key
-          echo "Extracting Sonarr API key..."
-          until [ -f /sonarr-config/config.xml ]; do
-            echo "  Sonarr config not found, waiting..."
-            sleep 5
-          done
-          
-          SONARR_API_KEY=$(grep "<ApiKey>" /sonarr-config/config.xml | sed 's/.*<ApiKey>\(.*\)<\/ApiKey>.*/\1/')
-          
-          if [ -z "$SONARR_API_KEY" ]; then
-            echo "ERROR: Could not extract Sonarr API key"
-            exit 1
-          fi
-          
-          echo "Sonarr API Key: ${SONARR_API_KEY:0:8}..."
-          
-          # Extract Radarr API key
-          echo "Extracting Radarr API key..."
-          until [ -f /radarr-config/config.xml ]; do
-            echo "  Radarr config not found, waiting..."
-            sleep 5
-          done
-          
-          RADARR_API_KEY=$(grep "<ApiKey>" /radarr-config/config.xml | sed 's/.*<ApiKey>\(.*\)<\/ApiKey>.*/\1/')
-          
-          if [ -z "$RADARR_API_KEY" ]; then
-            echo "ERROR: Could not extract Radarr API key"
-            exit 1
-          fi
-          
-          echo "Radarr API Key: ${RADARR_API_KEY:0:8}..."
-          
-          # Extract Prowlarr API key
-          echo "Extracting Prowlarr API key..."
-          until [ -f /prowlarr-config/config.xml ]; do
-            echo "  Prowlarr config not found, waiting..."
-            sleep 5
-          done
-          
-          PROWLARR_API_KEY=$(grep "<ApiKey>" /prowlarr-config/config.xml | sed 's/.*<ApiKey>\(.*\)<\/ApiKey>.*/\1/')
-          
-          if [ -z "$PROWLARR_API_KEY" ]; then
-            echo "ERROR: Could not extract Prowlarr API key"
-            exit 1
-          fi
-          
-          echo "Prowlarr API Key: ${PROWLARR_API_KEY:0:8}..."
-          
-          # Check if already linked
-          SONARR_LINKED=false
-          RADARR_LINKED=false
-          
-          if [ -f /prowlarr-config/.sonarr-linked ]; then
-            echo "Sonarr already linked to Prowlarr"
-            SONARR_LINKED=true
-          fi
-          
-          if [ -f /prowlarr-config/.radarr-linked ]; then
-            echo "Radarr already linked to Prowlarr"
-            RADARR_LINKED=true
-          fi
-          
-          if [ "$SONARR_LINKED" = "true" ] && [ "$RADARR_LINKED" = "true" ]; then
-            echo "All apps already linked, skipping..."
-            exit 0
-          fi
-          
-          # Link Sonarr to Prowlarr
-          if [ "$SONARR_LINKED" = "false" ]; then
-            echo "Linking Sonarr to Prowlarr..."
-            
-            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/applications" \
-              -H "X-Api-Key: $PROWLARR_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "name": "Sonarr",
-                "implementation": "Sonarr",
-                "configContract": "SonarrSettings",
-                "fields": [
-                  {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
-                  {"name": "baseUrl", "value": "http://sonarr:8989"},
-                  {"name": "apiKey", "value": "'"$SONARR_API_KEY"'"},
-                  {"name": "syncLevel", "value": 2}
-                ],
-                "syncLevel": "fullSync"
-              }')
-            
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-            BODY=$(echo "$RESPONSE" | sed '$d')
-            
-            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ Sonarr successfully linked to Prowlarr!"
-              touch /prowlarr-config/.sonarr-linked
-            elif echo "$BODY" | grep -q "already exists"; then
-              echo "✓ Sonarr link already exists"
-              touch /prowlarr-config/.sonarr-linked
-            else
-              echo "✗ Failed to link Sonarr (HTTP $HTTP_CODE)"
-              echo "Response: $BODY"
-            fi
-          fi
-          
-          # Link Radarr to Prowlarr
-          if [ "$RADARR_LINKED" = "false" ]; then
-            echo "Linking Radarr to Prowlarr..."
-            
-            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/applications" \
-              -H "X-Api-Key: $PROWLARR_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "name": "Radarr",
-                "implementation": "Radarr",
-                "configContract": "RadarrSettings",
-                "fields": [
-                  {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
-                  {"name": "baseUrl", "value": "http://radarr:7878"},
-                  {"name": "apiKey", "value": "'"$RADARR_API_KEY"'"},
-                  {"name": "syncLevel", "value": 2}
-                ],
-                "syncLevel": "fullSync"
-              }')
-            
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-            BODY=$(echo "$RESPONSE" | sed '$d')
-            
-            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ Radarr successfully linked to Prowlarr!"
-              touch /prowlarr-config/.radarr-linked
-            elif echo "$BODY" | grep -q "already exists"; then
-              echo "✓ Radarr link already exists"
-              touch /prowlarr-config/.radarr-linked
-            else
-              echo "✗ Failed to link Radarr (HTTP $HTTP_CODE)"
-              echo "Response: $BODY"
-            fi
-          fi
-          
-          # Get the default app profile ID once
-          APP_PROFILE_ID=$(curl -s "http://prowlarr:9696/api/v1/appprofile" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
-          
-          if [ -z "$APP_PROFILE_ID" ]; then
-            echo "Could not get app profile ID, using default 1"
-            APP_PROFILE_ID=1
-          fi
-          
-          echo "Using App Profile ID: $APP_PROFILE_ID"
-          
-          # Add indexers from secrets - loop through all 6 possible indexers
-          for IDX in 1 2 3 4 5 6; do
-            eval INDEXER_NAME=\$INDEXER${IDX}_NAME
-            eval INDEXER_URL=\$INDEXER${IDX}_URL
-            eval INDEXER_APIKEY=\$INDEXER${IDX}_APIKEY
-            
-            # Only require name and URL (API key optional for open indexers)
-            if [ -n "${INDEXER_NAME:-}" ] && [ -n "${INDEXER_URL:-}" ]; then
-              if [ ! -f /prowlarr-config/.indexer${IDX}-added ]; then
-                # Generate unique name using hash of URL
-                INDEXER_HASH=$(echo -n "$INDEXER_URL" | md5sum | cut -d' ' -f1 | cut -c1-8)
-                INDEXER_UNIQUE_NAME="${INDEXER_NAME}-${INDEXER_HASH}"
-                
-                echo "Adding indexer ${IDX}: $INDEXER_UNIQUE_NAME (from $INDEXER_NAME)"
-                
-                RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/indexer" \
-                  -H "X-Api-Key: $PROWLARR_API_KEY" \
-                  -H "Content-Type: application/json" \
-                  -d '{
-                    "name": "'"$INDEXER_UNIQUE_NAME"'",
-                    "implementation": "Newznab",
-                    "configContract": "NewznabSettings",
-                    "enable": true,
-                    "redirect": true,
-                    "appProfileId": '"$APP_PROFILE_ID"',
-                    "fields": [
-                      {"name": "baseUrl", "value": "'"$INDEXER_URL"'"},
-                      {"name": "apiKey", "value": "'"$INDEXER_APIKEY"'"},
-                      {"name": "categories", "value": [5000,5030,5040]}
-                    ],
-                    "enableRss": true,
-                    "enableAutomaticSearch": true,
-                    "enableInteractiveSearch": true,
-                    "protocol": "usenet",
-                    "priority": 25
-                  }')
-                
-                HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-                BODY=$(echo "$RESPONSE" | sed '$d')
-                
-                if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-                  echo "✓ Indexer $INDEXER_NAME successfully added!"
-                  touch /prowlarr-config/.indexer${IDX}-added
-                elif echo "$BODY" | grep -q "already exists"; then
-                  echo "✓ Indexer $INDEXER_NAME already exists"
-                  touch /prowlarr-config/.indexer${IDX}-added
-                else
-                  echo "✗ Failed to add indexer ${IDX} (HTTP $HTTP_CODE)"
-                  echo "Response: $BODY"
-                fi
-              else
-                echo "Indexer ${IDX} already added, skipping..."
-              fi
-            fi
-          done
-          
-          # Configure Transmission in Sonarr
-          if [ ! -f /sonarr-config/.transmission-added ]; then
-            echo "Adding Transmission to Sonarr..."
-            
-            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://sonarr:8989/api/v3/downloadclient" \
-              -H "X-Api-Key: $SONARR_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "enable": true,
-                "protocol": "torrent",
-                "priority": 1,
-                "name": "Transmission",
-                "fields": [
-                  {"name": "host", "value": "transmission"},
-                  {"name": "port", "value": 9091},
-                  {"name": "urlBase", "value": "/transmission/"},
-                  {"name": "username", "value": "'"$TRANSMISSION_USER"'"},
-                  {"name": "password", "value": "'"$TRANSMISSION_PASS"'"},
-                  {"name": "category", "value": "sonarr"}
-                ],
-                "implementationName": "Transmission",
-                "implementation": "Transmission",
-                "configContract": "TransmissionSettings",
-                "tags": []
-              }')
-            
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-            BODY=$(echo "$RESPONSE" | sed '$d')
-            
-            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ Transmission added to Sonarr!"
-              touch /sonarr-config/.transmission-added
-            elif echo "$BODY" | grep -q "already exists"; then
-              echo "✓ Transmission already exists in Sonarr"
-              touch /sonarr-config/.transmission-added
-            else
-              echo "✗ Failed to add Transmission to Sonarr (HTTP $HTTP_CODE)"
-              echo "Response: $BODY"
-            fi
-          fi
-          
-          # Configure Transmission in Radarr
-          if [ ! -f /radarr-config/.transmission-added ]; then
-            echo "Adding Transmission to Radarr..."
-            
-            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://radarr:7878/api/v3/downloadclient" \
-              -H "X-Api-Key: $RADARR_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "enable": true,
-                "protocol": "torrent",
-                "priority": 1,
-                "name": "Transmission",
-                "fields": [
-                  {"name": "host", "value": "transmission"},
-                  {"name": "port", "value": 9091},
-                  {"name": "urlBase", "value": "/transmission/"},
-                  {"name": "username", "value": "'"$TRANSMISSION_USER"'"},
-                  {"name": "password", "value": "'"$TRANSMISSION_PASS"'"},
-                  {"name": "category", "value": "radarr"}
-                ],
-                "implementationName": "Transmission",
-                "implementation": "Transmission",
-                "configContract": "TransmissionSettings",
-                "tags": []
-              }')
-            
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-            BODY=$(echo "$RESPONSE" | sed '$d')
-            
-            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ Transmission added to Radarr!"
-              touch /radarr-config/.transmission-added
-            elif echo "$BODY" | grep -q "already exists"; then
-              echo "✓ Transmission already exists in Radarr"
-              touch /radarr-config/.transmission-added
-            else
-              echo "✗ Failed to add Transmission to Radarr (HTTP $HTTP_CODE)"
-              echo "Response: $BODY"
-            fi
-          fi
-          
-          # Add remote path mapping for Sonarr (Transmission /downloads -> Sonarr /media/downloads)
-          if [ ! -f /sonarr-config/.path-mapping-added ]; then
-            echo "Adding remote path mapping to Sonarr..."
-            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://sonarr:8989/api/v3/remotepathmapping" \
-              -H "X-Api-Key: $SONARR_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "host": "transmission",
-                "remotePath": "/downloads/",
-                "localPath": "/media/downloads/"
-              }')
-            
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ Remote path mapping added to Sonarr"
-              touch /sonarr-config/.path-mapping-added
-            else
-              echo "Note: Path mapping may already exist (this is fine)"
-              touch /sonarr-config/.path-mapping-added
-            fi
-          fi
-          
-          # Add remote path mapping for Radarr (Transmission /downloads -> Radarr /media/downloads)
-          if [ ! -f /radarr-config/.path-mapping-added ]; then
-            echo "Adding remote path mapping to Radarr..."
-            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://radarr:7878/api/v3/remotepathmapping" \
-              -H "X-Api-Key: $RADARR_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "host": "transmission",
-                "remotePath": "/downloads/",
-                "localPath": "/media/downloads/"
-              }')
-            
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-              echo "✓ Remote path mapping added to Radarr"
-              touch /radarr-config/.path-mapping-added
-            else
-              echo "Note: Path mapping may already exist (this is fine)"
-              touch /radarr-config/.path-mapping-added
-            fi
-          fi
-          
-          # Trigger sync from Prowlarr to all apps
-          echo "Triggering indexer sync to all apps..."
-          curl -X POST "http://prowlarr:9696/api/v1/applications/sync" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" || echo "Sync trigger failed, but may happen automatically"
-          
-          echo ""
-          echo "=== Setup Complete! ==="
-          echo "✓ Sonarr linked to Prowlarr"
-          echo "✓ Radarr linked to Prowlarr"
-          echo "✓ Transmission added to Sonarr"
-          echo "✓ Transmission added to Radarr"
-          echo "✓ Remote path mappings configured"
-          echo "✓ Indexers will be automatically synced to both"
-          echo "✓ Your media stack is fully integrated!"
+        - python3
+        - /scripts/setup.py
         env:
         - name: TRANSMISSION_USER
           valueFrom:
@@ -520,13 +411,22 @@ spec:
               key: indexer6-apikey
               optional: true
         volumeMounts:
+        - name: scripts
+          mountPath: /scripts
         - name: sonarr-config
           mountPath: /sonarr-config
+          readOnly: true
         - name: radarr-config
           mountPath: /radarr-config
+          readOnly: true
         - name: prowlarr-config
           mountPath: /prowlarr-config
+          readOnly: true
       volumes:
+      - name: scripts
+        configMap:
+          name: arr-integration-script
+          defaultMode: 0755
       - name: sonarr-config
         hostPath:
           path: /var/persist/sonarr-config
@@ -541,4 +441,3 @@ spec:
           type: Directory
       nodeSelector:
         kubernetes.io/hostname: dell-r620
-
