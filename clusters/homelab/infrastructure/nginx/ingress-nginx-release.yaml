@@ -22,13 +22,9 @@ spec:
     tcp:
       "445": "timemachine/timemachine:445"
     controller:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       service:
         type: LoadBalancer
         loadBalancerIP: 10.0.0.70
-      nodeSelector:
-        kubernetes.io/hostname: dell-r620
       ingressClassResource:
         name: nginx
         enabled: true
