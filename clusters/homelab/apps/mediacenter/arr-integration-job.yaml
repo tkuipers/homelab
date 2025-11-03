@@ -284,6 +284,7 @@ spec:
         image: python:3.11-slim
         command:
         - python3
+        - -u
         - /scripts/setup.py
         env:
         - name: TRANSMISSION_USER
