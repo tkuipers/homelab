@@ -14,6 +14,8 @@ spec:
         namespace: flux-system
       version: 4.0.18
   values:
+    nodeSelector:
+      kubernetes.io/hostname: omen-worker1
     nfs:
       server: nfs-server-omen-worker1.nfs-provisioner.svc.cluster.local
       path: /exports
