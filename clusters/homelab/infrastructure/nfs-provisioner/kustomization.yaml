@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ghcr-credentials-external-secret.yaml
+  - samba-credentials-external-secret.yaml
   - nfs-server-dell-r620.yaml
   - nfs-server-omen-worker1.yaml
   - helm-repository.yaml

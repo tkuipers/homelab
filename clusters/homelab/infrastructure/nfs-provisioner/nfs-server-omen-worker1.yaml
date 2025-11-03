@@ -17,24 +17,39 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+      - name: ghcr-secret
       containers:
-      - name: nfs-server
-        image: erichough/nfs-server:latest
+      - name: samba-server
+        image: ghcr.io/servercontainers/samba:latest
         env:
-        - name: NFS_EXPORT_0
-          value: "/export *(rw,no_subtree_check,no_root_squash,fsid=0)"
+        - name: ACCOUNT_smbuser
+          valueFrom:
+            secretKeyRef:
+              name: samba-credentials
+              key: password
+        - name: UID_smbuser
+          value: "1000"
+        - name: SAMBA_VOLUME_CONFIG_shared
+          value: "[shared]; path=/data; valid users = smbuser; guest ok = no; read only = no; browseable = yes"
+        ports:
+        - containerPort: 445
+          name: smb
         securityContext:
-          privileged: true
           capabilities:
-            add: ["SYS_ADMIN", "SETPCAP"]
+            add: ["DAC_READ_SEARCH"]
         volumeMounts:
         - name: export
-          mountPath: /export
+          mountPath: /data
+        - name: samba-config
+          mountPath: /external
       volumes:
       - name: export
         hostPath:
           path: /var/persist/nfs-omen-worker1
           type: DirectoryOrCreate
+      - name: samba-config
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -45,6 +60,6 @@ spec:
   selector:
     app: nfs-server-omen-worker1
   ports:
-  - name: nfs
-    port: 2049
+  - name: smb
+    port: 445
     protocol: TCP
