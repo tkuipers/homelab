@@ -33,9 +33,9 @@ spec:
         - name: GANESHA_EXPORT_ID
           value: "1"
         - name: GANESHA_EXPORT
-          value: /exports
+          value: /export
         - name: GANESHA_PSEUDO
-          value: /exports
+          value: /export
         - name: GANESHA_ACCESS_TYPE
           value: RW
         - name: GANESHA_SQUASH
@@ -52,7 +52,7 @@ spec:
             add: ["SYS_ADMIN", "DAC_READ_SEARCH"]
         volumeMounts:
         - name: export
-          mountPath: /exports
+          mountPath: /export
       volumes:
       - name: export
         hostPath:
