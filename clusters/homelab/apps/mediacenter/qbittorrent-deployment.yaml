@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sonarr
+  name: qbittorrent
   namespace: mediacenter
 spec:
   replicas: 1
@@ -9,20 +9,26 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: sonarr
+      app: qbittorrent
   template:
     metadata:
       labels:
-        app: sonarr
+        app: qbittorrent
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
       containers:
-      - name: sonarr
-        image: linuxserver/sonarr:latest
+      - name: qbittorrent
+        image: linuxserver/qbittorrent:latest
         ports:
-        - containerPort: 8989
-          name: http
+        - containerPort: 8080
+          name: webui
+        - containerPort: 6881
+          name: tcp-listen
+          protocol: TCP
+        - containerPort: 6881
+          name: udp-listen
+          protocol: UDP
         env:
         - name: PUID
           value: "1000"
@@ -30,23 +36,31 @@ spec:
           value: "1000"
         - name: TZ
           value: "America/Los_Angeles"
+        - name: WEBUI_PORT
+          value: "8080"
         volumeMounts:
         - name: config
           mountPath: /config
+        - name: downloads
+          mountPath: /downloads
         - name: media
           mountPath: /media
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
+            memory: "512Mi"
+            cpu: "200m"
           limits:
-            memory: "1Gi"
-            cpu: "1000m"
+            memory: "2Gi"
+            cpu: "2000m"
       volumes:
       - name: config
         hostPath:
-          path: /var/persist/sonarr-config
+          path: /var/persist/qbittorrent-config
           type: DirectoryOrCreate
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: jellyfin-media
+          subPath: downloads
       - name: media
         persistentVolumeClaim:
           claimName: jellyfin-media

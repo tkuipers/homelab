@@ -6,8 +6,10 @@ resources:
   - jellyfin-deployment.yaml
   - jellyfin-service.yaml
   - jellyfin-ingress.yaml
-  - sonarr-config-pvc.yaml
   - sonarr-deployment.yaml
   - sonarr-service.yaml
   - sonarr-ingress.yaml
+  - qbittorrent-deployment.yaml
+  - qbittorrent-service.yaml
+  - qbittorrent-ingress.yaml
 
