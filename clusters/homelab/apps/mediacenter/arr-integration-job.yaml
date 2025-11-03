@@ -43,7 +43,7 @@ spec:
           
           # Wait for Transmission
           echo "Waiting for Transmission..."
-          until curl -sf http://transmission:9091 > /dev/null 2>&1; do
+          until curl -s -o /dev/null -w "%{http_code}" http://transmission:9091 | grep -q "401\|200"; do
             echo "  Transmission not ready, waiting..."
             sleep 10
           done
