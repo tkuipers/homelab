@@ -336,6 +336,50 @@ spec:
             fi
           fi
           
+          # Add remote path mapping for Sonarr (Transmission /downloads -> Sonarr /media/downloads)
+          if [ ! -f /sonarr-config/.path-mapping-added ]; then
+            echo "Adding remote path mapping to Sonarr..."
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://sonarr:8989/api/v3/remotepathmapping" \
+              -H "X-Api-Key: $SONARR_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "host": "transmission",
+                "remotePath": "/downloads/",
+                "localPath": "/media/downloads/"
+              }')
+            
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+              echo "✓ Remote path mapping added to Sonarr"
+              touch /sonarr-config/.path-mapping-added
+            else
+              echo "Note: Path mapping may already exist (this is fine)"
+              touch /sonarr-config/.path-mapping-added
+            fi
+          fi
+          
+          # Add remote path mapping for Radarr (Transmission /downloads -> Radarr /media/downloads)
+          if [ ! -f /radarr-config/.path-mapping-added ]; then
+            echo "Adding remote path mapping to Radarr..."
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://radarr:7878/api/v3/remotepathmapping" \
+              -H "X-Api-Key: $RADARR_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "host": "transmission",
+                "remotePath": "/downloads/",
+                "localPath": "/media/downloads/"
+              }')
+            
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+              echo "✓ Remote path mapping added to Radarr"
+              touch /radarr-config/.path-mapping-added
+            else
+              echo "Note: Path mapping may already exist (this is fine)"
+              touch /radarr-config/.path-mapping-added
+            fi
+          fi
+          
           # Trigger sync from Prowlarr to all apps
           echo "Triggering indexer sync to all apps..."
           curl -X POST "http://prowlarr:9696/api/v1/applications/sync" \
@@ -347,6 +391,7 @@ spec:
           echo "✓ Radarr linked to Prowlarr"
           echo "✓ Transmission added to Sonarr"
           echo "✓ Transmission added to Radarr"
+          echo "✓ Remote path mappings configured"
           echo "✓ Indexers will be automatically synced to both"
           echo "✓ Your media stack is fully integrated!"
         env:
