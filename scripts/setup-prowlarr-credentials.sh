@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 
@@ -7,18 +7,25 @@ VAULT_NAME="Homelab"
 INDEXERS_ITEM_NAME="Prowlarr Indexers"
 ITEM_CATEGORY="login"
 
-# Predefined indexer list with descriptions
-declare -A INDEXERS
+# Predefined indexer list (name|description pairs)
 INDEXERS=(
-    ["NZBGeek"]="Popular general Usenet indexer with great retention"
-    ["NZBFinder"]="Comprehensive Usenet indexer with excellent API"
-    ["DrunkenSlug"]="High-quality Usenet indexer with active community"
-    ["AnimeTosho"]="Specialized in anime, Japanese media, and Asian content"
-    ["NinjaCentral"]="Well-rounded Usenet indexer with good coverage"
+    "NZBGeek|Popular general Usenet indexer with great retention"
+    "NZBFinder|Comprehensive Usenet indexer with excellent API"
+    "DrunkenSlug|High-quality Usenet indexer with active community"
+    "AnimeTosho|Specialized in anime, Japanese media, and Asian content"
+    "6box|Asian content specialist - Chinese dramas, K-dramas, and Asian TV"
+    "NinjaCentral|Well-rounded Usenet indexer with good coverage"
 )
 
-# Order for display
-INDEXER_ORDER=("NZBGeek" "NZBFinder" "DrunkenSlug" "AnimeTosho" "6box" "NinjaCentral")
+# Helper function to get indexer name
+get_indexer_name() {
+    echo "$1" | cut -d'|' -f1
+}
+
+# Helper function to get indexer description
+get_indexer_desc() {
+    echo "$1" | cut -d'|' -f2
+}
 
 # Colors for output
 RED='\033[0;31m'
@@ -145,7 +152,11 @@ get_current_value() {
 
 # Collect indexer credentials
 collect_indexer_credentials() {
-    declare -gA INDEXER_DATA
+    # Store data in simple variables instead of associative array
+    INDEXER_NAMES=()
+    INDEXER_URLS=()
+    INDEXER_APIKEYS=()
+    INDEXER_SKIPS=()
     
     echo
     log_header "========================================="
@@ -153,8 +164,10 @@ collect_indexer_credentials() {
     log_header "========================================="
     echo
     
-    for indexer_name in "${INDEXER_ORDER[@]}"; do
-        echo -e "${CYAN}${indexer_name}${NC}: ${INDEXERS[$indexer_name]}"
+    for indexer_entry in "${INDEXERS[@]}"; do
+        local name=$(get_indexer_name "$indexer_entry")
+        local desc=$(get_indexer_desc "$indexer_entry")
+        echo -e "${CYAN}${name}${NC}: ${desc}"
     done
     
     echo
@@ -162,10 +175,13 @@ collect_indexer_credentials() {
     echo
     
     local idx=1
-    for indexer_name in "${INDEXER_ORDER[@]}"; do
+    for indexer_entry in "${INDEXERS[@]}"; do
+        local indexer_name=$(get_indexer_name "$indexer_entry")
+        local indexer_desc=$(get_indexer_desc "$indexer_entry")
+        
         echo
-        log_header "--- Indexer ${idx}/5: $indexer_name ---"
-        echo -e "${INDEXERS[$indexer_name]}"
+        log_header "--- Indexer ${idx}/${#INDEXERS[@]}: $indexer_name ---"
+        echo -e "${indexer_desc}"
         echo
         
         # Get current values
@@ -173,18 +189,22 @@ collect_indexer_credentials() {
         local current_apikey=$(get_current_value "indexer${idx}_apikey")
         
         # Prompt for URL
-        prompt_for_input "Base URL (e.g., https://api.${indexer_name,,}.com)" "url" "$current_url" false true
+        prompt_for_input "Base URL (e.g., https://api.nzbgeek.info)" "url" "$current_url" false true
         
         if [ "$url" = "SKIP" ]; then
             log_warning "Skipping $indexer_name"
-            INDEXER_DATA["${idx}_skip"]="true"
+            INDEXER_SKIPS+=("true")
+            INDEXER_NAMES+=("")
+            INDEXER_URLS+=("")
+            INDEXER_APIKEYS+=("")
         else
-            INDEXER_DATA["${idx}_name"]="$indexer_name"
-            INDEXER_DATA["${idx}_url"]="$url"
-            
             # Prompt for API key
             prompt_for_input "API Key" "apikey" "$current_apikey" true false
-            INDEXER_DATA["${idx}_apikey"]="$apikey"
+            
+            INDEXER_SKIPS+=("false")
+            INDEXER_NAMES+=("$indexer_name")
+            INDEXER_URLS+=("$url")
+            INDEXER_APIKEYS+=("$apikey")
             
             log_success "$indexer_name configured!"
         fi
@@ -195,17 +215,20 @@ collect_indexer_credentials() {
 
 # Build op command arguments
 build_op_args() {
-    local -a args=()
+    local args=""
     
-    for idx in {1..5}; do
-        if [ "${INDEXER_DATA[${idx}_skip]:-false}" != "true" ]; then
-            args+=("indexer${idx}_name[text]=${INDEXER_DATA[${idx}_name]}")
-            args+=("indexer${idx}_url[text]=${INDEXER_DATA[${idx}_url]}")
-            args+=("indexer${idx}_apikey[password]=${INDEXER_DATA[${idx}_apikey]}")
+    for idx in "${!INDEXER_SKIPS[@]}"; do
+        local array_idx=$((idx))
+        local item_idx=$((idx + 1))
+        
+        if [ "${INDEXER_SKIPS[$array_idx]}" != "true" ]; then
+            args+=" indexer${item_idx}_name[text]=${INDEXER_NAMES[$array_idx]}"
+            args+=" indexer${item_idx}_url[text]=${INDEXER_URLS[$array_idx]}"
+            args+=" indexer${item_idx}_apikey[password]=${INDEXER_APIKEYS[$array_idx]}"
         fi
     done
     
-    echo "${args[@]}"
+    echo "$args"
 }
 
 # Create or update item
@@ -213,10 +236,13 @@ create_or_update_item() {
     echo
     log_info "Configuration summary:"
     
-    for idx in {1..5}; do
-        if [ "${INDEXER_DATA[${idx}_skip]:-false}" != "true" ]; then
-            echo "  Indexer ${idx}: ${INDEXER_DATA[${idx}_name]}"
-            echo "    URL: ${INDEXER_DATA[${idx}_url]}"
+    for idx in "${!INDEXER_SKIPS[@]}"; do
+        local array_idx=$((idx))
+        local item_idx=$((idx + 1))
+        
+        if [ "${INDEXER_SKIPS[$array_idx]}" != "true" ]; then
+            echo "  Indexer ${item_idx}: ${INDEXER_NAMES[$array_idx]}"
+            echo "    URL: ${INDEXER_URLS[$array_idx]}"
             echo "    API Key: ****"
         fi
     done
