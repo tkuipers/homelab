@@ -22,8 +22,10 @@ spec:
         - sh
         - -c
         - |
-          mkdir -p /media/downloads /media/downloads/incomplete
-          chmod 777 /media/downloads /media/downloads/incomplete
+          mkdir -p /media/downloads/incomplete \
+                   /media/downloads/complete/tv-sonarr \
+                   /media/downloads/complete/radarr
+          chmod -R 777 /media/downloads
         volumeMounts:
         - name: media-root
           mountPath: /media
