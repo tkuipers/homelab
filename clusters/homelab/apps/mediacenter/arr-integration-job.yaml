@@ -1,0 +1,201 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: arr-integration-setup
+  namespace: mediacenter
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: setup
+        image: curlimages/curl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          
+          echo "=== Arr Stack Integration Setup ==="
+          echo "Waiting for services to be ready..."
+          
+          # Wait for Sonarr
+          echo "Waiting for Sonarr..."
+          until curl -sf http://sonarr:8989/ping > /dev/null 2>&1; do
+            echo "  Sonarr not ready, waiting..."
+            sleep 10
+          done
+          
+          # Wait for Prowlarr
+          echo "Waiting for Prowlarr..."
+          until curl -sf http://prowlarr:9696/ping > /dev/null 2>&1; do
+            echo "  Prowlarr not ready, waiting..."
+            sleep 10
+          done
+          
+          echo "All services are ready!"
+          
+          # Extract Sonarr API key
+          echo "Extracting Sonarr API key..."
+          until [ -f /sonarr-config/config.xml ]; do
+            echo "  Sonarr config not found, waiting..."
+            sleep 5
+          done
+          
+          SONARR_API_KEY=$(grep "<ApiKey>" /sonarr-config/config.xml | sed 's/.*<ApiKey>\(.*\)<\/ApiKey>.*/\1/')
+          
+          if [ -z "$SONARR_API_KEY" ]; then
+            echo "ERROR: Could not extract Sonarr API key"
+            exit 1
+          fi
+          
+          echo "Sonarr API Key: ${SONARR_API_KEY:0:8}..."
+          
+          # Extract Prowlarr API key
+          echo "Extracting Prowlarr API key..."
+          until [ -f /prowlarr-config/config.xml ]; do
+            echo "  Prowlarr config not found, waiting..."
+            sleep 5
+          done
+          
+          PROWLARR_API_KEY=$(grep "<ApiKey>" /prowlarr-config/config.xml | sed 's/.*<ApiKey>\(.*\)<\/ApiKey>.*/\1/')
+          
+          if [ -z "$PROWLARR_API_KEY" ]; then
+            echo "ERROR: Could not extract Prowlarr API key"
+            exit 1
+          fi
+          
+          echo "Prowlarr API Key: ${PROWLARR_API_KEY:0:8}..."
+          
+          # Check if already linked
+          if [ -f /prowlarr-config/.sonarr-linked ]; then
+            echo "Sonarr already linked to Prowlarr, skipping..."
+            exit 0
+          fi
+          
+          # Link Sonarr to Prowlarr
+          echo "Linking Sonarr to Prowlarr..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/applications" \
+            -H "X-Api-Key: $PROWLARR_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "Sonarr",
+              "implementation": "Sonarr",
+              "configContract": "SonarrSettings",
+              "fields": [
+                {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
+                {"name": "baseUrl", "value": "http://sonarr:8989"},
+                {"name": "apiKey", "value": "'"$SONARR_API_KEY"'"},
+                {"name": "syncLevel", "value": 2}
+              ],
+              "syncLevel": "fullSync"
+            }')
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+            echo "✓ Sonarr successfully linked to Prowlarr!"
+            touch /prowlarr-config/.sonarr-linked
+          elif echo "$BODY" | grep -q "already exists"; then
+            echo "✓ Sonarr link already exists"
+            touch /prowlarr-config/.sonarr-linked
+          else
+            echo "✗ Failed to link Sonarr (HTTP $HTTP_CODE)"
+            echo "Response: $BODY"
+            exit 1
+          fi
+          
+          # Add indexers from secrets if provided
+          if [ -n "${INDEXER1_NAME:-}" ] && [ -n "${INDEXER1_URL:-}" ] && [ -n "${INDEXER1_APIKEY:-}" ]; then
+            if [ ! -f /prowlarr-config/.indexer1-added ]; then
+              echo "Adding indexer: $INDEXER1_NAME"
+              
+              RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/indexer" \
+                -H "X-Api-Key: $PROWLARR_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "'"$INDEXER1_NAME"'",
+                  "implementation": "Newznab",
+                  "configContract": "NewznabSettings",
+                  "fields": [
+                    {"name": "baseUrl", "value": "'"$INDEXER1_URL"'"},
+                    {"name": "apiKey", "value": "'"$INDEXER1_APIKEY"'"},
+                    {"name": "categories", "value": [5000,5030,5040]}
+                  ],
+                  "enableRss": true,
+                  "enableAutomaticSearch": true,
+                  "enableInteractiveSearch": true,
+                  "protocol": "usenet",
+                  "priority": 25
+                }')
+              
+              HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+              BODY=$(echo "$RESPONSE" | sed '$d')
+              
+              if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+                echo "✓ Indexer $INDEXER1_NAME successfully added!"
+                touch /prowlarr-config/.indexer1-added
+              elif echo "$BODY" | grep -q "already exists"; then
+                echo "✓ Indexer $INDEXER1_NAME already exists"
+                touch /prowlarr-config/.indexer1-added
+              else
+                echo "✗ Failed to add indexer (HTTP $HTTP_CODE)"
+                echo "Response: $BODY"
+              fi
+            else
+              echo "Indexer already added, skipping..."
+            fi
+          else
+            echo "No indexer credentials provided, skipping indexer setup"
+          fi
+          
+          # Trigger sync from Prowlarr to Sonarr
+          echo "Triggering indexer sync to Sonarr..."
+          curl -X POST "http://prowlarr:9696/api/v1/applications/sync" \
+            -H "X-Api-Key: $PROWLARR_API_KEY" || echo "Sync trigger failed, but may happen automatically"
+          
+          echo ""
+          echo "=== Setup Complete! ==="
+          echo "✓ Sonarr linked to Prowlarr"
+          echo "✓ Indexers will be automatically synced"
+          echo "✓ Your media stack is fully integrated!"
+        env:
+        - name: INDEXER1_NAME
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer1-name
+              optional: true
+        - name: INDEXER1_URL
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer1-url
+              optional: true
+        - name: INDEXER1_APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer1-apikey
+              optional: true
+        volumeMounts:
+        - name: sonarr-config
+          mountPath: /sonarr-config
+          readOnly: true
+        - name: prowlarr-config
+          mountPath: /prowlarr-config
+      volumes:
+      - name: sonarr-config
+        hostPath:
+          path: /var/persist/sonarr-config
+          type: Directory
+      - name: prowlarr-config
+        hostPath:
+          path: /var/persist/prowlarr-config
+          type: Directory
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+

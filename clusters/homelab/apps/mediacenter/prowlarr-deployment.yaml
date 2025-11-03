@@ -40,57 +40,9 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
-        lifecycle:
-          postStart:
-            exec:
-              command:
-              - /bin/sh
-              - -c
-              - |
-                # Wait a bit for Prowlarr to fully initialize
-                sleep 30
-                # Run bootstrap in background
-                /scripts/bootstrap.sh &
-      - name: bootstrap
-        image: curlimages/curl:latest
-        command: ["/bin/sh", "-c", "sleep infinity"]
-        env:
-        - name: INDEXER1_NAME
-          valueFrom:
-            secretKeyRef:
-              name: prowlarr-config
-              key: indexer1-name
-              optional: true
-        - name: INDEXER1_URL
-          valueFrom:
-            secretKeyRef:
-              name: prowlarr-config
-              key: indexer1-url
-              optional: true
-        - name: INDEXER1_APIKEY
-          valueFrom:
-            secretKeyRef:
-              name: prowlarr-config
-              key: indexer1-apikey
-              optional: true
-        - name: SONARR_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: prowlarr-config
-              key: sonarr-api-key
-              optional: true
-        volumeMounts:
-        - name: config
-          mountPath: /config
-        - name: bootstrap-script
-          mountPath: /scripts
       volumes:
       - name: config
         hostPath:
           path: /var/persist/prowlarr-config
           type: DirectoryOrCreate
-      - name: bootstrap-script
-        configMap:
-          name: prowlarr-bootstrap
-          defaultMode: 0755
 
