@@ -22,11 +22,13 @@ spec:
       labels:
         app: nfs-server-dell-r620
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         kubernetes.io/hostname: dell-r620
       containers:
       - name: nfs-server
-        image: quay.io/coreos/nfs-ganesha-server-and-provisioner-amd64
+        image: hectorm/nfs-ganesha:latest
         env:
         - name: GANESHA_EXPORT_ID
           value: "1"
