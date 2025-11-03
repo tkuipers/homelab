@@ -48,7 +48,7 @@ spec:
                 # Wait for qBittorrent to initialize
                 sleep 30
                 
-                # Update qBittorrent config to disable seeding
+                # Update qBittorrent config
                 CONFIG_FILE="/config/qBittorrent/qBittorrent.conf"
                 if [ -f "$CONFIG_FILE" ]; then
                   # Backup original
@@ -64,7 +64,11 @@ spec:
                   # Enable the limits
                   sed -i 's/GlobalMaxRatio=.*/GlobalMaxRatio=0/' "$CONFIG_FILE" || echo "GlobalMaxRatio=0" >> "$CONFIG_FILE"
                   
-                  echo "qBittorrent configured to not seed"
+                  # Bypass auth for local subnet (pod network)
+                  sed -i 's/WebUI\\AuthSubnetWhitelist=.*/WebUI\\AuthSubnetWhitelist=10.244.0.0\\/16/' "$CONFIG_FILE" || echo "WebUI\\AuthSubnetWhitelist=10.244.0.0/16" >> "$CONFIG_FILE"
+                  sed -i 's/WebUI\\AuthSubnetWhitelistEnabled=.*/WebUI\\AuthSubnetWhitelistEnabled=true/' "$CONFIG_FILE" || echo "WebUI\\AuthSubnetWhitelistEnabled=true" >> "$CONFIG_FILE"
+                  
+                  echo "qBittorrent configured"
                 else
                   echo "Config file not found yet, will use defaults"
                 fi
