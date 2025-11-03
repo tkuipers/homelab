@@ -43,7 +43,8 @@ data:
                     self.log(f"{name} is ready", "SUCCESS")
                     break
                 except urllib.error.HTTPError as e:
-                    if accept_401 and e.code == 401:
+                    # 401 means the service is up but requires auth (which is fine)
+                    if e.code == 401 and accept_401:
                         self.log(f"{name} is ready", "SUCCESS")
                         break
                 except:
@@ -209,9 +210,9 @@ data:
             print()
             
             # Wait for all services
-            self.wait_for_service("Sonarr", f"{self.sonarr_url}/api/v3/health")
-            self.wait_for_service("Radarr", f"{self.radarr_url}/api/v3/health")
-            self.wait_for_service("Prowlarr", f"{self.prowlarr_url}/api/v1/health")
+            self.wait_for_service("Sonarr", f"{self.sonarr_url}/ping")
+            self.wait_for_service("Radarr", f"{self.radarr_url}/ping")
+            self.wait_for_service("Prowlarr", f"{self.prowlarr_url}/ping")
             self.wait_for_service("Transmission", self.transmission_url, accept_401=True)
             print()
             
