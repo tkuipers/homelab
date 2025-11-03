@@ -28,11 +28,17 @@ spec:
         volumeMounts:
         - name: export
           mountPath: /exports
+        - name: nfsd-fs
+          mountPath: /proc/fs/nfsd
       volumes:
       - name: export
         hostPath:
           path: /var/persist/nfs-omen-worker1
           type: DirectoryOrCreate
+      - name: nfsd-fs
+        hostPath:
+          path: /proc/fs/nfsd
+          type: Directory
 ---
 apiVersion: v1
 kind: Service
