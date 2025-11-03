@@ -187,67 +187,71 @@ spec:
             fi
           fi
           
-          # Add indexers from secrets if provided
-          if [ -n "${INDEXER1_NAME:-}" ] && [ -n "${INDEXER1_URL:-}" ] && [ -n "${INDEXER1_APIKEY:-}" ]; then
-            if [ ! -f /prowlarr-config/.indexer1-added ]; then
-              # Generate unique name using hash of URL
-              INDEXER_HASH=$(echo -n "$INDEXER1_URL" | md5sum | cut -d' ' -f1 | cut -c1-8)
-              INDEXER_UNIQUE_NAME="${INDEXER1_NAME}-${INDEXER_HASH}"
-              
-              echo "Adding indexer: $INDEXER_UNIQUE_NAME (from $INDEXER1_NAME)"
-              
-              # Get the default app profile ID
-              APP_PROFILE_ID=$(curl -s "http://prowlarr:9696/api/v1/appprofile" \
-                -H "X-Api-Key: $PROWLARR_API_KEY" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
-              
-              if [ -z "$APP_PROFILE_ID" ]; then
-                echo "Could not get app profile ID, using default 1"
-                APP_PROFILE_ID=1
-              fi
-              
-              echo "Using App Profile ID: $APP_PROFILE_ID"
-              
-              RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/indexer" \
-                -H "X-Api-Key: $PROWLARR_API_KEY" \
-                -H "Content-Type: application/json" \
-                -d '{
-                  "name": "'"$INDEXER_UNIQUE_NAME"'",
-                  "implementation": "Newznab",
-                  "configContract": "NewznabSettings",
-                  "enable": true,
-                  "redirect": true,
-                  "appProfileId": '"$APP_PROFILE_ID"',
-                  "fields": [
-                    {"name": "baseUrl", "value": "'"$INDEXER1_URL"'"},
-                    {"name": "apiKey", "value": "'"$INDEXER1_APIKEY"'"},
-                    {"name": "categories", "value": [5000,5030,5040]}
-                  ],
-                  "enableRss": true,
-                  "enableAutomaticSearch": true,
-                  "enableInteractiveSearch": true,
-                  "protocol": "usenet",
-                  "priority": 25
-                }')
-              
-              HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-              BODY=$(echo "$RESPONSE" | sed '$d')
-              
-              if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-                echo "✓ Indexer $INDEXER1_NAME successfully added!"
-                touch /prowlarr-config/.indexer1-added
-              elif echo "$BODY" | grep -q "already exists"; then
-                echo "✓ Indexer $INDEXER1_NAME already exists"
-                touch /prowlarr-config/.indexer1-added
-              else
-                echo "✗ Failed to add indexer (HTTP $HTTP_CODE)"
-                echo "Response: $BODY"
-              fi
-            else
-              echo "Indexer already added, skipping..."
-            fi
-          else
-            echo "No indexer credentials provided, skipping indexer setup"
+          # Get the default app profile ID once
+          APP_PROFILE_ID=$(curl -s "http://prowlarr:9696/api/v1/appprofile" \
+            -H "X-Api-Key: $PROWLARR_API_KEY" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
+          
+          if [ -z "$APP_PROFILE_ID" ]; then
+            echo "Could not get app profile ID, using default 1"
+            APP_PROFILE_ID=1
           fi
+          
+          echo "Using App Profile ID: $APP_PROFILE_ID"
+          
+          # Add indexers from secrets - loop through all 6 possible indexers
+          for IDX in 1 2 3 4 5 6; do
+            eval INDEXER_NAME=\$INDEXER${IDX}_NAME
+            eval INDEXER_URL=\$INDEXER${IDX}_URL
+            eval INDEXER_APIKEY=\$INDEXER${IDX}_APIKEY
+            
+            if [ -n "${INDEXER_NAME:-}" ] && [ -n "${INDEXER_URL:-}" ] && [ -n "${INDEXER_APIKEY:-}" ]; then
+              if [ ! -f /prowlarr-config/.indexer${IDX}-added ]; then
+                # Generate unique name using hash of URL
+                INDEXER_HASH=$(echo -n "$INDEXER_URL" | md5sum | cut -d' ' -f1 | cut -c1-8)
+                INDEXER_UNIQUE_NAME="${INDEXER_NAME}-${INDEXER_HASH}"
+                
+                echo "Adding indexer ${IDX}: $INDEXER_UNIQUE_NAME (from $INDEXER_NAME)"
+                
+                RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/indexer" \
+                  -H "X-Api-Key: $PROWLARR_API_KEY" \
+                  -H "Content-Type: application/json" \
+                  -d '{
+                    "name": "'"$INDEXER_UNIQUE_NAME"'",
+                    "implementation": "Newznab",
+                    "configContract": "NewznabSettings",
+                    "enable": true,
+                    "redirect": true,
+                    "appProfileId": '"$APP_PROFILE_ID"',
+                    "fields": [
+                      {"name": "baseUrl", "value": "'"$INDEXER_URL"'"},
+                      {"name": "apiKey", "value": "'"$INDEXER_APIKEY"'"},
+                      {"name": "categories", "value": [5000,5030,5040]}
+                    ],
+                    "enableRss": true,
+                    "enableAutomaticSearch": true,
+                    "enableInteractiveSearch": true,
+                    "protocol": "usenet",
+                    "priority": 25
+                  }')
+                
+                HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+                BODY=$(echo "$RESPONSE" | sed '$d')
+                
+                if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+                  echo "✓ Indexer $INDEXER_NAME successfully added!"
+                  touch /prowlarr-config/.indexer${IDX}-added
+                elif echo "$BODY" | grep -q "already exists"; then
+                  echo "✓ Indexer $INDEXER_NAME already exists"
+                  touch /prowlarr-config/.indexer${IDX}-added
+                else
+                  echo "✗ Failed to add indexer ${IDX} (HTTP $HTTP_CODE)"
+                  echo "Response: $BODY"
+                fi
+              else
+                echo "Indexer ${IDX} already added, skipping..."
+              fi
+            fi
+          done
           
           # Configure Transmission in Sonarr
           if [ ! -f /sonarr-config/.transmission-added ]; then
@@ -355,6 +359,7 @@ spec:
             secretKeyRef:
               name: transmission-credentials
               key: password
+        # Indexer 1
         - name: INDEXER1_NAME
           valueFrom:
             secretKeyRef:
@@ -372,6 +377,101 @@ spec:
             secretKeyRef:
               name: prowlarr-config
               key: indexer1-apikey
+              optional: true
+        # Indexer 2
+        - name: INDEXER2_NAME
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer2-name
+              optional: true
+        - name: INDEXER2_URL
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer2-url
+              optional: true
+        - name: INDEXER2_APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer2-apikey
+              optional: true
+        # Indexer 3
+        - name: INDEXER3_NAME
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer3-name
+              optional: true
+        - name: INDEXER3_URL
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer3-url
+              optional: true
+        - name: INDEXER3_APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer3-apikey
+              optional: true
+        # Indexer 4
+        - name: INDEXER4_NAME
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer4-name
+              optional: true
+        - name: INDEXER4_URL
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer4-url
+              optional: true
+        - name: INDEXER4_APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer4-apikey
+              optional: true
+        # Indexer 5
+        - name: INDEXER5_NAME
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer5-name
+              optional: true
+        - name: INDEXER5_URL
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer5-url
+              optional: true
+        - name: INDEXER5_APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer5-apikey
+              optional: true
+        # Indexer 6
+        - name: INDEXER6_NAME
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer6-name
+              optional: true
+        - name: INDEXER6_URL
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer6-url
+              optional: true
+        - name: INDEXER6_APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: prowlarr-config
+              key: indexer6-apikey
               optional: true
         volumeMounts:
         - name: sonarr-config
