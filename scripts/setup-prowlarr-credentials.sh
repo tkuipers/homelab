@@ -7,11 +7,25 @@ VAULT_NAME="Homelab"
 INDEXERS_ITEM_NAME="Prowlarr Indexers"
 ITEM_CATEGORY="login"
 
+# Predefined indexer list with descriptions
+declare -A INDEXERS
+INDEXERS=(
+    ["NZBGeek"]="Popular general Usenet indexer with great retention"
+    ["NZBFinder"]="Comprehensive Usenet indexer with excellent API"
+    ["DrunkenSlug"]="High-quality Usenet indexer with active community"
+    ["AnimeTosho"]="Specialized in anime, Japanese media, and Asian content"
+    ["NinjaCentral"]="Well-rounded Usenet indexer with good coverage"
+)
+
+# Order for display
+INDEXER_ORDER=("NZBGeek" "NZBFinder" "DrunkenSlug" "AnimeTosho" "6box" "NinjaCentral")
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 log_info() {
@@ -30,12 +44,17 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+log_header() {
+    echo -e "${CYAN}$1${NC}"
+}
+
 # Function to prompt for input with validation
 prompt_for_input() {
     local prompt="$1"
     local var_name="$2"
     local current_value="${3:-}"
     local is_secret="${4:-false}"
+    local allow_skip="${5:-false}"
     
     if [ -n "$current_value" ]; then
         if [ "$is_secret" = "true" ]; then
@@ -44,111 +63,178 @@ prompt_for_input() {
             echo -n "$prompt [current: $current_value]: "
         fi
     else
-        echo -n "$prompt: "
+        if [ "$allow_skip" = "true" ]; then
+            echo -n "$prompt (or 'skip' to skip): "
+        else
+            echo -n "$prompt: "
+        fi
     fi
     
     if [ "$is_secret" = "true" ]; then
-        read -s input
-        echo  # Add newline after hidden input
+        read -s user_input
+        echo  # New line after password input
     else
-        read input
+        read user_input
     fi
     
-    # Use current value if no input provided
-    if [ -z "$input" ] && [ -n "$current_value" ]; then
-        input="$current_value"
+    # Check for skip
+    if [ "$allow_skip" = "true" ] && [ "$user_input" = "skip" ]; then
+        eval "$var_name=\"SKIP\""
+        return
     fi
     
-    eval "$var_name='$input'"
+    if [ -z "$user_input" ] && [ -n "$current_value" ]; then
+        eval "$var_name=\"$current_value\""
+    else
+        eval "$var_name=\"$user_input\""
+    fi
 }
 
-# Check if op CLI is available
+# Check if 1Password CLI is installed
 check_op_cli() {
     if ! command -v op &> /dev/null; then
-        log_error "1Password CLI (op) is not installed or not in PATH"
-        log_info "Install it from: https://developer.1password.com/docs/cli/get-started/"
+        log_error "1Password CLI (op) is not installed"
+        log_info "Please install it from: https://developer.1password.com/docs/cli/get-started/"
         exit 1
     fi
+    
+    log_success "1Password CLI is installed"
     
     # Check if signed in
-    if ! op account get &> /dev/null; then
+    if ! op vault list &> /dev/null; then
         log_error "Not signed in to 1Password CLI"
-        log_info "Run: op signin"
+        log_info "Please run: eval \$(op signin)"
         exit 1
     fi
     
-    log_success "1Password CLI is available and signed in"
+    log_success "Signed in to 1Password CLI"
 }
 
 # Check if vault exists
 check_vault() {
     if ! op vault get "$VAULT_NAME" &> /dev/null; then
         log_error "Vault '$VAULT_NAME' not found"
-        log_info "Available vaults:"
-        op vault list
         exit 1
     fi
     
     log_success "Vault '$VAULT_NAME' found"
 }
 
-# Get current items if they exist
-get_current_items() {
+# Get current item if it exists
+get_current_item() {
     log_info "Checking if item exists..."
     
-    # Check Indexers item
     if op item get "$INDEXERS_ITEM_NAME" --vault="$VAULT_NAME" &> /dev/null; then
         log_success "Item '$INDEXERS_ITEM_NAME' found"
-        INDEXERS_EXISTS=true
-        CURRENT_INDEXER1_NAME=$(op item get "$INDEXERS_ITEM_NAME" --vault="$VAULT_NAME" --fields="indexer1_name" 2>/dev/null || echo "")
-        CURRENT_INDEXER1_URL=$(op item get "$INDEXERS_ITEM_NAME" --vault="$VAULT_NAME" --fields="indexer1_url" 2>/dev/null || echo "")
-        CURRENT_INDEXER1_APIKEY=$(op item get "$INDEXERS_ITEM_NAME" --vault="$VAULT_NAME" --fields="indexer1_apikey" 2>/dev/null || echo "")
+        ITEM_EXISTS=true
     else
         log_info "Item '$INDEXERS_ITEM_NAME' does not exist - will create new item"
-        INDEXERS_EXISTS=false
-        CURRENT_INDEXER1_NAME=""
-        CURRENT_INDEXER1_URL=""
-        CURRENT_INDEXER1_APIKEY=""
+        ITEM_EXISTS=false
     fi
 }
 
-# Collect indexer input
-collect_indexer_input() {
-    echo
-    log_info "=== Prowlarr Indexers Configuration ==="
-    echo
-    log_info "Configure your indexer (Newznab/Torznab). You can add more later."
-    echo
-    
-    prompt_for_input "Indexer Name (e.g., NZBgeek)" INDEXER1_NAME "$CURRENT_INDEXER1_NAME"
-    prompt_for_input "Indexer Base URL (e.g., https://api.nzbgeek.info)" INDEXER1_URL "$CURRENT_INDEXER1_URL"
-    prompt_for_input "Indexer API Key" INDEXER1_APIKEY "$CURRENT_INDEXER1_APIKEY" true
+# Get current value for a field
+get_current_value() {
+    local field_name="$1"
+    if [ "$ITEM_EXISTS" = "true" ]; then
+        op item get "$INDEXERS_ITEM_NAME" --vault="$VAULT_NAME" --fields="$field_name" 2>/dev/null || echo ""
+    else
+        echo ""
+    fi
 }
 
-
-# Create or update indexers item
-create_or_update_indexers() {
+# Collect indexer credentials
+collect_indexer_credentials() {
+    declare -gA INDEXER_DATA
+    
     echo
-    log_info "Configuration summary:"
-    echo "  Indexer Name: $INDEXER1_NAME"
-    echo "  Indexer URL: $INDEXER1_URL"
-    echo "  Indexer API Key: ****"
+    log_header "========================================="
+    log_header "   Available Indexers"
+    log_header "========================================="
     echo
     
-    echo -n "Proceed with $(if [ "$INDEXERS_EXISTS" = "true" ]; then echo "update"; else echo "creation"; fi)? [y/N]: "
+    for indexer_name in "${INDEXER_ORDER[@]}"; do
+        echo -e "${CYAN}${indexer_name}${NC}: ${INDEXERS[$indexer_name]}"
+    done
+    
+    echo
+    log_info "You'll be prompted for each indexer. Enter 'skip' to skip any indexer you don't have."
+    echo
+    
+    local idx=1
+    for indexer_name in "${INDEXER_ORDER[@]}"; do
+        echo
+        log_header "--- Indexer ${idx}/5: $indexer_name ---"
+        echo -e "${INDEXERS[$indexer_name]}"
+        echo
+        
+        # Get current values
+        local current_url=$(get_current_value "indexer${idx}_url")
+        local current_apikey=$(get_current_value "indexer${idx}_apikey")
+        
+        # Prompt for URL
+        prompt_for_input "Base URL (e.g., https://api.${indexer_name,,}.com)" "url" "$current_url" false true
+        
+        if [ "$url" = "SKIP" ]; then
+            log_warning "Skipping $indexer_name"
+            INDEXER_DATA["${idx}_skip"]="true"
+        else
+            INDEXER_DATA["${idx}_name"]="$indexer_name"
+            INDEXER_DATA["${idx}_url"]="$url"
+            
+            # Prompt for API key
+            prompt_for_input "API Key" "apikey" "$current_apikey" true false
+            INDEXER_DATA["${idx}_apikey"]="$apikey"
+            
+            log_success "$indexer_name configured!"
+        fi
+        
+        idx=$((idx + 1))
+    done
+}
+
+# Build op command arguments
+build_op_args() {
+    local -a args=()
+    
+    for idx in {1..5}; do
+        if [ "${INDEXER_DATA[${idx}_skip]:-false}" != "true" ]; then
+            args+=("indexer${idx}_name[text]=${INDEXER_DATA[${idx}_name]}")
+            args+=("indexer${idx}_url[text]=${INDEXER_DATA[${idx}_url]}")
+            args+=("indexer${idx}_apikey[password]=${INDEXER_DATA[${idx}_apikey]}")
+        fi
+    done
+    
+    echo "${args[@]}"
+}
+
+# Create or update item
+create_or_update_item() {
+    echo
+    log_info "Configuration summary:"
+    
+    for idx in {1..5}; do
+        if [ "${INDEXER_DATA[${idx}_skip]:-false}" != "true" ]; then
+            echo "  Indexer ${idx}: ${INDEXER_DATA[${idx}_name]}"
+            echo "    URL: ${INDEXER_DATA[${idx}_url]}"
+            echo "    API Key: ****"
+        fi
+    done
+    
+    echo
+    echo -n "Proceed with $(if [ "$ITEM_EXISTS" = "true" ]; then echo "update"; else echo "creation"; fi)? [y/N]: "
     read confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         log_info "Operation cancelled"
         return 1
     fi
     
-    if [ "$INDEXERS_EXISTS" = "true" ]; then
+    local op_args=$(build_op_args)
+    
+    if [ "$ITEM_EXISTS" = "true" ]; then
         log_info "Updating existing item..."
         
-        op item edit "$INDEXERS_ITEM_NAME" --vault="$VAULT_NAME" \
-            "indexer1_name[text]=$INDEXER1_NAME" \
-            "indexer1_url[text]=$INDEXER1_URL" \
-            "indexer1_apikey[password]=$INDEXER1_APIKEY"
+        op item edit "$INDEXERS_ITEM_NAME" --vault="$VAULT_NAME" $op_args
         
         log_success "Item '$INDEXERS_ITEM_NAME' updated successfully"
     else
@@ -157,9 +243,7 @@ create_or_update_indexers() {
         op item create --vault="$VAULT_NAME" \
             --category="$ITEM_CATEGORY" \
             --title="$INDEXERS_ITEM_NAME" \
-            "indexer1_name[text]=$INDEXER1_NAME" \
-            "indexer1_url[text]=$INDEXER1_URL" \
-            "indexer1_apikey[password]=$INDEXER1_APIKEY"
+            $op_args
         
         log_success "Item '$INDEXERS_ITEM_NAME' created successfully"
     fi
@@ -171,47 +255,38 @@ show_next_steps() {
     log_success "Prowlarr indexer credentials are now configured in 1Password!"
     echo
     log_info "Next steps:"
-    echo "1. Commit and push your changes to trigger FluxCD deployment"
-    echo "2. External Secrets Operator will automatically sync credentials"
-    echo "3. The arr-integration-job will automatically:"
-    echo "   - Extract Sonarr and Prowlarr API keys"
-    echo "   - Add your indexer to Prowlarr"
-    echo "   - Link Prowlarr to Sonarr"
-    echo "   - Sync indexers from Prowlarr to Sonarr"
-    echo
-    log_info "No manual configuration needed - everything happens automatically!"
-    echo
-    log_info "To monitor the integration:"
-    echo "  kubectl -n mediacenter get jobs"
-    echo "  kubectl -n mediacenter logs -f job/arr-integration-setup"
-    echo "  kubectl -n mediacenter get pods"
+    echo "1. Update the mediacenter ExternalSecret to include all configured indexers"
+    echo "2. Update the arr-integration-job to support multiple indexers"
+    echo "3. Commit and push your changes to trigger FluxCD deployment"
+    echo "4. The arr-integration-job will automatically:"
+    echo "   - Add all configured indexers to Prowlarr"
+    echo "   - Link Prowlarr to Sonarr and Radarr"
+    echo "   - Sync indexers from Prowlarr to both apps"
     echo
     log_info "Access your services:"
-    echo "  Jellyfin:    https://jellyfin.tkuipers.ca"
-    echo "  Sonarr:      https://sonarr.tkuipers.ca"
     echo "  Prowlarr:    https://prowlarr.tkuipers.ca"
-    echo "  qBittorrent: https://qbittorrent.tkuipers.ca"
+    echo "  Sonarr:      https://sonarr.tkuipers.ca"
+    echo "  Radarr:      https://radarr.tkuipers.ca"
     echo
 }
 
 # Main execution
 main() {
-    echo "========================================="
-    echo "   Prowlarr Credentials Setup"
-    echo "========================================="
+    log_header "========================================="
+    log_header "   Prowlarr Multi-Indexer Setup"
+    log_header "========================================="
     echo
     
     check_op_cli
     check_vault
     
-    get_current_items
+    get_current_item
     
-    collect_indexer_input
-    create_or_update_indexers
+    collect_indexer_credentials
+    create_or_update_item
     
     show_next_steps
 }
 
 # Run main function
 main "$@"
-
