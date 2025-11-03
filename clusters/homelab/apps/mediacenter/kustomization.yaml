@@ -7,7 +7,6 @@ resources:
   - jellyfin-service.yaml
   - jellyfin-ingress.yaml
   - prowlarr-indexers-external-secret.yaml
-  - prowlarr-bootstrap-configmap.yaml
   - prowlarr-deployment.yaml
   - prowlarr-service.yaml
   - prowlarr-ingress.yaml
@@ -17,4 +16,5 @@ resources:
   - qbittorrent-deployment.yaml
   - qbittorrent-service.yaml
   - qbittorrent-ingress.yaml
+  - arr-integration-job.yaml
 

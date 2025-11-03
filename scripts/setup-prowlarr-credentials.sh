@@ -5,7 +5,6 @@ set -euo pipefail
 # Configuration
 VAULT_NAME="Homelab"
 INDEXERS_ITEM_NAME="Prowlarr Indexers"
-APPS_ITEM_NAME="Prowlarr Apps"
 ITEM_CATEGORY="login"
 
 # Colors for output
@@ -95,7 +94,7 @@ check_vault() {
 
 # Get current items if they exist
 get_current_items() {
-    log_info "Checking if items exist..."
+    log_info "Checking if item exists..."
     
     # Check Indexers item
     if op item get "$INDEXERS_ITEM_NAME" --vault="$VAULT_NAME" &> /dev/null; then
@@ -110,17 +109,6 @@ get_current_items() {
         CURRENT_INDEXER1_NAME=""
         CURRENT_INDEXER1_URL=""
         CURRENT_INDEXER1_APIKEY=""
-    fi
-    
-    # Check Apps item
-    if op item get "$APPS_ITEM_NAME" --vault="$VAULT_NAME" &> /dev/null; then
-        log_success "Item '$APPS_ITEM_NAME' found"
-        APPS_EXISTS=true
-        CURRENT_SONARR_APIKEY=$(op item get "$APPS_ITEM_NAME" --vault="$VAULT_NAME" --fields="sonarr_api_key" 2>/dev/null || echo "")
-    else
-        log_info "Item '$APPS_ITEM_NAME' does not exist - will create new item"
-        APPS_EXISTS=false
-        CURRENT_SONARR_APIKEY=""
     fi
 }
 
@@ -137,36 +125,25 @@ collect_indexer_input() {
     prompt_for_input "Indexer API Key" INDEXER1_APIKEY "$CURRENT_INDEXER1_APIKEY" true
 }
 
-# Collect apps input
-collect_apps_input() {
-    echo
-    log_info "=== Prowlarr Apps Configuration ==="
-    echo
-    log_info "Note: You'll need to get the Sonarr API key after Sonarr starts"
-    log_info "Find it at: Sonarr → Settings → General → API Key"
-    echo
-    
-    prompt_for_input "Sonarr API Key" SONARR_APIKEY "$CURRENT_SONARR_APIKEY" true
-}
 
 # Create or update indexers item
 create_or_update_indexers() {
     echo
-    log_info "Indexers summary:"
-    echo "  Name: $INDEXER1_NAME"
-    echo "  URL: $INDEXER1_URL"
-    echo "  API Key: ****"
+    log_info "Configuration summary:"
+    echo "  Indexer Name: $INDEXER1_NAME"
+    echo "  Indexer URL: $INDEXER1_URL"
+    echo "  Indexer API Key: ****"
     echo
     
-    echo -n "Proceed with indexers $(if [ "$INDEXERS_EXISTS" = "true" ]; then echo "update"; else echo "creation"; fi)? [y/N]: "
+    echo -n "Proceed with $(if [ "$INDEXERS_EXISTS" = "true" ]; then echo "update"; else echo "creation"; fi)? [y/N]: "
     read confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-        log_info "Indexers operation cancelled"
+        log_info "Operation cancelled"
         return 1
     fi
     
     if [ "$INDEXERS_EXISTS" = "true" ]; then
-        log_info "Updating existing indexers item..."
+        log_info "Updating existing item..."
         
         op item edit "$INDEXERS_ITEM_NAME" --vault="$VAULT_NAME" \
             "indexer1_name[text]=$INDEXER1_NAME" \
@@ -175,7 +152,7 @@ create_or_update_indexers() {
         
         log_success "Item '$INDEXERS_ITEM_NAME' updated successfully"
     else
-        log_info "Creating new indexers item..."
+        log_info "Creating new item..."
         
         op item create --vault="$VAULT_NAME" \
             --category="$ITEM_CATEGORY" \
@@ -188,61 +165,32 @@ create_or_update_indexers() {
     fi
 }
 
-# Create or update apps item
-create_or_update_apps() {
-    echo
-    log_info "Apps summary:"
-    echo "  Sonarr API Key: ****"
-    echo
-    
-    echo -n "Proceed with apps $(if [ "$APPS_EXISTS" = "true" ]; then echo "update"; else echo "creation"; fi)? [y/N]: "
-    read confirm
-    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-        log_info "Apps operation cancelled"
-        return 1
-    fi
-    
-    if [ "$APPS_EXISTS" = "true" ]; then
-        log_info "Updating existing apps item..."
-        
-        op item edit "$APPS_ITEM_NAME" --vault="$VAULT_NAME" \
-            "sonarr_api_key[password]=$SONARR_APIKEY"
-        
-        log_success "Item '$APPS_ITEM_NAME' updated successfully"
-    else
-        log_info "Creating new apps item..."
-        
-        op item create --vault="$VAULT_NAME" \
-            --category="$ITEM_CATEGORY" \
-            --title="$APPS_ITEM_NAME" \
-            "sonarr_api_key[password]=$SONARR_APIKEY"
-        
-        log_success "Item '$APPS_ITEM_NAME' created successfully"
-    fi
-}
-
 # Show next steps
 show_next_steps() {
     echo
-    log_success "Prowlarr credentials are now configured in 1Password!"
+    log_success "Prowlarr indexer credentials are now configured in 1Password!"
     echo
     log_info "Next steps:"
     echo "1. Commit and push your changes to trigger FluxCD deployment"
     echo "2. External Secrets Operator will automatically sync credentials"
-    echo "3. Prowlarr will bootstrap automatically with your indexer"
-    echo "4. The indexer will be synced to Sonarr automatically"
+    echo "3. The arr-integration-job will automatically:"
+    echo "   - Extract Sonarr and Prowlarr API keys"
+    echo "   - Add your indexer to Prowlarr"
+    echo "   - Link Prowlarr to Sonarr"
+    echo "   - Sync indexers from Prowlarr to Sonarr"
     echo
-    log_info "To get the Sonarr API key:"
-    echo "  1. Wait for Sonarr to start: kubectl -n mediacenter get pods"
-    echo "  2. Access Sonarr at: https://sonarr.tkuipers.ca"
-    echo "  3. Go to: Settings → General → Security → API Key"
-    echo "  4. Run this script again to add the API key"
+    log_info "No manual configuration needed - everything happens automatically!"
     echo
-    log_info "To monitor the deployment:"
-    echo "  kubectl get externalsecrets -n mediacenter"
-    echo "  kubectl get secrets -n mediacenter"
-    echo "  kubectl get pods -n mediacenter"
-    echo "  kubectl -n mediacenter logs -f prowlarr-xxx -c bootstrap"
+    log_info "To monitor the integration:"
+    echo "  kubectl -n mediacenter get jobs"
+    echo "  kubectl -n mediacenter logs -f job/arr-integration-setup"
+    echo "  kubectl -n mediacenter get pods"
+    echo
+    log_info "Access your services:"
+    echo "  Jellyfin:    https://jellyfin.tkuipers.ca"
+    echo "  Sonarr:      https://sonarr.tkuipers.ca"
+    echo "  Prowlarr:    https://prowlarr.tkuipers.ca"
+    echo "  qBittorrent: https://qbittorrent.tkuipers.ca"
     echo
 }
 
@@ -260,10 +208,6 @@ main() {
     
     collect_indexer_input
     create_or_update_indexers
-    
-    echo
-    collect_apps_input
-    create_or_update_apps
     
     show_next_steps
 }
