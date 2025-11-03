@@ -31,7 +31,7 @@ spec:
       volumes:
       - name: export
         hostPath:
-          path: /var/mnt/nfs-omen-worker1
+          path: /var/persist/nfs-omen-worker1
           type: DirectoryOrCreate
 ---
 apiVersion: v1

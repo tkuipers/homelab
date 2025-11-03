@@ -40,7 +40,7 @@ spec:
       volumes:
       - name: export
         hostPath:
-          path: /var/mnt/nfs-dell-r620
+          path: /var/persist/nfs-dell-r620
           type: DirectoryOrCreate
 ---
 apiVersion: v1
