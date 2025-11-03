@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transmission-cleanup-script
+  namespace: mediacenter
+data:
+  cleanup.py: |
+    #!/usr/bin/env python3
+    import os
+    import json
+    import urllib.request
+    import urllib.error
+    import base64
+    
+    TRANSMISSION_URL = "http://transmission:9091/transmission/rpc"
+    TRANSMISSION_USER = os.getenv("TRANSMISSION_USER")
+    TRANSMISSION_PASS = os.getenv("TRANSMISSION_PASS")
+    
+    def get_session_id():
+        """Get CSRF session ID from Transmission"""
+        try:
+            req = urllib.request.Request(TRANSMISSION_URL)
+            urllib.request.urlopen(req)
+        except urllib.error.HTTPError as e:
+            if e.code == 409:
+                return e.headers.get("X-Transmission-Session-Id")
+        return None
+    
+    def rpc_request(method, arguments=None):
+        """Make an RPC request to Transmission"""
+        session_id = get_session_id()
+        if not session_id:
+            print("Failed to get session ID")
+            return None
+            
+        headers = {
+            "X-Transmission-Session-Id": session_id,
+            "Content-Type": "application/json"
+        }
+        
+        # Add basic auth
+        if TRANSMISSION_USER and TRANSMISSION_PASS:
+            credentials = base64.b64encode(f"{TRANSMISSION_USER}:{TRANSMISSION_PASS}".encode()).decode()
+            headers["Authorization"] = f"Basic {credentials}"
+        
+        payload = {
+            "method": method,
+            "arguments": arguments or {}
+        }
+        
+        req = urllib.request.Request(
+            TRANSMISSION_URL,
+            data=json.dumps(payload).encode(),
+            headers=headers
+        )
+        
+        try:
+            response = urllib.request.urlopen(req)
+            return json.loads(response.read().decode())
+        except Exception as e:
+            print(f"RPC request failed: {e}")
+            return None
+    
+    def cleanup_completed_torrents():
+        """Remove all completed/seeding torrents"""
+        print("Checking for completed torrents...")
+        
+        # Get all torrents
+        response = rpc_request("torrent-get", {
+            "fields": ["id", "name", "status", "percentDone", "isFinished"]
+        })
+        
+        if not response or response.get("result") != "success":
+            print("Failed to get torrent list")
+            return
+        
+        torrents = response.get("arguments", {}).get("torrents", [])
+        
+        if not torrents:
+            print("No torrents found")
+            return
+        
+        # Status codes: 0=stopped, 4=downloading, 6=seeding
+        # Find completed torrents (100% done or status is seeding/stopped)
+        completed_ids = []
+        for torrent in torrents:
+            status = torrent.get("status")
+            percent_done = torrent.get("percentDone", 0)
+            is_finished = torrent.get("isFinished", False)
+            name = torrent.get("name")
+            
+            # Remove if finished or seeding
+            if is_finished or status == 6 or (status == 0 and percent_done >= 1.0):
+                completed_ids.append(torrent["id"])
+                print(f"  Removing: {name} (status={status}, done={percent_done*100:.0f}%)")
+        
+        if not completed_ids:
+            print("No completed torrents to remove")
+            return
+        
+        # Remove completed torrents
+        print(f"Removing {len(completed_ids)} completed torrent(s)...")
+        response = rpc_request("torrent-remove", {
+            "ids": completed_ids,
+            "delete-local-data": False  # Keep the downloaded files
+        })
+        
+        if response and response.get("result") == "success":
+            print(f"✓ Successfully removed {len(completed_ids)} torrent(s)")
+        else:
+            print("✗ Failed to remove torrents")
+    
+    if __name__ == "__main__":
+        print("=" * 50)
+        print("  Transmission Cleanup")
+        print("=" * 50)
+        cleanup_completed_torrents()
+        print("=" * 50)
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: transmission-cleanup
+  namespace: mediacenter
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: cleanup
+            image: python:3.11-slim
+            command:
+            - python3
+            - -u
+            - /scripts/cleanup.py
+            env:
+            - name: TRANSMISSION_USER
+              valueFrom:
+                secretKeyRef:
+                  name: transmission-credentials
+                  key: username
+            - name: TRANSMISSION_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: transmission-credentials
+                  key: password
+            volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+          volumes:
+          - name: scripts
+            configMap:
+              name: transmission-cleanup-script
+              defaultMode: 0755
+          nodeSelector:
+            kubernetes.io/hostname: dell-r620
+

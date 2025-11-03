@@ -21,5 +21,6 @@ resources:
   - transmission-deployment.yaml
   - transmission-service.yaml
   - transmission-ingress.yaml
+  - transmission-cleanup-cronjob.yaml
   - arr-integration-job.yaml
 
