@@ -26,10 +26,10 @@ spec:
         kubernetes.io/hostname: dell-r620
       containers:
       - name: nfs-server
-        image: bitnami/nfs-server:latest
+        image: itsthenetwork/nfs-server-alpine:latest
         env:
-        - name: NFS_EXPORT_0
-          value: /exports *(rw,sync,no_subtree_check,no_root_squash)
+        - name: SHARED_DIRECTORY
+          value: /exports
         securityContext:
           privileged: true
         ports:
