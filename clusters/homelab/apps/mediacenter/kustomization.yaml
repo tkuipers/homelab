@@ -13,6 +13,9 @@ resources:
   - sonarr-deployment.yaml
   - sonarr-service.yaml
   - sonarr-ingress.yaml
+  - radarr-deployment.yaml
+  - radarr-service.yaml
+  - radarr-ingress.yaml
   - qbittorrent-deployment.yaml
   - qbittorrent-service.yaml
   - qbittorrent-ingress.yaml

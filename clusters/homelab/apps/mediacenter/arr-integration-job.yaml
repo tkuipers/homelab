@@ -27,6 +27,13 @@ spec:
             sleep 10
           done
           
+          # Wait for Radarr
+          echo "Waiting for Radarr..."
+          until curl -sf http://radarr:7878/ping > /dev/null 2>&1; do
+            echo "  Radarr not ready, waiting..."
+            sleep 10
+          done
+          
           # Wait for Prowlarr
           echo "Waiting for Prowlarr..."
           until curl -sf http://prowlarr:9696/ping > /dev/null 2>&1; do
@@ -52,6 +59,22 @@ spec:
           
           echo "Sonarr API Key: ${SONARR_API_KEY:0:8}..."
           
+          # Extract Radarr API key
+          echo "Extracting Radarr API key..."
+          until [ -f /radarr-config/config.xml ]; do
+            echo "  Radarr config not found, waiting..."
+            sleep 5
+          done
+          
+          RADARR_API_KEY=$(grep "<ApiKey>" /radarr-config/config.xml | sed 's/.*<ApiKey>\(.*\)<\/ApiKey>.*/\1/')
+          
+          if [ -z "$RADARR_API_KEY" ]; then
+            echo "ERROR: Could not extract Radarr API key"
+            exit 1
+          fi
+          
+          echo "Radarr API Key: ${RADARR_API_KEY:0:8}..."
+          
           # Extract Prowlarr API key
           echo "Extracting Prowlarr API key..."
           until [ -f /prowlarr-config/config.xml ]; do
@@ -69,43 +92,92 @@ spec:
           echo "Prowlarr API Key: ${PROWLARR_API_KEY:0:8}..."
           
           # Check if already linked
+          SONARR_LINKED=false
+          RADARR_LINKED=false
+          
           if [ -f /prowlarr-config/.sonarr-linked ]; then
-            echo "Sonarr already linked to Prowlarr, skipping..."
+            echo "Sonarr already linked to Prowlarr"
+            SONARR_LINKED=true
+          fi
+          
+          if [ -f /prowlarr-config/.radarr-linked ]; then
+            echo "Radarr already linked to Prowlarr"
+            RADARR_LINKED=true
+          fi
+          
+          if [ "$SONARR_LINKED" = "true" ] && [ "$RADARR_LINKED" = "true" ]; then
+            echo "All apps already linked, skipping..."
             exit 0
           fi
           
           # Link Sonarr to Prowlarr
-          echo "Linking Sonarr to Prowlarr..."
+          if [ "$SONARR_LINKED" = "false" ]; then
+            echo "Linking Sonarr to Prowlarr..."
+            
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/applications" \
+              -H "X-Api-Key: $PROWLARR_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "name": "Sonarr",
+                "implementation": "Sonarr",
+                "configContract": "SonarrSettings",
+                "fields": [
+                  {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
+                  {"name": "baseUrl", "value": "http://sonarr:8989"},
+                  {"name": "apiKey", "value": "'"$SONARR_API_KEY"'"},
+                  {"name": "syncLevel", "value": 2}
+                ],
+                "syncLevel": "fullSync"
+              }')
+            
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+            
+            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+              echo "✓ Sonarr successfully linked to Prowlarr!"
+              touch /prowlarr-config/.sonarr-linked
+            elif echo "$BODY" | grep -q "already exists"; then
+              echo "✓ Sonarr link already exists"
+              touch /prowlarr-config/.sonarr-linked
+            else
+              echo "✗ Failed to link Sonarr (HTTP $HTTP_CODE)"
+              echo "Response: $BODY"
+            fi
+          fi
           
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/applications" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "name": "Sonarr",
-              "implementation": "Sonarr",
-              "configContract": "SonarrSettings",
-              "fields": [
-                {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
-                {"name": "baseUrl", "value": "http://sonarr:8989"},
-                {"name": "apiKey", "value": "'"$SONARR_API_KEY"'"},
-                {"name": "syncLevel", "value": 2}
-              ],
-              "syncLevel": "fullSync"
-            }')
-          
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          
-          if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-            echo "✓ Sonarr successfully linked to Prowlarr!"
-            touch /prowlarr-config/.sonarr-linked
-          elif echo "$BODY" | grep -q "already exists"; then
-            echo "✓ Sonarr link already exists"
-            touch /prowlarr-config/.sonarr-linked
-          else
-            echo "✗ Failed to link Sonarr (HTTP $HTTP_CODE)"
-            echo "Response: $BODY"
-            exit 1
+          # Link Radarr to Prowlarr
+          if [ "$RADARR_LINKED" = "false" ]; then
+            echo "Linking Radarr to Prowlarr..."
+            
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://prowlarr:9696/api/v1/applications" \
+              -H "X-Api-Key: $PROWLARR_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "name": "Radarr",
+                "implementation": "Radarr",
+                "configContract": "RadarrSettings",
+                "fields": [
+                  {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
+                  {"name": "baseUrl", "value": "http://radarr:7878"},
+                  {"name": "apiKey", "value": "'"$RADARR_API_KEY"'"},
+                  {"name": "syncLevel", "value": 2}
+                ],
+                "syncLevel": "fullSync"
+              }')
+            
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+            
+            if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+              echo "✓ Radarr successfully linked to Prowlarr!"
+              touch /prowlarr-config/.radarr-linked
+            elif echo "$BODY" | grep -q "already exists"; then
+              echo "✓ Radarr link already exists"
+              touch /prowlarr-config/.radarr-linked
+            else
+              echo "✗ Failed to link Radarr (HTTP $HTTP_CODE)"
+              echo "Response: $BODY"
+            fi
           fi
           
           # Add indexers from secrets if provided
@@ -152,15 +224,16 @@ spec:
             echo "No indexer credentials provided, skipping indexer setup"
           fi
           
-          # Trigger sync from Prowlarr to Sonarr
-          echo "Triggering indexer sync to Sonarr..."
+          # Trigger sync from Prowlarr to all apps
+          echo "Triggering indexer sync to all apps..."
           curl -X POST "http://prowlarr:9696/api/v1/applications/sync" \
             -H "X-Api-Key: $PROWLARR_API_KEY" || echo "Sync trigger failed, but may happen automatically"
           
           echo ""
           echo "=== Setup Complete! ==="
           echo "✓ Sonarr linked to Prowlarr"
-          echo "✓ Indexers will be automatically synced"
+          echo "✓ Radarr linked to Prowlarr"
+          echo "✓ Indexers will be automatically synced to both"
           echo "✓ Your media stack is fully integrated!"
         env:
         - name: INDEXER1_NAME
@@ -185,12 +258,19 @@ spec:
         - name: sonarr-config
           mountPath: /sonarr-config
           readOnly: true
+        - name: radarr-config
+          mountPath: /radarr-config
+          readOnly: true
         - name: prowlarr-config
           mountPath: /prowlarr-config
       volumes:
       - name: sonarr-config
         hostPath:
           path: /var/persist/sonarr-config
+          type: Directory
+      - name: radarr-config
+        hostPath:
+          path: /var/persist/radarr-config
           type: Directory
       - name: prowlarr-config
         hostPath:
