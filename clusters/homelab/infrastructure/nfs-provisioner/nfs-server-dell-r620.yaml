@@ -22,8 +22,6 @@ spec:
       labels:
         app: nfs-server-dell-r620
     spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         kubernetes.io/hostname: dell-r620
       imagePullSecrets:
