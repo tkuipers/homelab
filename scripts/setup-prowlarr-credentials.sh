@@ -7,14 +7,14 @@ VAULT_NAME="Homelab"
 INDEXERS_ITEM_NAME="Prowlarr Indexers"
 ITEM_CATEGORY="login"
 
-# Predefined indexer list (name|description pairs)
+# Predefined indexer list (name|description|baseurl triplets)
 INDEXERS=(
-    "NZBGeek|Popular general Usenet indexer with great retention"
-    "NZBFinder|Comprehensive Usenet indexer with excellent API"
-    "DrunkenSlug|High-quality Usenet indexer with active community"
-    "AnimeTosho|Specialized in anime, Japanese media, and Asian content"
-    "6box|Asian content specialist - Chinese dramas, K-dramas, and Asian TV"
-    "NinjaCentral|Well-rounded Usenet indexer with good coverage"
+    "NZBGeek|Popular general Usenet indexer with great retention|https://api.nzbgeek.info"
+    "NZBFinder|Comprehensive Usenet indexer with excellent API|https://nzbfinder.ws"
+    "DrunkenSlug|High-quality Usenet indexer with active community|https://api.drunkenslug.com"
+    "AnimeTosho|Specialized in anime, Japanese media, and Asian content|https://feed.animetosho.org"
+    "6box|Asian content specialist - Chinese dramas, K-dramas, and Asian TV|https://6box.me"
+    "NinjaCentral|Well-rounded Usenet indexer with good coverage|https://ninjacentral.co.za"
 )
 
 # Helper function to get indexer name
@@ -25,6 +25,11 @@ get_indexer_name() {
 # Helper function to get indexer description
 get_indexer_desc() {
     echo "$1" | cut -d'|' -f2
+}
+
+# Helper function to get indexer base URL
+get_indexer_url() {
+    echo "$1" | cut -d'|' -f3
 }
 
 # Colors for output
@@ -178,6 +183,7 @@ collect_indexer_credentials() {
     for indexer_entry in "${INDEXERS[@]}"; do
         local indexer_name=$(get_indexer_name "$indexer_entry")
         local indexer_desc=$(get_indexer_desc "$indexer_entry")
+        local indexer_baseurl=$(get_indexer_url "$indexer_entry")
         
         echo
         log_header "--- Indexer ${idx}/${#INDEXERS[@]}: $indexer_name ---"
@@ -188,8 +194,13 @@ collect_indexer_credentials() {
         local current_url=$(get_current_value "indexer${idx}_url")
         local current_apikey=$(get_current_value "indexer${idx}_apikey")
         
+        # Use base URL as default if no current value
+        if [ -z "$current_url" ]; then
+            current_url="$indexer_baseurl"
+        fi
+        
         # Prompt for URL
-        prompt_for_input "Base URL (e.g., https://api.nzbgeek.info)" "url" "$current_url" false true
+        prompt_for_input "Base URL" "url" "$current_url" false true
         
         if [ "$url" = "SKIP" ]; then
             log_warning "Skipping $indexer_name"
