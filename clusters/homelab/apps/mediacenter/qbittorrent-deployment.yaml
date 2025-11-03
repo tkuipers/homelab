@@ -68,13 +68,14 @@ spec:
                 else
                   echo "Config file not found yet, will use defaults"
                 fi
-        volumeMounts:
-        - name: config
-          mountPath: /config
-        - name: downloads
-          mountPath: /downloads
-        - name: media
-          mountPath: /media
+          volumeMounts:
+          - name: config
+            mountPath: /config
+          - name: media-root
+            mountPath: /downloads
+            subPath: downloads
+          - name: media-root
+            mountPath: /media
         resources:
           requests:
             memory: "512Mi"
@@ -92,18 +93,14 @@ spec:
           mkdir -p /media/downloads
           chmod 777 /media/downloads
         volumeMounts:
-        - name: media
+        - name: media-root
           mountPath: /media
       volumes:
       - name: config
         hostPath:
           path: /var/persist/qbittorrent-config
           type: DirectoryOrCreate
-      - name: downloads
-        persistentVolumeClaim:
-          claimName: jellyfin-media
-          subPath: downloads
-      - name: media
+      - name: media-root
         persistentVolumeClaim:
           claimName: jellyfin-media
 
