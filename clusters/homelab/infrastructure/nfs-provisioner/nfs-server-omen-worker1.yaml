@@ -17,6 +17,13 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
+      initContainers:
+      - name: setup-mtab
+        image: busybox:latest
+        command: ['sh', '-c', 'echo -e "/dev/root / ext4 rw,relatime 0 0\n/dev/root /export ext4 rw,relatime 0 0" > /etc/mtab']
+        volumeMounts:
+        - name: mtab
+          mountPath: /etc/mtab
       containers:
       - name: nfs-server
         image: hectorm/nfs-ganesha:latest
@@ -44,11 +51,16 @@ spec:
         volumeMounts:
         - name: export
           mountPath: /export
+        - name: mtab
+          mountPath: /etc/mtab
+          readOnly: true
       volumes:
       - name: export
         hostPath:
           path: /var/persist/nfs-omen-worker1
           type: DirectoryOrCreate
+      - name: mtab
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
