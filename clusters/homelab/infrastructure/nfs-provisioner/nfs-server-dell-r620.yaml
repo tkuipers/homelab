@@ -26,16 +26,27 @@ spec:
         kubernetes.io/hostname: dell-r620
       containers:
       - name: nfs-server
-        image: alpine:latest
-        command: ["/bin/sh", "-c"]
-        args:
-        - |
-          apk add --no-cache nfs-utils
-          echo "/exports *(rw,sync,no_subtree_check,no_root_squash)" > /etc/exports
-          /sbin/rpcbind -w -f &
-          /sbin/nfsd --debug 8 --no-udp --no-nfs-v2 --no-nfs-v3 -G 600 -t 1
+        image: quay.io/coreos/nfs-ganesha-server-and-provisioner-amd64
+        env:
+        - name: GANESHA_EXPORT_ID
+          value: "1"
+        - name: GANESHA_EXPORT
+          value: /exports
+        - name: GANESHA_PSEUDO
+          value: /exports
+        - name: GANESHA_ACCESS_TYPE
+          value: RW
+        - name: GANESHA_SQUASH
+          value: "no_root_squash"
+        - name: GANESHA_FSAL
+          value: VFS
+        - name: GANESHA_LOGFILE
+          value: STDOUT
+        - name: GANESHA_OPTIONS
+          value: "NFS_Commit = 0; NFS_Protocols = 4; "
         securityContext:
-          privileged: true
+          capabilities:
+            add: ["SYS_ADMIN", "DAC_READ_SEARCH"]
         volumeMounts:
         - name: export
           mountPath: /exports
