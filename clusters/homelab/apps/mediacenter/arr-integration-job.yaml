@@ -190,7 +190,11 @@ spec:
           # Add indexers from secrets if provided
           if [ -n "${INDEXER1_NAME:-}" ] && [ -n "${INDEXER1_URL:-}" ] && [ -n "${INDEXER1_APIKEY:-}" ]; then
             if [ ! -f /prowlarr-config/.indexer1-added ]; then
-              echo "Adding indexer: $INDEXER1_NAME"
+              # Generate unique name using hash of URL
+              INDEXER_HASH=$(echo -n "$INDEXER1_URL" | md5sum | cut -d' ' -f1 | cut -c1-8)
+              INDEXER_UNIQUE_NAME="${INDEXER1_NAME}-${INDEXER_HASH}"
+              
+              echo "Adding indexer: $INDEXER_UNIQUE_NAME (from $INDEXER1_NAME)"
               
               # Get the default app profile ID
               APP_PROFILE_ID=$(curl -s "http://prowlarr:9696/api/v1/appprofile" \
@@ -207,7 +211,7 @@ spec:
                 -H "X-Api-Key: $PROWLARR_API_KEY" \
                 -H "Content-Type: application/json" \
                 -d '{
-                  "name": "'"$INDEXER1_NAME"'",
+                  "name": "'"$INDEXER_UNIQUE_NAME"'",
                   "implementation": "Newznab",
                   "configContract": "NewznabSettings",
                   "appProfileId": '"$APP_PROFILE_ID"',
