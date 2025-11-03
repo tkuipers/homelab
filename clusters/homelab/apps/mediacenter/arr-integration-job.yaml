@@ -246,8 +246,6 @@ spec:
                 "fields": [
                   {"name": "host", "value": "qbittorrent"},
                   {"name": "port", "value": 8080},
-                  {"name": "username", "value": "admin"},
-                  {"name": "password", "value": "adminadmin"},
                   {"name": "category", "value": "sonarr"}
                 ],
                 "implementationName": "qBittorrent",
@@ -286,8 +284,6 @@ spec:
                 "fields": [
                   {"name": "host", "value": "qbittorrent"},
                   {"name": "port", "value": 8080},
-                  {"name": "username", "value": "admin"},
-                  {"name": "password", "value": "adminadmin"},
                   {"name": "category", "value": "radarr"}
                 ],
                 "implementationName": "qBittorrent",
