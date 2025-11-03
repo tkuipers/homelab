@@ -1,0 +1,31 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: nfs-provisioner-omen-worker1
+  namespace: nfs-provisioner
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: nfs-subdir-external-provisioner
+      sourceRef:
+        kind: HelmRepository
+        name: nfs-subdir-external-provisioner
+        namespace: flux-system
+      version: 4.0.18
+  values:
+    nfs:
+      server: nfs-server-omen-worker1.nfs-provisioner.svc.cluster.local
+      path: /exports
+    storageClass:
+      name: nfs-omen-worker1
+      defaultClass: false
+      provisionerName: nfs-storage-omen-worker1
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+              - omen-worker1

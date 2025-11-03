@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-server-omen-worker1
+  namespace: nfs-provisioner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfs-server-omen-worker1
+  template:
+    metadata:
+      labels:
+        app: nfs-server-omen-worker1
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      containers:
+      - name: nfs-server
+        image: bitnami/nfs-server:latest
+        env:
+        - name: NFS_EXPORT_0
+          value: /exports *(rw,sync,no_subtree_check,no_root_squash)
+        securityContext:
+          privileged: true
+        ports:
+        - containerPort: 2049
+        volumeMounts:
+        - name: export
+          mountPath: /exports
+      volumes:
+      - name: export
+        hostPath:
+          path: /var/mnt/nfs-omen-worker1
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfs-server-omen-worker1
+  namespace: nfs-provisioner
+spec:
+  selector:
+    app: nfs-server-omen-worker1
+  ports:
+  - name: nfs
+    port: 2049
+    protocol: TCP

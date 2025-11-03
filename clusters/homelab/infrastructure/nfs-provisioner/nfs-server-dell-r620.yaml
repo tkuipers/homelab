@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nfs-provisioner
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-server-dell-r620
+  namespace: nfs-provisioner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfs-server-dell-r620
+  template:
+    metadata:
+      labels:
+        app: nfs-server-dell-r620
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      containers:
+      - name: nfs-server
+        image: bitnami/nfs-server:latest
+        env:
+        - name: NFS_EXPORT_0
+          value: /exports *(rw,sync,no_subtree_check,no_root_squash)
+        securityContext:
+          privileged: true
+        ports:
+        - containerPort: 2049
+        volumeMounts:
+        - name: export
+          mountPath: /exports
+      volumes:
+      - name: export
+        hostPath:
+          path: /var/mnt/nfs-dell-r620
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfs-server-dell-r620
+  namespace: nfs-provisioner
+spec:
+  selector:
+    app: nfs-server-dell-r620
+  ports:
+  - name: nfs
+    port: 2049
+    protocol: TCP
