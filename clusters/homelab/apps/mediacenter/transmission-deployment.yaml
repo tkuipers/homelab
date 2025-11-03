@@ -46,10 +46,16 @@ spec:
           value: "1000"
         - name: TZ
           value: "America/Los_Angeles"
-        # Transmission settings via environment
-        - name: TRANSMISSION_WEB_HOME
-          value: "/config/transmission-web"
-        # Auth will be handled via settings.json volume mount
+        - name: USER
+          valueFrom:
+            secretKeyRef:
+              name: transmission-credentials
+              key: username
+        - name: PASS
+          valueFrom:
+            secretKeyRef:
+              name: transmission-credentials
+              key: password
         volumeMounts:
         - name: config
           mountPath: /config
