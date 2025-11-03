@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transmission
+  namespace: mediacenter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transmission
+  template:
+    metadata:
+      labels:
+        app: transmission
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      initContainers:
+      - name: create-downloads-dir
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /media/downloads /media/downloads/incomplete
+          chmod 777 /media/downloads /media/downloads/incomplete
+        volumeMounts:
+        - name: media-root
+          mountPath: /media
+      containers:
+      - name: transmission
+        image: linuxserver/transmission:latest
+        ports:
+        - containerPort: 9091
+          name: webui
+        - containerPort: 51413
+          name: tcp-listen
+          protocol: TCP
+        - containerPort: 51413
+          name: udp-listen
+          protocol: UDP
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "America/Los_Angeles"
+        # Transmission settings via environment
+        - name: TRANSMISSION_WEB_HOME
+          value: "/config/transmission-web"
+        # Auth will be handled via settings.json volume mount
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: media-root
+          mountPath: /downloads
+          subPath: downloads
+        - name: media-root
+          mountPath: /media
+        - name: transmission-settings
+          mountPath: /config/transmission-daemon/settings.json
+          subPath: settings.json
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "2000m"
+      volumes:
+      - name: config
+        hostPath:
+          path: /var/persist/transmission-config
+          type: DirectoryOrCreate
+      - name: media-root
+        persistentVolumeClaim:
+          claimName: jellyfin-media
+      - name: transmission-settings
+        configMap:
+          name: transmission-settings
+

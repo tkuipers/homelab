@@ -16,8 +16,9 @@ resources:
   - radarr-deployment.yaml
   - radarr-service.yaml
   - radarr-ingress.yaml
-  - qbittorrent-deployment.yaml
-  - qbittorrent-service.yaml
-  - qbittorrent-ingress.yaml
+  - transmission-settings-configmap.yaml
+  - transmission-deployment.yaml
+  - transmission-service.yaml
+  - transmission-ingress.yaml
   - arr-integration-job.yaml
 
