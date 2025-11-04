@@ -390,15 +390,16 @@ data:
                     # Hash the password using bcrypt
                     password_hash = bcrypt.hashpw("water123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                     
-                    # Insert admin user with minimal fields (let database use defaults for others)
+                    # Insert admin user with required fields
                     cursor.execute("""
-                        INSERT INTO user (email, username, password, userType)
-                        VALUES (?, ?, ?, ?)
+                        INSERT INTO user (email, username, password, userType, avatar)
+                        VALUES (?, ?, ?, ?, ?)
                     """, (
                         "admin@localhost",  # email
                         "admin",  # username
                         password_hash,  # password
-                        1  # userType (1 = admin/owner)
+                        1,  # userType (1 = admin/owner)
+                        ""  # avatar (empty string)
                     ))
                     conn.commit()
                     self.log("Admin user created (username: admin)", "SUCCESS")
