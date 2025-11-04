@@ -355,58 +355,8 @@ data:
                 with open(config_path, 'w') as f:
                     f.writelines(new_lines)
                 
-                # Create default language profiles via API
-                self.log("Creating language profiles...")
-                try:
-                    # Wait a moment for Bazarr to fully initialize after config change
-                    time.sleep(3)
-                    
-                    # Check if any profiles exist
-                    status, profiles = self.api_request(f"{self.bazarr_url}/api/system/languages/profiles", 
-                                                        self.bazarr_api_key)
-                    
-                    if status == 200 and profiles is not None and len(profiles) == 0:
-                        # No profiles exist, create English and Chinese profiles
-                        profiles_data = [
-                            {
-                                "profileId": 1,
-                                "name": "English",
-                                "cutoff": None,
-                                "items": [{"language": "en", "forced": False, "hi": False, "audio_exclude": False}],
-                                "mustContain": "",
-                                "mustNotContain": "",
-                                "originalFormat": None
-                            },
-                            {
-                                "profileId": 2,
-                                "name": "Chinese",
-                                "cutoff": None,
-                                "items": [{"language": "zh", "forced": False, "hi": False, "audio_exclude": False}],
-                                "mustContain": "",
-                                "mustNotContain": "",
-                                "originalFormat": None
-                            }
-                        ]
-                        
-                        # Post to settings endpoint with form data
-                        form_data = {"languages-profiles": json.dumps(profiles_data)}
-                        response = requests.post(
-                            f"{self.bazarr_url}/api/system/settings",
-                            headers={"X-Api-Key": self.bazarr_api_key},
-                            data=form_data
-                        )
-                        
-                        if response.status_code in [200, 204]:
-                            self.log("English and Chinese language profiles created", "SUCCESS")
-                        else:
-                            self.log(f"Failed to create language profiles: {response.status_code}", "WARNING")
-                    else:
-                        self.log("Language profiles already exist", "SUCCESS")
-                except Exception as e:
-                    self.log(f"Language profile setup error: {e}", "WARNING")
-                    self.log("You may need to create profiles manually", "INFO")
-                
                 self.log("Bazarr configured with Sonarr, Radarr, and OpenSubtitles.com", "SUCCESS")
+                self.log("Note: Create language profiles manually in Bazarr UI (Settings > Languages)", "INFO")
                 self.log("Restarting Bazarr pod to apply changes...", "INFO")
                 
             except Exception as e:
