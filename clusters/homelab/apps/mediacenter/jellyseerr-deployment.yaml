@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyseerr
+  namespace: mediacenter
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jellyseerr
+  template:
+    metadata:
+      labels:
+        app: jellyseerr
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      containers:
+      - name: jellyseerr
+        image: fallenbagel/jellyseerr:latest
+        ports:
+        - containerPort: 5055
+          name: http
+        env:
+        - name: TZ
+          value: "America/Los_Angeles"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: config
+        hostPath:
+          path: /var/persist/jellyseerr-config
+          type: DirectoryOrCreate
+
