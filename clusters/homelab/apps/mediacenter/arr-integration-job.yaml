@@ -355,6 +355,44 @@ data:
                 with open(config_path, 'w') as f:
                     f.writelines(new_lines)
                 
+                # Create default language profiles via API
+                self.log("Creating language profiles...")
+                try:
+                    # First check if any profiles exist
+                    status, profiles = self.api_request(f"{self.bazarr_url}/api/profiles", self.bazarr_api_key)
+                    if status == 200 and len(profiles) == 0:
+                        # Create English profile
+                        english_profile = {
+                            "name": "English",
+                            "cutoff": None,
+                            "items": [
+                                {"language": "en", "forced": False, "hi": False, "audio_exclude": False}
+                            ]
+                        }
+                        status, result = self.api_request(f"{self.bazarr_url}/api/profiles", 
+                                                         self.bazarr_api_key, "POST", english_profile)
+                        if status in [200, 201]:
+                            self.log("English language profile created", "SUCCESS")
+                        
+                        # Create Chinese profile
+                        chinese_profile = {
+                            "name": "Chinese",
+                            "cutoff": None,
+                            "items": [
+                                {"language": "zh", "forced": False, "hi": False, "audio_exclude": False}
+                            ]
+                        }
+                        status, result = self.api_request(f"{self.bazarr_url}/api/profiles", 
+                                                         self.bazarr_api_key, "POST", chinese_profile)
+                        if status in [200, 201]:
+                            self.log("Chinese language profile created", "SUCCESS")
+                        else:
+                            self.log("Could not create Chinese profile", "WARNING")
+                    else:
+                        self.log("Language profiles already exist", "SUCCESS")
+                except Exception as e:
+                    self.log(f"Could not create language profiles via API: {e}", "WARNING")
+                
                 self.log("Bazarr configured with Sonarr, Radarr, and OpenSubtitles.com", "SUCCESS")
                 self.log("Restarting Bazarr pod to apply changes...", "INFO")
                 
