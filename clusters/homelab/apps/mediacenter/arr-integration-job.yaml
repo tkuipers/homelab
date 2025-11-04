@@ -23,8 +23,6 @@ data:
             self.prowlarr_url = "http://prowlarr:9696"
             self.transmission_url = "http://transmission:9091"
             self.bazarr_url = "http://bazarr:6767"
-            self.jellyseerr_url = "http://jellyseerr:5055"
-            self.jellyfin_url = "http://jellyfin:8096"
             
             self.transmission_user = os.getenv("TRANSMISSION_USER")
             self.transmission_pass = os.getenv("TRANSMISSION_PASS")
@@ -363,98 +361,6 @@ data:
             except Exception as e:
                 self.log(f"Failed to configure Bazarr: {e}", "ERROR")
                 
-        def setup_jellyseerr(self):
-            self.log("Configuring Jellyseerr...")
-            
-            config_path = "/jellyseerr-config/settings.json"
-            
-            try:
-                with open(config_path, 'r') as f:
-                    settings = json.load(f)
-                
-                # Check if already initialized
-                if settings.get("public", {}).get("initialized", False):
-                    self.log("Jellyseerr already initialized", "SUCCESS")
-                    return
-                
-                # Note: Jellyseerr requires one-time manual setup for the initial admin user
-                # This is a security feature and cannot be automated without compromising security
-                self.log("Jellyseerr requires manual initial setup:", "INFO")
-                self.log("  1. Visit jellyseerr.tkuipers.ca", "INFO")
-                self.log("  2. Create admin account (use 1Password credentials)", "INFO")
-                self.log("  3. Sonarr and Radarr are pre-configured!", "INFO")
-                
-                # Configure Jellyfin (for future integration)
-                settings["jellyfin"] = {
-                    "name": "Jellyfin",
-                    "ip": "jellyfin",
-                    "port": 8096,
-                    "useSsl": False,
-                    "urlBase": "",
-                    "externalHostname": "",
-                    "jellyfinForgotPasswordUrl": "",
-                    "libraries": [],
-                    "serverId": "",
-                    "apiKey": ""
-                }
-                
-                # Configure Sonarr
-                settings["sonarr"] = [{
-                    "name": "Sonarr",
-                    "hostname": "sonarr",
-                    "port": 8989,
-                    "apiKey": self.sonarr_api_key,
-                    "useSsl": False,
-                    "baseUrl": "/",
-                    "activeProfileId": 1,
-                    "activeDirectory": "/media/tv",
-                    "activeLanguageProfileId": 1,
-                    "activeAnimeProfileId": None,
-                    "activeAnimeDirectory": "",
-                    "activeAnimeLanguageProfileId": None,
-                    "is4k": False,
-                    "enableSeasonFolders": True,
-                    "isDefault": True,
-                    "externalUrl": "",
-                    "syncEnabled": True,
-                    "preventSearch": False,
-                    "tagRequests": False,
-                    "tags": []
-                }]
-                
-                # Configure Radarr
-                settings["radarr"] = [{
-                    "name": "Radarr",
-                    "hostname": "radarr",
-                    "port": 7878,
-                    "apiKey": self.radarr_api_key,
-                    "useSsl": False,
-                    "baseUrl": "/",
-                    "activeProfileId": 1,
-                    "activeDirectory": "/media/movies",
-                    "is4k": False,
-                    "minimumAvailability": "released",
-                    "isDefault": True,
-                    "externalUrl": "",
-                    "syncEnabled": True,
-                    "preventSearch": False,
-                    "tagRequests": False,
-                    "tags": []
-                }]
-                
-                # Mark as initialized
-                settings["public"]["initialized"] = True
-                
-                # Write back the config
-                with open(config_path, 'w') as f:
-                    json.dump(settings, f, indent=1)
-                
-                self.log("Jellyseerr configured with admin user, Sonarr, and Radarr", "SUCCESS")
-                self.log("Login at jellyseerr.tkuipers.ca with username: admin", "INFO")
-                
-            except Exception as e:
-                self.log(f"Failed to configure Jellyseerr: {e}", "ERROR")
-                
         def run(self):
             print("=" * 60)
             print("   Arr Stack Integration Setup")
@@ -467,7 +373,6 @@ data:
             self.wait_for_service("Prowlarr", f"{self.prowlarr_url}/ping")
             self.wait_for_service("Transmission", self.transmission_url, accept_401=True)
             self.wait_for_service("Bazarr", f"{self.bazarr_url}/api/system/status", accept_401=True)
-            self.wait_for_service("Jellyseerr", f"{self.jellyseerr_url}/api/v1/status", accept_401=True)
             print()
             
             # Extract API keys
@@ -515,10 +420,6 @@ data:
             
             # Configure Bazarr
             self.setup_bazarr()
-            print()
-            
-            # Configure Jellyseerr
-            self.setup_jellyseerr()
             
             print()
             print("=" * 60)
@@ -529,7 +430,6 @@ data:
             self.log("Transmission configured in both", "SUCCESS")
             self.log("Remote path mappings configured", "SUCCESS")
             self.log("Bazarr linked to Sonarr and Radarr", "SUCCESS")
-            self.log("Jellyseerr configured with Jellyfin, Sonarr, and Radarr", "SUCCESS")
             self.log("Your media stack is fully integrated!", "SUCCESS")
             
     if __name__ == "__main__":
@@ -579,9 +479,6 @@ spec:
         - name: bazarr-config
           mountPath: /bazarr-config
           readOnly: false
-        - name: jellyseerr-config
-          mountPath: /jellyseerr-config
-          readOnly: false
       volumes:
       - name: scripts
         configMap:
@@ -602,10 +499,6 @@ spec:
       - name: bazarr-config
         hostPath:
           path: /var/persist/bazarr-config
-          type: Directory
-      - name: jellyseerr-config
-        hostPath:
-          path: /var/persist/jellyseerr-config
           type: Directory
       nodeSelector:
         kubernetes.io/hostname: dell-r620

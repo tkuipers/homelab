@@ -4,7 +4,7 @@ metadata:
   name: bazarr
   namespace: mediacenter
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
   tls:
