@@ -281,42 +281,87 @@ data:
         def setup_bazarr(self):
             self.log("Configuring Bazarr...")
             
-            # Configure Sonarr in Bazarr
-            status, response = self.api_request(f"{self.bazarr_url}/api/system/settings", self.bazarr_api_key)
-            if status == 200:
-                settings = response
-                sonarr_settings = {
-                    "ip": "sonarr",
-                    "port": 8989,
-                    "base_url": "/",
-                    "ssl": False,
-                    "apikey": self.sonarr_api_key
-                }
-                settings["sonarr"] = sonarr_settings
+            config_path = "/bazarr-config/config/config.yaml"
+            
+            # Read the current config
+            try:
+                with open(config_path, 'r') as f:
+                    lines = f.readlines()
                 
-                radarr_settings = {
-                    "ip": "radarr",
-                    "port": 7878,
-                    "base_url": "/",
-                    "ssl": False,
-                    "apikey": self.radarr_api_key
-                }
-                settings["radarr"] = radarr_settings
+                # Parse and update config
+                new_lines = []
+                in_sonarr_section = False
+                in_radarr_section = False
+                in_general_section = False
                 
-                # Enable OpenSubtitles.com (no auth required)
-                if "settings" not in settings:
-                    settings["settings"] = {}
-                if "general" not in settings["settings"]:
-                    settings["settings"]["general"] = {}
-                settings["settings"]["general"]["enabled_providers"] = ["opensubtitlescom"]
+                for line in lines:
+                    # Update Sonarr section
+                    if line.strip().startswith('sonarr:'):
+                        in_sonarr_section = True
+                        in_radarr_section = False
+                        in_general_section = False
+                        new_lines.append(line)
+                    elif in_sonarr_section:
+                        if line.strip().startswith('apikey:'):
+                            new_lines.append(f"  apikey: {self.sonarr_api_key}\n")
+                        elif line.strip().startswith('ip:'):
+                            new_lines.append("  ip: sonarr\n")
+                        elif line.strip().startswith('port:'):
+                            new_lines.append("  port: 8989\n")
+                        elif line.strip() and not line.startswith('  '):
+                            in_sonarr_section = False
+                            new_lines.append(line)
+                        else:
+                            new_lines.append(line)
+                    # Update Radarr section
+                    elif line.strip().startswith('radarr:'):
+                        in_radarr_section = True
+                        in_sonarr_section = False
+                        in_general_section = False
+                        new_lines.append(line)
+                    elif in_radarr_section:
+                        if line.strip().startswith('apikey:'):
+                            new_lines.append(f"  apikey: {self.radarr_api_key}\n")
+                        elif line.strip().startswith('ip:'):
+                            new_lines.append("  ip: radarr\n")
+                        elif line.strip().startswith('port:'):
+                            new_lines.append("  port: 7878\n")
+                        elif line.strip() and not line.startswith('  '):
+                            in_radarr_section = False
+                            new_lines.append(line)
+                        else:
+                            new_lines.append(line)
+                    # Update general section for providers and enabling
+                    elif line.strip().startswith('general:'):
+                        in_general_section = True
+                        in_sonarr_section = False
+                        in_radarr_section = False
+                        new_lines.append(line)
+                    elif in_general_section:
+                        if line.strip().startswith('enabled_providers:'):
+                            new_lines.append("  enabled_providers:\n")
+                            new_lines.append("  - opensubtitlescom\n")
+                        elif line.strip().startswith('use_sonarr:'):
+                            new_lines.append("  use_sonarr: true\n")
+                        elif line.strip().startswith('use_radarr:'):
+                            new_lines.append("  use_radarr: true\n")
+                        elif line.strip() and not line.startswith('  '):
+                            in_general_section = False
+                            new_lines.append(line)
+                        else:
+                            new_lines.append(line)
+                    else:
+                        new_lines.append(line)
                 
-                status, _ = self.api_request(f"{self.bazarr_url}/api/system/settings", self.bazarr_api_key, "POST", settings)
-                if status in [200, 201, 204]:
-                    self.log("Bazarr configured with Sonarr, Radarr, and OpenSubtitles.com", "SUCCESS")
-                else:
-                    self.log("Bazarr configuration may need manual setup", "WARNING")
-            else:
-                self.log("Could not configure Bazarr automatically", "WARNING")
+                # Write back the config
+                with open(config_path, 'w') as f:
+                    f.writelines(new_lines)
+                
+                self.log("Bazarr configured with Sonarr, Radarr, and OpenSubtitles.com", "SUCCESS")
+                self.log("Restarting Bazarr pod to apply changes...", "INFO")
+                
+            except Exception as e:
+                self.log(f"Failed to configure Bazarr: {e}", "ERROR")
                 
         def setup_jellyseerr(self):
             self.log("Configuring Jellyseerr...")
@@ -345,7 +390,6 @@ data:
             self.sonarr_api_key = self.extract_api_key("/sonarr-config/config.xml", "Sonarr")
             self.radarr_api_key = self.extract_api_key("/radarr-config/config.xml", "Radarr")
             self.prowlarr_api_key = self.extract_api_key("/prowlarr-config/config.xml", "Prowlarr")
-            self.bazarr_api_key = self.extract_api_key("/bazarr-config/config/config.yaml", "Bazarr")
             print()
             
             # Link apps to Prowlarr
@@ -450,7 +494,7 @@ spec:
           readOnly: true
         - name: bazarr-config
           mountPath: /bazarr-config
-          readOnly: true
+          readOnly: false
       volumes:
       - name: scripts
         configMap:
