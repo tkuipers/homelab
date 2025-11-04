@@ -14,6 +14,8 @@ data:
     import urllib.request
     import urllib.error
     import xml.etree.ElementTree as ET
+    import sqlite3
+    import bcrypt
     from typing import Optional, Dict, Any
     
     class ArrIntegration:
@@ -367,6 +369,7 @@ data:
             self.log("Configuring Jellyseerr...")
             
             config_path = "/jellyseerr-config/settings.json"
+            db_path = "/jellyseerr-config/db/db.sqlite3"
             
             try:
                 with open(config_path, 'r') as f:
@@ -377,7 +380,53 @@ data:
                     self.log("Jellyseerr already initialized", "SUCCESS")
                     return
                 
-                # Configure Jellyfin
+                # Create admin user in database
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                
+                # Check if user already exists
+                cursor.execute("SELECT id FROM user WHERE email = ?", ("admin@localhost",))
+                if cursor.fetchone() is None:
+                    # Hash the password using bcrypt
+                    password_hash = bcrypt.hashpw("water123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                    
+                    # Insert admin user
+                    cursor.execute("""
+                        INSERT INTO user (email, username, plexUsername, plexId, jellyfinUsername, jellyfinUserId, 
+                                         jellyfinDeviceId, jellyfinAuthToken, password, userType, plexToken, 
+                                         avatar, movieQuotaLimit, movieQuotaDays, tvQuotaLimit, tvQuotaDays, 
+                                         createdAt, updatedAt, requestCount, displayName)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        "admin@localhost",  # email
+                        "admin",  # username
+                        None,  # plexUsername
+                        None,  # plexId
+                        None,  # jellyfinUsername
+                        None,  # jellyfinUserId
+                        None,  # jellyfinDeviceId
+                        None,  # jellyfinAuthToken
+                        password_hash,  # password
+                        1,  # userType (1 = admin)
+                        None,  # plexToken
+                        "",  # avatar
+                        None,  # movieQuotaLimit
+                        None,  # movieQuotaDays
+                        None,  # tvQuotaLimit
+                        None,  # tvQuotaDays
+                        int(time.time() * 1000),  # createdAt (milliseconds)
+                        int(time.time() * 1000),  # updatedAt (milliseconds)
+                        0,  # requestCount
+                        "Admin"  # displayName
+                    ))
+                    conn.commit()
+                    self.log("Admin user created (username: admin)", "SUCCESS")
+                else:
+                    self.log("Admin user already exists", "SUCCESS")
+                
+                conn.close()
+                
+                # Configure Jellyfin (for future integration)
                 settings["jellyfin"] = {
                     "name": "Jellyfin",
                     "ip": "jellyfin",
@@ -442,8 +491,8 @@ data:
                 with open(config_path, 'w') as f:
                     json.dump(settings, f, indent=1)
                 
-                self.log("Jellyseerr configured with Jellyfin, Sonarr, and Radarr", "SUCCESS")
-                self.log("Restarting Jellyseerr pod to apply changes...", "INFO")
+                self.log("Jellyseerr configured with admin user, Sonarr, and Radarr", "SUCCESS")
+                self.log("Login at jellyseerr.tkuipers.ca with username: admin", "INFO")
                 
             except Exception as e:
                 self.log(f"Failed to configure Jellyseerr: {e}", "ERROR")
@@ -543,9 +592,10 @@ spec:
       - name: setup
         image: python:3.11-slim
         command:
-        - python3
-        - -u
-        - /scripts/setup.py
+        - /bin/sh
+        - -c
+        - |
+          pip install --no-cache-dir bcrypt && python3 -u /scripts/setup.py
         env:
         - name: TRANSMISSION_USER
           valueFrom:

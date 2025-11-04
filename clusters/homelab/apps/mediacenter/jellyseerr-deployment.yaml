@@ -19,7 +19,7 @@ spec:
         kubernetes.io/hostname: dell-r620
       containers:
       - name: jellyseerr
-        image: fallenbagel/jellyseerr:latest
+        image: fallenbagel/jellyseerr:1.9.2
         ports:
         - containerPort: 5055
           name: http
