@@ -81,12 +81,12 @@ data:
                     if api_key:
                         self.log(f"{service_name} API key extracted", "SUCCESS")
                         return api_key
-                elif config_path.endswith('.ini'):
-                    # Parse INI file for Bazarr
+                elif config_path.endswith('.yaml'):
+                    # Parse YAML file for Bazarr
                     with open(config_path, 'r') as f:
                         for line in f:
-                            if line.strip().startswith('apikey'):
-                                api_key = line.split('=', 1)[1].strip()
+                            if 'apikey:' in line:
+                                api_key = line.split(':', 1)[1].strip()
                                 if api_key:
                                     self.log(f"{service_name} API key extracted", "SUCCESS")
                                     return api_key
@@ -345,7 +345,7 @@ data:
             self.sonarr_api_key = self.extract_api_key("/sonarr-config/config.xml", "Sonarr")
             self.radarr_api_key = self.extract_api_key("/radarr-config/config.xml", "Radarr")
             self.prowlarr_api_key = self.extract_api_key("/prowlarr-config/config.xml", "Prowlarr")
-            self.bazarr_api_key = self.extract_api_key("/bazarr-config/config/config.ini", "Bazarr")
+            self.bazarr_api_key = self.extract_api_key("/bazarr-config/config/config.yaml", "Bazarr")
             print()
             
             # Link apps to Prowlarr
