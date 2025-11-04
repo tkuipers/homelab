@@ -15,6 +15,12 @@ resources:
   - radarr-deployment.yaml
   - radarr-service.yaml
   - radarr-ingress.yaml
+  - bazarr-deployment.yaml
+  - bazarr-service.yaml
+  - bazarr-ingress.yaml
+  - jellyseerr-deployment.yaml
+  - jellyseerr-service.yaml
+  - jellyseerr-ingress.yaml
   - transmission-credentials-external-secret.yaml
   - transmission-deployment.yaml
   - transmission-service.yaml

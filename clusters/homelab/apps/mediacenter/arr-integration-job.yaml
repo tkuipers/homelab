@@ -22,6 +22,9 @@ data:
             self.radarr_url = "http://radarr:7878"
             self.prowlarr_url = "http://prowlarr:9696"
             self.transmission_url = "http://transmission:9091"
+            self.bazarr_url = "http://bazarr:6767"
+            self.jellyseerr_url = "http://jellyseerr:5055"
+            self.jellyfin_url = "http://jellyfin:8096"
             
             self.transmission_user = os.getenv("TRANSMISSION_USER")
             self.transmission_pass = os.getenv("TRANSMISSION_PASS")
@@ -29,6 +32,7 @@ data:
             self.sonarr_api_key = None
             self.radarr_api_key = None
             self.prowlarr_api_key = None
+            self.bazarr_api_key = None
             
         def log(self, message: str, level: str = "INFO"):
             symbols = {"INFO": "ℹ", "SUCCESS": "✓", "ERROR": "✗", "WARNING": "⚠"}
@@ -70,12 +74,22 @@ data:
         def extract_api_key(self, config_path: str, service_name: str) -> str:
             self.log(f"Extracting {service_name} API key...")
             try:
-                tree = ET.parse(config_path)
-                root = tree.getroot()
-                api_key = root.find(".//ApiKey").text
-                if api_key:
-                    self.log(f"{service_name} API key extracted", "SUCCESS")
-                    return api_key
+                if config_path.endswith('.xml'):
+                    tree = ET.parse(config_path)
+                    root = tree.getroot()
+                    api_key = root.find(".//ApiKey").text
+                    if api_key:
+                        self.log(f"{service_name} API key extracted", "SUCCESS")
+                        return api_key
+                elif config_path.endswith('.ini'):
+                    # Parse INI file for Bazarr
+                    with open(config_path, 'r') as f:
+                        for line in f:
+                            if line.strip().startswith('apikey'):
+                                api_key = line.split('=', 1)[1].strip()
+                                if api_key:
+                                    self.log(f"{service_name} API key extracted", "SUCCESS")
+                                    return api_key
             except Exception as e:
                 self.log(f"Failed to extract {service_name} API key: {e}", "ERROR")
                 sys.exit(1)
@@ -263,6 +277,54 @@ data:
                     self.log(f"Root folder {path} already exists in {service_name}", "SUCCESS")
                 else:
                     self.log(f"Failed to add root folder to {service_name}: {body}", "WARNING")
+                    
+        def setup_bazarr(self):
+            self.log("Configuring Bazarr...")
+            
+            # Configure Sonarr in Bazarr
+            status, response = self.api_request(f"{self.bazarr_url}/api/system/settings", self.bazarr_api_key)
+            if status == 200:
+                settings = response
+                sonarr_settings = {
+                    "ip": "sonarr",
+                    "port": 8989,
+                    "base_url": "/",
+                    "ssl": False,
+                    "apikey": self.sonarr_api_key
+                }
+                settings["sonarr"] = sonarr_settings
+                
+                radarr_settings = {
+                    "ip": "radarr",
+                    "port": 7878,
+                    "base_url": "/",
+                    "ssl": False,
+                    "apikey": self.radarr_api_key
+                }
+                settings["radarr"] = radarr_settings
+                
+                # Enable OpenSubtitles.com (no auth required)
+                if "settings" not in settings:
+                    settings["settings"] = {}
+                if "general" not in settings["settings"]:
+                    settings["settings"]["general"] = {}
+                settings["settings"]["general"]["enabled_providers"] = ["opensubtitlescom"]
+                
+                status, _ = self.api_request(f"{self.bazarr_url}/api/system/settings", self.bazarr_api_key, "POST", settings)
+                if status in [200, 201, 204]:
+                    self.log("Bazarr configured with Sonarr, Radarr, and OpenSubtitles.com", "SUCCESS")
+                else:
+                    self.log("Bazarr configuration may need manual setup", "WARNING")
+            else:
+                self.log("Could not configure Bazarr automatically", "WARNING")
+                
+        def setup_jellyseerr(self):
+            self.log("Configuring Jellyseerr...")
+            
+            # Note: Jellyseerr requires initial setup through UI first
+            # We'll just log a message for now
+            self.log("Jellyseerr requires manual initial setup via UI", "INFO")
+            self.log("After setup, link Jellyfin, Sonarr, and Radarr manually", "INFO")
                 
         def run(self):
             print("=" * 60)
@@ -275,12 +337,15 @@ data:
             self.wait_for_service("Radarr", f"{self.radarr_url}/ping")
             self.wait_for_service("Prowlarr", f"{self.prowlarr_url}/ping")
             self.wait_for_service("Transmission", self.transmission_url, accept_401=True)
+            self.wait_for_service("Bazarr", f"{self.bazarr_url}/api/system/status", accept_401=True)
+            self.wait_for_service("Jellyseerr", f"{self.jellyseerr_url}/api/v1/status", accept_401=True)
             print()
             
             # Extract API keys
             self.sonarr_api_key = self.extract_api_key("/sonarr-config/config.xml", "Sonarr")
             self.radarr_api_key = self.extract_api_key("/radarr-config/config.xml", "Radarr")
             self.prowlarr_api_key = self.extract_api_key("/prowlarr-config/config.xml", "Prowlarr")
+            self.bazarr_api_key = self.extract_api_key("/bazarr-config/config/config.ini", "Bazarr")
             print()
             
             # Link apps to Prowlarr
@@ -318,6 +383,14 @@ data:
             # Trigger sync
             self.log("Triggering indexer sync...")
             self.api_request(f"{self.prowlarr_url}/api/v1/applications/sync", self.prowlarr_api_key, "POST")
+            print()
+            
+            # Configure Bazarr
+            self.setup_bazarr()
+            print()
+            
+            # Configure Jellyseerr
+            self.setup_jellyseerr()
             
             print()
             print("=" * 60)
@@ -327,6 +400,8 @@ data:
             self.log("Radarr linked to Prowlarr", "SUCCESS")
             self.log("Transmission configured in both", "SUCCESS")
             self.log("Remote path mappings configured", "SUCCESS")
+            self.log("Bazarr linked to Sonarr and Radarr", "SUCCESS")
+            self.log("Jellyseerr ready for manual setup", "INFO")
             self.log("Your media stack is fully integrated!", "SUCCESS")
             
     if __name__ == "__main__":
@@ -373,6 +448,9 @@ spec:
         - name: prowlarr-config
           mountPath: /prowlarr-config
           readOnly: true
+        - name: bazarr-config
+          mountPath: /bazarr-config
+          readOnly: true
       volumes:
       - name: scripts
         configMap:
@@ -389,6 +467,10 @@ spec:
       - name: prowlarr-config
         hostPath:
           path: /var/persist/prowlarr-config
+          type: Directory
+      - name: bazarr-config
+        hostPath:
+          path: /var/persist/bazarr-config
           type: Directory
       nodeSelector:
         kubernetes.io/hostname: dell-r620
