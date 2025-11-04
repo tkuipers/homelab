@@ -20,6 +20,10 @@ data:
         """Get CSRF session ID from Transmission"""
         try:
             req = urllib.request.Request(TRANSMISSION_URL)
+            # Add basic auth for initial request
+            if TRANSMISSION_USER and TRANSMISSION_PASS:
+                credentials = base64.b64encode(f"{TRANSMISSION_USER}:{TRANSMISSION_PASS}".encode()).decode()
+                req.add_header("Authorization", f"Basic {credentials}")
             urllib.request.urlopen(req)
         except urllib.error.HTTPError as e:
             if e.code == 409:
