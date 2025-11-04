@@ -154,6 +154,55 @@ data:
                 else:
                     self.log(f"Failed to add indexer {name}: {body}", "WARNING")
                     
+        def add_torrent_indexer(self, name: str, implementation: str, app_profile_id: int, base_url: str = "", extra_fields: dict = None):
+            """Add a torrent indexer using Prowlarr's built-in implementations"""
+            # Generate unique name
+            hash_suffix = hashlib.md5(f"{implementation}{base_url}".encode()).hexdigest()[:8]
+            unique_name = f"{name}-{hash_suffix}"
+            
+            self.log(f"Adding torrent indexer: {unique_name}")
+            
+            # Check if already exists
+            status, indexers = self.api_request(f"{self.prowlarr_url}/api/v1/indexer", self.prowlarr_api_key)
+            if status == 200:
+                for indexer in indexers:
+                    if indexer.get("name") == unique_name:
+                        self.log(f"Torrent indexer {name} already configured", "SUCCESS")
+                        return
+            
+            # Build fields
+            fields = []
+            if base_url:
+                fields.append({"name": "baseUrl", "value": base_url})
+            if extra_fields:
+                for field_name, field_value in extra_fields.items():
+                    fields.append({"name": field_name, "value": field_value})
+            
+            payload = {
+                "name": unique_name,
+                "implementation": implementation,
+                "configContract": f"{implementation}Settings",
+                "enable": True,
+                "redirect": False,
+                "appProfileId": app_profile_id,
+                "fields": fields,
+                "enableRss": True,
+                "enableAutomaticSearch": True,
+                "enableInteractiveSearch": True,
+                "protocol": "torrent",
+                "priority": 25
+            }
+            
+            status, body = self.api_request(f"{self.prowlarr_url}/api/v1/indexer", self.prowlarr_api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"Torrent indexer {name} successfully added", "SUCCESS")
+            else:
+                error_msg = str(body)
+                if "already exists" in error_msg.lower() or "unique" in error_msg.lower():
+                    self.log(f"Torrent indexer {name} already configured", "SUCCESS")
+                else:
+                    self.log(f"Failed to add torrent indexer {name}: {body}", "WARNING")
+                    
         def add_download_client(self, service_name: str, service_url: str, api_key: str, category: str):
             self.log(f"Adding Transmission to {service_name}...")
             
@@ -255,7 +304,7 @@ data:
             app_profile_id = profiles[0]["id"] if status == 200 and profiles else 1
             self.log(f"Using App Profile ID: {app_profile_id}")
             
-            # Add indexers
+            # Add Usenet indexers from secrets
             for i in range(1, 7):
                 name = os.getenv(f"INDEXER{i}_NAME")
                 url = os.getenv(f"INDEXER{i}_URL")
@@ -263,6 +312,13 @@ data:
                 
                 if name and url:
                     self.add_indexer(name, url, api_key, app_profile_id)
+            
+            # Add public torrent indexers
+            self.add_torrent_indexer("1337x", "1337x", app_profile_id)
+            self.add_torrent_indexer("EZTV", "Eztv", app_profile_id)
+            self.add_torrent_indexer("YTS", "YTS", app_profile_id, "https://yts.mx")
+            self.add_torrent_indexer("TorrentGalaxy", "TorrentGalaxy", app_profile_id)
+            self.add_torrent_indexer("ThePirateBay", "ThePirateBay", app_profile_id)
             print()
             
             # Configure Transmission
