@@ -68,9 +68,6 @@ spec:
           subPath: downloads
         - name: media-root
           mountPath: /media
-        - name: transmission-settings
-          mountPath: /config/transmission-daemon/settings.json
-          subPath: settings.json
         resources:
           requests:
             memory: "256Mi"
@@ -86,7 +83,4 @@ spec:
       - name: media-root
         persistentVolumeClaim:
           claimName: jellyfin-media
-      - name: transmission-settings
-        configMap:
-          name: transmission-settings
 

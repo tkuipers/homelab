@@ -6,7 +6,6 @@ resources:
   - jellyfin-deployment.yaml
   - jellyfin-service.yaml
   - jellyfin-ingress.yaml
-  - prowlarr-indexers-external-secret.yaml
   - prowlarr-deployment.yaml
   - prowlarr-service.yaml
   - prowlarr-ingress.yaml
@@ -17,7 +16,6 @@ resources:
   - radarr-service.yaml
   - radarr-ingress.yaml
   - transmission-credentials-external-secret.yaml
-  - transmission-settings-configmap.yaml
   - transmission-deployment.yaml
   - transmission-service.yaml
   - transmission-ingress.yaml
