@@ -14,8 +14,6 @@ data:
     import urllib.request
     import urllib.error
     import xml.etree.ElementTree as ET
-    import sqlite3
-    import bcrypt
     from typing import Optional, Dict, Any
     
     class ArrIntegration:
@@ -369,7 +367,6 @@ data:
             self.log("Configuring Jellyseerr...")
             
             config_path = "/jellyseerr-config/settings.json"
-            db_path = "/jellyseerr-config/db/db.sqlite3"
             
             try:
                 with open(config_path, 'r') as f:
@@ -380,33 +377,24 @@ data:
                     self.log("Jellyseerr already initialized", "SUCCESS")
                     return
                 
-                # Create admin user in database
-                conn = sqlite3.connect(db_path)
-                cursor = conn.cursor()
-                
-                # Check if user already exists
-                cursor.execute("SELECT id FROM user WHERE email = ?", ("admin@localhost",))
-                if cursor.fetchone() is None:
-                    # Hash the password using bcrypt
-                    password_hash = bcrypt.hashpw("water123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                    
-                    # Insert admin user with required fields
-                    cursor.execute("""
-                        INSERT INTO user (email, username, password, userType, avatar)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (
-                        "admin@localhost",  # email
-                        "admin",  # username
-                        password_hash,  # password
-                        1,  # userType (1 = admin/owner)
-                        ""  # avatar (empty string)
-                    ))
-                    conn.commit()
-                    self.log("Admin user created (username: admin)", "SUCCESS")
-                else:
-                    self.log("Admin user already exists", "SUCCESS")
-                
-                conn.close()
+                # Create local admin user via API
+                self.log("Creating admin user via Jellyseerr API...")
+                auth_payload = {
+                    "email": "admin@localhost",
+                    "password": "water123"
+                }
+                headers = {"Content-Type": "application/json"}
+                request_data = json.dumps(auth_payload).encode()
+                req = urllib.request.Request(f"{self.jellyseerr_url}/api/v1/auth/local", 
+                                            data=request_data, headers=headers, method="POST")
+                try:
+                    response = urllib.request.urlopen(req)
+                    self.log("Admin user created via API", "SUCCESS")
+                except urllib.error.HTTPError as e:
+                    if e.code == 500:
+                        self.log("Admin user may already exist or setup incomplete", "WARNING")
+                    else:
+                        self.log(f"Failed to create user: HTTP {e.code}", "WARNING")
                 
                 # Configure Jellyfin (for future integration)
                 settings["jellyfin"] = {
@@ -574,10 +562,9 @@ spec:
       - name: setup
         image: python:3.11-slim
         command:
-        - /bin/sh
-        - -c
-        - |
-          pip install --no-cache-dir bcrypt && python3 -u /scripts/setup.py
+        - python3
+        - -u
+        - /scripts/setup.py
         env:
         - name: TRANSMISSION_USER
           valueFrom:
