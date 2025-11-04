@@ -390,33 +390,17 @@ data:
                     # Hash the password using bcrypt
                     password_hash = bcrypt.hashpw("water123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                     
-                    # Insert admin user
+                    # Insert admin user with minimal fields
                     cursor.execute("""
-                        INSERT INTO user (email, username, plexUsername, plexId, jellyfinUsername, jellyfinUserId, 
-                                         jellyfinDeviceId, jellyfinAuthToken, password, userType, plexToken, 
-                                         avatar, movieQuotaLimit, movieQuotaDays, tvQuotaLimit, tvQuotaDays, 
-                                         createdAt, updatedAt, requestCount, displayName)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO user (email, username, password, userType, createdAt, updatedAt, displayName)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
                     """, (
                         "admin@localhost",  # email
                         "admin",  # username
-                        None,  # plexUsername
-                        None,  # plexId
-                        None,  # jellyfinUsername
-                        None,  # jellyfinUserId
-                        None,  # jellyfinDeviceId
-                        None,  # jellyfinAuthToken
                         password_hash,  # password
                         1,  # userType (1 = admin)
-                        None,  # plexToken
-                        "",  # avatar
-                        None,  # movieQuotaLimit
-                        None,  # movieQuotaDays
-                        None,  # tvQuotaLimit
-                        None,  # tvQuotaDays
                         int(time.time() * 1000),  # createdAt (milliseconds)
                         int(time.time() * 1000),  # updatedAt (milliseconds)
-                        0,  # requestCount
                         "Admin"  # displayName
                     ))
                     conn.commit()
