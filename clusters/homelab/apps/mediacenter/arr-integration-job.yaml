@@ -366,10 +366,87 @@ data:
         def setup_jellyseerr(self):
             self.log("Configuring Jellyseerr...")
             
-            # Note: Jellyseerr requires initial setup through UI first
-            # We'll just log a message for now
-            self.log("Jellyseerr requires manual initial setup via UI", "INFO")
-            self.log("After setup, link Jellyfin, Sonarr, and Radarr manually", "INFO")
+            config_path = "/jellyseerr-config/settings.json"
+            
+            try:
+                with open(config_path, 'r') as f:
+                    settings = json.load(f)
+                
+                # Check if already initialized
+                if settings.get("public", {}).get("initialized", False):
+                    self.log("Jellyseerr already initialized", "SUCCESS")
+                    return
+                
+                # Configure Jellyfin
+                settings["jellyfin"] = {
+                    "name": "Jellyfin",
+                    "ip": "jellyfin",
+                    "port": 8096,
+                    "useSsl": False,
+                    "urlBase": "",
+                    "externalHostname": "",
+                    "jellyfinForgotPasswordUrl": "",
+                    "libraries": [],
+                    "serverId": "",
+                    "apiKey": ""
+                }
+                
+                # Configure Sonarr
+                settings["sonarr"] = [{
+                    "name": "Sonarr",
+                    "hostname": "sonarr",
+                    "port": 8989,
+                    "apiKey": self.sonarr_api_key,
+                    "useSsl": False,
+                    "baseUrl": "/",
+                    "activeProfileId": 1,
+                    "activeDirectory": "/media/tv",
+                    "activeLanguageProfileId": 1,
+                    "activeAnimeProfileId": None,
+                    "activeAnimeDirectory": "",
+                    "activeAnimeLanguageProfileId": None,
+                    "is4k": False,
+                    "enableSeasonFolders": True,
+                    "isDefault": True,
+                    "externalUrl": "",
+                    "syncEnabled": True,
+                    "preventSearch": False,
+                    "tagRequests": False,
+                    "tags": []
+                }]
+                
+                # Configure Radarr
+                settings["radarr"] = [{
+                    "name": "Radarr",
+                    "hostname": "radarr",
+                    "port": 7878,
+                    "apiKey": self.radarr_api_key,
+                    "useSsl": False,
+                    "baseUrl": "/",
+                    "activeProfileId": 1,
+                    "activeDirectory": "/media/movies",
+                    "is4k": False,
+                    "minimumAvailability": "released",
+                    "isDefault": True,
+                    "externalUrl": "",
+                    "syncEnabled": True,
+                    "preventSearch": False,
+                    "tagRequests": False,
+                    "tags": []
+                }]
+                
+                # Mark as initialized
+                settings["public"]["initialized"] = True
+                
+                # Write back the config
+                with open(config_path, 'w') as f:
+                    json.dump(settings, f, indent=1)
+                
+                self.log("Jellyseerr configured with Jellyfin, Sonarr, and Radarr", "SUCCESS")
+                self.log("Restarting Jellyseerr pod to apply changes...", "INFO")
+                
+            except Exception as e:
+                self.log(f"Failed to configure Jellyseerr: {e}", "ERROR")
                 
         def run(self):
             print("=" * 60)
@@ -445,7 +522,7 @@ data:
             self.log("Transmission configured in both", "SUCCESS")
             self.log("Remote path mappings configured", "SUCCESS")
             self.log("Bazarr linked to Sonarr and Radarr", "SUCCESS")
-            self.log("Jellyseerr ready for manual setup", "INFO")
+            self.log("Jellyseerr configured with Jellyfin, Sonarr, and Radarr", "SUCCESS")
             self.log("Your media stack is fully integrated!", "SUCCESS")
             
     if __name__ == "__main__":
@@ -495,6 +572,9 @@ spec:
         - name: bazarr-config
           mountPath: /bazarr-config
           readOnly: false
+        - name: jellyseerr-config
+          mountPath: /jellyseerr-config
+          readOnly: false
       volumes:
       - name: scripts
         configMap:
@@ -515,6 +595,10 @@ spec:
       - name: bazarr-config
         hostPath:
           path: /var/persist/bazarr-config
+          type: Directory
+      - name: jellyseerr-config
+        hostPath:
+          path: /var/persist/jellyseerr-config
           type: Directory
       nodeSelector:
         kubernetes.io/hostname: dell-r620
