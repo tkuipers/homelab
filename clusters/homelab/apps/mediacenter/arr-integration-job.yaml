@@ -22,6 +22,7 @@ data:
             self.radarr_url = "http://radarr:7878"
             self.prowlarr_url = "http://prowlarr:9696"
             self.transmission_url = "http://transmission:9091"
+            self.sabnzbd_url = "http://sabnzbd:8080"
             self.bazarr_url = "http://bazarr:6767"
             
             self.transmission_user = os.getenv("TRANSMISSION_USER")
@@ -31,6 +32,7 @@ data:
             self.radarr_api_key = None
             self.prowlarr_api_key = None
             self.bazarr_api_key = None
+            self.sabnzbd_api_key = None
             
         def log(self, message: str, level: str = "INFO"):
             symbols = {"INFO": "ℹ", "SUCCESS": "✓", "ERROR": "✗", "WARNING": "⚠"}
@@ -85,6 +87,15 @@ data:
                         for line in f:
                             if 'apikey:' in line:
                                 api_key = line.split(':', 1)[1].strip()
+                                if api_key:
+                                    self.log(f"{service_name} API key extracted", "SUCCESS")
+                                    return api_key
+                elif config_path.endswith('.ini'):
+                    # Parse INI file for SABnzbd
+                    with open(config_path, 'r') as f:
+                        for line in f:
+                            if 'api_key =' in line:
+                                api_key = line.split('=', 1)[1].strip()
                                 if api_key:
                                     self.log(f"{service_name} API key extracted", "SUCCESS")
                                     return api_key
@@ -238,6 +249,41 @@ data:
                 else:
                     self.log(f"Failed to add Transmission to {service_name}: {body}", "WARNING")
                     
+        def add_sabnzbd_client(self, service_name: str, service_url: str, api_key: str, category: str):
+            self.log(f"Adding SABnzbd to {service_name}...")
+            
+            payload = {
+                "enable": True,
+                "protocol": "usenet",
+                "priority": 1,
+                "removeCompletedDownloads": True,
+                "removeFailedDownloads": True,
+                "name": "SABnzbd",
+                "fields": [
+                    {"name": "host", "value": "sabnzbd"},
+                    {"name": "port", "value": 8080},
+                    {"name": "apiKey", "value": self.sabnzbd_api_key},
+                    {"name": "category", "value": category},
+                    {"name": "recentTvPriority", "value": 0},
+                    {"name": "olderTvPriority", "value": 0},
+                    {"name": "useSsl", "value": False}
+                ],
+                "implementationName": "SABnzbd",
+                "implementation": "Sabnzbd",
+                "configContract": "SabnzbdSettings",
+                "tags": []
+            }
+            
+            status, body = self.api_request(f"{service_url}/api/v3/downloadclient", api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"SABnzbd added to {service_name}", "SUCCESS")
+            else:
+                error_msg = str(body)
+                if "already exists" in error_msg.lower() or "unique" in error_msg.lower():
+                    self.log(f"SABnzbd already configured in {service_name}", "SUCCESS")
+                else:
+                    self.log(f"Failed to add SABnzbd to {service_name}: {body}", "WARNING")
+                    
         def add_path_mapping(self, service_name: str, service_url: str, api_key: str):
             self.log(f"Adding remote path mapping to {service_name}...")
             
@@ -373,6 +419,7 @@ data:
             self.wait_for_service("Radarr", f"{self.radarr_url}/ping")
             self.wait_for_service("Prowlarr", f"{self.prowlarr_url}/ping")
             self.wait_for_service("Transmission", self.transmission_url, accept_401=True)
+            self.wait_for_service("SABnzbd", f"{self.sabnzbd_url}/api?mode=version", accept_401=False)
             self.wait_for_service("Bazarr", f"{self.bazarr_url}/api/system/status", accept_401=True)
             print()
             
@@ -380,6 +427,7 @@ data:
             self.sonarr_api_key = self.extract_api_key("/sonarr-config/config.xml", "Sonarr")
             self.radarr_api_key = self.extract_api_key("/radarr-config/config.xml", "Radarr")
             self.prowlarr_api_key = self.extract_api_key("/prowlarr-config/config.xml", "Prowlarr")
+            self.sabnzbd_api_key = self.extract_api_key("/sabnzbd-config/sabnzbd.ini", "SABnzbd")
             print()
             
             # Link apps to Prowlarr
@@ -402,6 +450,11 @@ data:
             # Configure Transmission
             self.add_download_client("Sonarr", self.sonarr_url, self.sonarr_api_key, "tv-sonarr")
             self.add_download_client("Radarr", self.radarr_url, self.radarr_api_key, "radarr")
+            print()
+            
+            # Configure SABnzbd
+            self.add_sabnzbd_client("Sonarr", self.sonarr_url, self.sonarr_api_key, "tv")
+            self.add_sabnzbd_client("Radarr", self.radarr_url, self.radarr_api_key, "movies")
             print()
             
             # Add path mappings
@@ -429,6 +482,7 @@ data:
             self.log("Sonarr linked to Prowlarr", "SUCCESS")
             self.log("Radarr linked to Prowlarr", "SUCCESS")
             self.log("Transmission configured in both", "SUCCESS")
+            self.log("SABnzbd configured in both", "SUCCESS")
             self.log("Remote path mappings configured", "SUCCESS")
             self.log("Bazarr linked to Sonarr and Radarr", "SUCCESS")
             self.log("Your media stack is fully integrated!", "SUCCESS")
@@ -480,6 +534,9 @@ spec:
         - name: bazarr-config
           mountPath: /bazarr-config
           readOnly: false
+        - name: sabnzbd-config
+          mountPath: /sabnzbd-config
+          readOnly: true
       volumes:
       - name: scripts
         configMap:
@@ -500,6 +557,10 @@ spec:
       - name: bazarr-config
         hostPath:
           path: /var/persist/bazarr-config
+          type: Directory
+      - name: sabnzbd-config
+        hostPath:
+          path: /var/persist/sabnzbd-config
           type: Directory
       nodeSelector:
         kubernetes.io/hostname: dell-r620

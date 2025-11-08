@@ -24,5 +24,8 @@ resources:
   - transmission-service.yaml
   - transmission-ingress.yaml
   - transmission-cleanup-cronjob.yaml
+  - sabnzbd-deployment.yaml
+  - sabnzbd-service.yaml
+  - sabnzbd-ingress.yaml
   - arr-integration-job.yaml
 

@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sabnzbd
+  namespace: mediacenter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sabnzbd
+  template:
+    metadata:
+      labels:
+        app: sabnzbd
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      initContainers:
+      - name: create-downloads-dir
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /media/downloads/incomplete \
+                   /media/downloads/complete/tv-sonarr \
+                   /media/downloads/complete/radarr \
+                   /media/tv \
+                   /media/movies
+          chmod -R 777 /media
+        volumeMounts:
+        - name: media-root
+          mountPath: /media
+      containers:
+      # Gluetun VPN sidecar - provides network for SABnzbd
+      - name: gluetun
+        image: qmcgaw/gluetun:latest
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+        ports:
+        - containerPort: 8080
+          name: webui
+          protocol: TCP
+        env:
+        - name: VPN_SERVICE_PROVIDER
+          value: "airvpn"
+        - name: VPN_TYPE
+          value: "wireguard"
+        - name: WIREGUARD_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: private_key
+        - name: WIREGUARD_PRESHARED_KEY
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: preshared_key
+        - name: WIREGUARD_ADDRESSES
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: addresses
+        - name: SERVER_COUNTRIES
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: server_country
+        - name: LOG_LEVEL
+          value: "info"
+        - name: TZ
+          value: "America/Los_Angeles"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      # SABnzbd - uses Gluetun's network
+      - name: sabnzbd
+        image: linuxserver/sabnzbd:latest
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "America/Los_Angeles"
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: media-root
+          mountPath: /downloads
+          subPath: downloads
+        - name: media-root
+          mountPath: /media
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+      volumes:
+      - name: config
+        hostPath:
+          path: /var/persist/sabnzbd-config
+          type: DirectoryOrCreate
+      - name: media-root
+        persistentVolumeClaim:
+          claimName: jellyfin-media
+
