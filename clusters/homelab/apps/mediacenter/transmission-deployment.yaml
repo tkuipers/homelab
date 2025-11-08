@@ -50,6 +50,10 @@ spec:
           value: "openvpn"
         - name: OPENVPN_CUSTOM_CONFIG
           value: "/gluetun/config/custom.conf"
+        - name: VPN_ENDPOINT_IP
+          value: ""
+        - name: VPN_ENDPOINT_PORT
+          value: ""
         - name: FIREWALL_VPN_INPUT_PORTS
           valueFrom:
             secretKeyRef:
