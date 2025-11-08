@@ -45,21 +45,30 @@ spec:
           protocol: TCP
         env:
         - name: VPN_SERVICE_PROVIDER
-          value: "custom"
+          value: "airvpn"
         - name: VPN_TYPE
-          value: "openvpn"
-        - name: OPENVPN_CUSTOM_CONFIG
-          value: "/gluetun/config/custom.conf"
-        - name: VPN_ENDPOINT_IP
-          value: ""
-        - name: VPN_ENDPOINT_PORT
-          value: ""
-        - name: FIREWALL_VPN_INPUT_PORTS
+          value: "wireguard"
+        - name: WIREGUARD_PRIVATE_KEY
           valueFrom:
             secretKeyRef:
               name: airvpn-credentials
-              key: forwarded_port
-        - name: FIREWALL_INPUT_PORTS
+              key: private_key
+        - name: WIREGUARD_PRESHARED_KEY
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: preshared_key
+        - name: WIREGUARD_ADDRESSES
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: addresses
+        - name: SERVER_COUNTRIES
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: server_country
+        - name: FIREWALL_VPN_INPUT_PORTS
           valueFrom:
             secretKeyRef:
               name: airvpn-credentials
@@ -68,12 +77,6 @@ spec:
           value: "info"
         - name: TZ
           value: "America/Los_Angeles"
-        volumeMounts:
-        - name: airvpn-config
-          mountPath: /gluetun/config
-          readOnly: true
-        - name: gluetun-data
-          mountPath: /gluetun
         resources:
           requests:
             memory: "128Mi"
@@ -129,10 +132,4 @@ spec:
       - name: media-root
         persistentVolumeClaim:
           claimName: jellyfin-media
-      - name: airvpn-config
-        secret:
-          secretName: airvpn-credentials
-          defaultMode: 0400
-      - name: gluetun-data
-        emptyDir: {}
 
