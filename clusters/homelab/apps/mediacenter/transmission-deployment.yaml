@@ -32,17 +32,54 @@ spec:
         - name: media-root
           mountPath: /media
       containers:
-      - name: transmission
-        image: linuxserver/transmission:latest
+      # Gluetun VPN sidecar - provides network for Transmission
+      - name: gluetun
+        image: qmcgaw/gluetun:latest
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
         ports:
         - containerPort: 9091
           name: webui
-        - containerPort: 51413
-          name: tcp-listen
           protocol: TCP
-        - containerPort: 51413
-          name: udp-listen
-          protocol: UDP
+        env:
+        - name: VPN_SERVICE_PROVIDER
+          value: "custom"
+        - name: VPN_TYPE
+          value: "openvpn"
+        - name: OPENVPN_CUSTOM_CONFIG
+          value: "/gluetun/custom.conf"
+        - name: FIREWALL_VPN_INPUT_PORTS
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: forwarded_port
+        - name: FIREWALL_INPUT_PORTS
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: forwarded_port
+        - name: HEALTH_VPN_DURATION_INITIAL
+          value: "30s"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: TZ
+          value: "America/Los_Angeles"
+        volumeMounts:
+        - name: airvpn-config
+          mountPath: /gluetun
+          readOnly: true
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      # Transmission - uses Gluetun's network
+      - name: transmission
+        image: linuxserver/transmission:latest
         env:
         - name: PUID
           value: "1000"
@@ -60,6 +97,11 @@ spec:
             secretKeyRef:
               name: transmission-credentials
               key: password
+        - name: PEERPORT
+          valueFrom:
+            secretKeyRef:
+              name: airvpn-credentials
+              key: forwarded_port
         volumeMounts:
         - name: config
           mountPath: /config
@@ -83,4 +125,8 @@ spec:
       - name: media-root
         persistentVolumeClaim:
           claimName: jellyfin-media
+      - name: airvpn-config
+        secret:
+          secretName: airvpn-credentials
+          defaultMode: 0400
 
