@@ -3,8 +3,9 @@
 set -euo pipefail
 
 # Configuration
-SECRET_NAME="airvpn-credentials"
-NAMESPACE="mediacenter"
+VAULT_NAME="Homelab"
+ITEM_NAME="AirVPN"
+ITEM_CATEGORY="login"
 TEMP_DIR="/tmp/airvpn-setup-$$"
 
 # Color codes for output
@@ -41,24 +42,34 @@ cleanup() {
 
 trap cleanup EXIT
 
-# Check if kubectl is available
-check_kubectl() {
-    if ! command -v kubectl &> /dev/null; then
-        log_error "kubectl is not installed"
+# Check if 1Password CLI is installed
+check_op_cli() {
+    if ! command -v op &> /dev/null; then
+        log_error "1Password CLI (op) is not installed"
+        log_info "Please install it from: https://developer.1password.com/docs/cli/get-started/"
         exit 1
     fi
     
-    log_success "kubectl is installed"
+    log_success "1Password CLI is installed"
+    
+    # Check if signed in
+    if ! op vault list &> /dev/null; then
+        log_error "Not signed in to 1Password CLI"
+        log_info "Please run: eval \$(op signin)"
+        exit 1
+    fi
+    
+    log_success "Signed in to 1Password CLI"
 }
 
-# Check if namespace exists
-check_namespace() {
-    if ! kubectl get namespace "$NAMESPACE" &> /dev/null; then
-        log_error "Namespace '$NAMESPACE' does not exist"
+# Check if vault exists
+check_vault() {
+    if ! op vault get "$VAULT_NAME" &> /dev/null; then
+        log_error "Vault '$VAULT_NAME' not found"
         exit 1
     fi
     
-    log_success "Namespace '$NAMESPACE' found"
+    log_success "Vault '$VAULT_NAME' found"
 }
 
 # Prompt for file path
@@ -118,6 +129,21 @@ validate_port() {
     return 0
 }
 
+# Get current item if it exists
+get_current_item() {
+    log_info "Checking if item exists..."
+    
+    if op item get "$ITEM_NAME" --vault="$VAULT_NAME" &> /dev/null; then
+        log_success "Item '$ITEM_NAME' found"
+        ITEM_EXISTS=true
+        CURRENT_PORT=$(op item get "$ITEM_NAME" --vault="$VAULT_NAME" --fields="forwarded_port" 2>/dev/null || echo "")
+    else
+        log_info "Item '$ITEM_NAME' does not exist - will create new item"
+        ITEM_EXISTS=false
+        CURRENT_PORT=""
+    fi
+}
+
 # Show instructions
 show_instructions() {
     echo "========================================="
@@ -130,10 +156,12 @@ show_instructions() {
     echo "  1. Go to: https://airvpn.org/generator/"
     echo "  2. Select your OS: Linux"
     echo "  3. Choose your preferred server(s)"
-    echo "  4. Enable 'Advanced mode'"
-    echo "  5. Check 'Separate keys/certs from .ovpn file'"
-    echo "  6. Click 'Generate' and download the .tar.gz file"
-    echo "  7. Extract it to a directory"
+    echo "  4. Protocol: UDP (recommended) or TCP"
+    echo "  5. Port: 443 (recommended)"
+    echo "  6. Enable 'Advanced mode'"
+    echo "  7. Check 'Separate keys/certs from .ovpn file'"
+    echo "  8. Click 'Generate' and download the .tar.gz file"
+    echo "  9. Extract it to a directory"
     echo
     log_info "You will also need to set up port forwarding:"
     echo "  1. Go to: https://airvpn.org/ports/"
@@ -158,12 +186,32 @@ collect_input() {
     
     echo
     while true; do
-        echo -n "Forwarded Port (from AirVPN portal): "
-        read FORWARDED_PORT
+        prompt_for_input "Forwarded Port" FORWARDED_PORT "$CURRENT_PORT"
         if validate_port "$FORWARDED_PORT"; then
             break
         fi
     done
+}
+
+# Prompt for input with default value
+prompt_for_input() {
+    local prompt_message="$1"
+    local var_name="$2"
+    local default_value="${3:-}"
+    
+    if [ -n "$default_value" ]; then
+        echo -n "$prompt_message [current: $default_value]: "
+    else
+        echo -n "$prompt_message: "
+    fi
+    
+    read user_input
+    
+    if [ -z "$user_input" ] && [ -n "$default_value" ]; then
+        eval "$var_name=\"$default_value\""
+    else
+        eval "$var_name=\"$user_input\""
+    fi
 }
 
 # Modify ovpn file to use correct paths
@@ -176,16 +224,16 @@ prepare_ovpn_config() {
     cp "$OVPN_FILE" "$TEMP_DIR/custom.conf"
     
     # Update certificate paths in the config
-    sed -i 's|ca .*|ca /gluetun/ca.crt|g' "$TEMP_DIR/custom.conf"
-    sed -i 's|cert .*|cert /gluetun/user.crt|g' "$TEMP_DIR/custom.conf"
-    sed -i 's|key .*|key /gluetun/user.key|g' "$TEMP_DIR/custom.conf"
-    sed -i 's|tls-auth .*|tls-auth /gluetun/ta.key|g' "$TEMP_DIR/custom.conf"
+    sed -i 's|ca .*|ca /gluetun/config/ca.crt|g' "$TEMP_DIR/custom.conf"
+    sed -i 's|cert .*|cert /gluetun/config/user.crt|g' "$TEMP_DIR/custom.conf"
+    sed -i 's|key .*|key /gluetun/config/user.key|g' "$TEMP_DIR/custom.conf"
+    sed -i 's|tls-auth .*|tls-auth /gluetun/config/ta.key|g' "$TEMP_DIR/custom.conf"
     
     log_success "OpenVPN configuration prepared"
 }
 
-# Create or update secret
-create_or_update_secret() {
+# Create or update item in 1Password
+create_or_update_item() {
     echo
     log_info "Configuration summary:"
     echo "  OpenVPN Config: $(basename "$OVPN_FILE")"
@@ -196,58 +244,70 @@ create_or_update_secret() {
     echo "  Forwarded Port: $FORWARDED_PORT"
     echo
     
-    # Check if secret already exists
-    if kubectl get secret "$SECRET_NAME" -n "$NAMESPACE" &> /dev/null; then
-        log_warning "Secret '$SECRET_NAME' already exists in namespace '$NAMESPACE'"
-        echo -n "Do you want to replace it? [y/N]: "
-        read confirm
-        if [[ "$confirm" =~ ^[Yy]$ ]]; then
-            log_info "Deleting existing secret..."
-            kubectl delete secret "$SECRET_NAME" -n "$NAMESPACE"
-        else
-            log_info "Operation cancelled"
-            exit 0
-        fi
-    fi
-    
-    echo -n "Proceed with secret creation? [y/N]: "
+    echo -n "Proceed with $(if [ "$ITEM_EXISTS" = "true" ]; then echo "update"; else echo "creation"; fi)? [y/N]: "
     read confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         log_info "Operation cancelled"
-        exit 0
+        return 1
     fi
     
-    log_info "Creating Kubernetes secret..."
+    log_info "Encoding files to base64..."
     
-    kubectl create secret generic "$SECRET_NAME" \
-        --namespace="$NAMESPACE" \
-        --from-file=custom.conf="$TEMP_DIR/custom.conf" \
-        --from-file=ca.crt="$CA_FILE" \
-        --from-file=user.crt="$USER_CRT_FILE" \
-        --from-file=user.key="$USER_KEY_FILE" \
-        --from-file=ta.key="$TA_KEY_FILE" \
-        --from-literal=forwarded_port="$FORWARDED_PORT"
+    # Base64 encode all files
+    CA_CRT_B64=$(base64 -w 0 "$CA_FILE")
+    USER_CRT_B64=$(base64 -w 0 "$USER_CRT_FILE")
+    USER_KEY_B64=$(base64 -w 0 "$USER_KEY_FILE")
+    TA_KEY_B64=$(base64 -w 0 "$TA_KEY_FILE")
+    CUSTOM_CONF_B64=$(base64 -w 0 "$TEMP_DIR/custom.conf")
     
-    log_success "Secret '$SECRET_NAME' created successfully in namespace '$NAMESPACE'"
+    if [ "$ITEM_EXISTS" = "true" ]; then
+        log_info "Updating existing item in 1Password..."
+        
+        op item edit "$ITEM_NAME" --vault="$VAULT_NAME" \
+            "ca.crt[text]=$CA_CRT_B64" \
+            "user.crt[text]=$USER_CRT_B64" \
+            "user.key[password]=$USER_KEY_B64" \
+            "ta.key[text]=$TA_KEY_B64" \
+            "custom.conf[text]=$CUSTOM_CONF_B64" \
+            "forwarded_port[text]=$FORWARDED_PORT"
+        
+        log_success "Item '$ITEM_NAME' updated successfully in 1Password"
+    else
+        log_info "Creating new item in 1Password..."
+        
+        op item create --vault="$VAULT_NAME" \
+            --category="$ITEM_CATEGORY" \
+            --title="$ITEM_NAME" \
+            "ca.crt[text]=$CA_CRT_B64" \
+            "user.crt[text]=$USER_CRT_B64" \
+            "user.key[password]=$USER_KEY_B64" \
+            "ta.key[text]=$TA_KEY_B64" \
+            "custom.conf[text]=$CUSTOM_CONF_B64" \
+            "forwarded_port[text]=$FORWARDED_PORT" \
+            "notesPlain=AirVPN OpenVPN credentials for Transmission VPN sidecar. Static port forwarding configured. Files are base64 encoded."
+        
+        log_success "Item '$ITEM_NAME' created successfully in 1Password"
+    fi
 }
 
 # Show next steps
 show_next_steps() {
     echo
-    log_success "AirVPN configuration is complete!"
+    log_success "AirVPN credentials are now configured in 1Password!"
     echo
     log_info "Next steps:"
-    echo "1. Apply the Transmission deployment:"
+    echo "1. The ExternalSecret will automatically sync credentials from 1Password"
+    echo "2. Apply the updated manifests (if not already done):"
     echo "   kubectl apply -k clusters/homelab/apps/mediacenter/"
     echo
-    echo "2. Watch the Transmission pod restart with Gluetun VPN sidecar:"
+    echo "3. Watch the Transmission pod restart with Gluetun VPN sidecar:"
     echo "   kubectl rollout status -n mediacenter deployment/transmission"
     echo
-    echo "3. Verify VPN connection is active:"
+    echo "4. Verify VPN connection is active:"
     echo "   kubectl logs -n mediacenter deployment/transmission -c gluetun --tail=50"
     echo "   (Look for 'ip getter: ip: X.X.X.X' - should be AirVPN IP)"
     echo
-    echo "4. Test that traffic goes through VPN:"
+    echo "5. Test that traffic goes through VPN:"
     echo "   kubectl exec -n mediacenter deployment/transmission -c transmission -- wget -qO- ifconfig.me"
     echo "   (Should show AirVPN IP, not your home IP)"
     echo
@@ -264,14 +324,16 @@ show_next_steps() {
 
 # Main execution
 main() {
-    check_kubectl
-    check_namespace
+    check_op_cli
+    check_vault
     
     show_instructions
     
+    get_current_item
+    
     collect_input
     prepare_ovpn_config
-    create_or_update_secret
+    create_or_update_item
     
     show_next_steps
 }

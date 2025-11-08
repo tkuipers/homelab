@@ -49,7 +49,7 @@ spec:
         - name: VPN_TYPE
           value: "openvpn"
         - name: OPENVPN_CUSTOM_CONFIG
-          value: "/gluetun/custom.conf"
+          value: "/gluetun/config/custom.conf"
         - name: FIREWALL_VPN_INPUT_PORTS
           valueFrom:
             secretKeyRef:
@@ -60,16 +60,16 @@ spec:
             secretKeyRef:
               name: airvpn-credentials
               key: forwarded_port
-        - name: HEALTH_VPN_DURATION_INITIAL
-          value: "30s"
         - name: LOG_LEVEL
           value: "info"
         - name: TZ
           value: "America/Los_Angeles"
         volumeMounts:
         - name: airvpn-config
-          mountPath: /gluetun
+          mountPath: /gluetun/config
           readOnly: true
+        - name: gluetun-data
+          mountPath: /gluetun
         resources:
           requests:
             memory: "128Mi"
@@ -129,4 +129,6 @@ spec:
         secret:
           secretName: airvpn-credentials
           defaultMode: 0400
+      - name: gluetun-data
+        emptyDir: {}
 
