@@ -19,7 +19,6 @@ resources:
   - bazarr-service.yaml
   - bazarr-ingress.yaml
   - transmission-credentials-external-secret.yaml
-  - airvpn-credentials-external-secret.yaml
   - transmission-deployment.yaml
   - transmission-service.yaml
   - transmission-ingress.yaml
