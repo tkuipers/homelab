@@ -120,6 +120,7 @@ spec:
             --ctx-size 16384 \
             --threads 4 \
             --n-gpu-layers 12 \
+            --jinja \
             --api-key "${API_KEY}"
         readinessProbe:
           httpGet:
