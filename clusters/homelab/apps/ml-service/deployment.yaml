@@ -47,8 +47,9 @@ spec:
         command:
         - /bin/sh
         - -c
+        args:
         - |
-          exec llama-server \
+          exec /app/llama-server \
             --model /models/tinyllama.gguf \
             --host 0.0.0.0 \
             --port 8080 \
