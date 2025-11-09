@@ -12,6 +12,5 @@ resources:
   - open-webui-deployment.yaml
   - open-webui-service.yaml
   - open-webui-ingress.yaml
-  # Uncomment when ready to add MCP servers:
-  # - mcp-servers-deployment.yaml
+  - mcp-servers-deployment.yaml
 
