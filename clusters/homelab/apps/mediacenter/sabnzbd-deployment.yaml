@@ -110,7 +110,7 @@ spec:
             command:
             - sh
             - -c
-            - "nslookup google.com 127.0.0.1 > /dev/null 2>&1"
+            - "wget -q --spider --timeout=3 http://1.1.1.1 > /dev/null 2>&1"
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
