@@ -119,7 +119,7 @@ spec:
             --port 8080 \
             --ctx-size 16384 \
             --threads 4 \
-            --n-gpu-layers 22 \
+            --n-gpu-layers 18 \
             --api-key "${API_KEY}"
         readinessProbe:
           httpGet:
