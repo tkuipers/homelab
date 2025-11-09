@@ -14,14 +14,17 @@ spec:
         app: mcp-servers
     spec:
       containers:
-      # MCP Brave Search Server
+      # MCP Brave Search Server (via mcpo proxy)
       - name: brave-search
-        image: node:20-slim
+        image: python:3.12-slim
         command: ["/bin/sh", "-c"]
         args:
           - |
-            npm install -g @modelcontextprotocol/server-brave-search &&
-            npx -y @modelcontextprotocol/server-brave-search
+            apt-get update && apt-get install -y nodejs npm curl &&
+            pip install --no-cache-dir uv &&
+            uv tool install mcpo &&
+            export PATH="/root/.local/bin:$PATH" &&
+            mcpo --host 0.0.0.0 --port 8001 -- npx -y @modelcontextprotocol/server-brave-search
         ports:
         - containerPort: 8001
           name: brave
