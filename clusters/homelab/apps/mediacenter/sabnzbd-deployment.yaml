@@ -28,6 +28,9 @@ spec:
                    /media/tv \
                    /media/movies
           chmod -R 777 /media
+          # Set ownership to match SABnzbd PUID/PGID (1000:1000)
+          # Note: busybox chown uses numeric IDs
+          chown -R 1000:1000 /media/downloads /media/tv /media/movies 2>/dev/null || true
         volumeMounts:
         - name: media-root
           mountPath: /media
