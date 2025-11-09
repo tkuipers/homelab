@@ -37,10 +37,10 @@ spec:
         - |
           apk add --no-cache curl
           
-          MODEL_FILE="/models/qwen2.5-coder-3b-instruct.gguf"
-          MODEL_URL="https://huggingface.co/bartowski/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf"
-          REPO="bartowski/Qwen2.5-Coder-3B-Instruct-GGUF"
-          FILENAME="Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf"
+          MODEL_FILE="/models/cogito-v1-preview-llama-3b.gguf"
+          MODEL_URL="https://huggingface.co/tensorblock/deepcogito_cogito-v1-preview-llama-3B-GGUF/resolve/main/cogito-v1-preview-llama-3B-Q4_K_M.gguf"
+          REPO="tensorblock/deepcogito_cogito-v1-preview-llama-3B-GGUF"
+          FILENAME="cogito-v1-preview-llama-3B-Q4_K_M.gguf"
           
           # Fetch expected SHA256 from Hugging Face API
           echo "Fetching file metadata from Hugging Face..."
@@ -114,7 +114,7 @@ spec:
         args:
         - |
           exec /app/llama-server \
-            --model /models/qwen2.5-coder-3b-instruct.gguf \
+            --model /models/cogito-v1-preview-llama-3b.gguf \
             --host 0.0.0.0 \
             --port 8080 \
             --ctx-size 16384 \
