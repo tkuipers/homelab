@@ -13,6 +13,7 @@ spec:
       labels:
         app: llama-server
     spec:
+      runtimeClassName: nvidia
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
       initContainers:
