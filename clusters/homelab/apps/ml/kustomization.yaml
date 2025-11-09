@@ -8,4 +8,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+  - open-webui-deployment.yaml
+  - open-webui-service.yaml
+  - open-webui-ingress.yaml
 
