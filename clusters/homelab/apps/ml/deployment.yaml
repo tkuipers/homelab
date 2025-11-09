@@ -119,7 +119,7 @@ spec:
             --port 8080 \
             --ctx-size 16384 \
             --threads 4 \
-            --n-gpu-layers 20 \
+            --n-gpu-layers 18 \
             --jinja \
             --api-key "${API_KEY}"
         readinessProbe:
