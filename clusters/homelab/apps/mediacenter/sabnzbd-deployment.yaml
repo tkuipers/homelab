@@ -101,6 +101,16 @@ spec:
           value: "info"
         - name: TZ
           value: "America/Los_Angeles"
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "nslookup google.com 127.0.0.1 > /dev/null 2>&1"
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 2
         resources:
           requests:
             memory: "128Mi"
