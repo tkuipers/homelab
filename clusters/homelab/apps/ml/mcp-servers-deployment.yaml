@@ -17,7 +17,6 @@ spec:
       # MCP Brave Search Server (official image)
       - name: brave-search
         image: mcp/brave-search
-        args: ["--transport", "http", "--port", "8001"]
         ports:
         - containerPort: 8001
           name: brave
@@ -27,6 +26,10 @@ spec:
             secretKeyRef:
               name: mcp-api-keys
               key: brave-api-key
+        - name: BRAVE_MCP_TRANSPORT
+          value: "http"
+        - name: PORT
+          value: "8001"
         resources:
           requests:
             memory: "128Mi"
