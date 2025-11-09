@@ -5,6 +5,8 @@ metadata:
   namespace: ml
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: llama-server
@@ -60,7 +62,7 @@ spec:
             --port 8080 \
             --ctx-size 32768 \
             --threads 4 \
-            --n-gpu-layers 18 \
+            --n-gpu-layers 28 \
             --api-key "${API_KEY}"
         readinessProbe:
           httpGet:
