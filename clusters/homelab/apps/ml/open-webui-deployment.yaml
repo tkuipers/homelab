@@ -31,6 +31,12 @@ spec:
           value: "false"
         - name: ENABLE_SIGNUP
           value: "false"
+        - name: ENABLE_RAG_WEB_SEARCH
+          value: "true"
+        - name: RAG_WEB_SEARCH_ENGINE
+          value: "duckduckgo"
+        - name: ENABLE_SEARCH_QUERY
+          value: "true"
         volumeMounts:
         - name: data
           mountPath: /app/backend/data
