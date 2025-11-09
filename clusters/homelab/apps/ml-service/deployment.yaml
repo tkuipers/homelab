@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-server
+  namespace: ml-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama-server
+  template:
+    metadata:
+      labels:
+        app: llama-server
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      initContainers:
+      - name: download-model
+        image: curlimages/curl:latest
+        command:
+        - sh
+        - -c
+        - |
+          echo "Downloading TinyLlama model..."
+          curl -L -o /models/tinyllama.gguf https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+          echo "Model download complete"
+        volumeMounts:
+        - name: models
+          mountPath: /models
+      containers:
+      - name: llama-server
+        image: ghcr.io/ggerganov/llama.cpp:server-latest
+        ports:
+        - containerPort: 8080
+          name: http
+        command:
+        - /bin/sh
+        - -c
+        - |
+          exec /server \
+            --model /models/tinyllama.gguf \
+            --host 0.0.0.0 \
+            --port 8080 \
+            --ctx-size 2048 \
+            --threads 4 \
+            --n-gpu-layers 0 \
+            --api-key "${API_KEY}"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        env:
+        - name: TZ
+          value: "America/Los_Angeles"
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: llama-api-key
+              key: api-key
+        volumeMounts:
+        - name: models
+          mountPath: /models
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"
+      volumes:
+      - name: models
+        hostPath:
+          path: /var/persist/llama-models
+          type: DirectoryOrCreate
+

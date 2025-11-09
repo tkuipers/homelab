@@ -6,3 +6,4 @@ resources:
   # - guacamole/
   - pterodactyl/
   - mediacenter/
+  - ml-service/
