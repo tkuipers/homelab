@@ -46,6 +46,10 @@ spec:
           - name: nvidia_drm
           - name: nvidia_modeset
     - op: add
+      path: /machine/sysctls
+      value:
+        net.core.bpf_jit_harden: 1
+    - op: add
       path: /machine/certSANs
       value:
         - 10.0.0.52
