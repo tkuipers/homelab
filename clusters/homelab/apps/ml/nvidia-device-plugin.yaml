@@ -21,6 +21,7 @@ spec:
         operator: Exists
         effect: NoSchedule
       priorityClassName: system-node-critical
+      runtimeClassName: nvidia
       containers:
       - name: nvidia-device-plugin
         image: nvcr.io/nvidia/k8s-device-plugin:v0.14.5
