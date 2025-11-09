@@ -41,6 +41,19 @@ spec:
           if [ -f "$CONFIG_FILE" ]; then
             echo "Updating SABnzbd hostname whitelist..."
             sed -i 's/^host_whitelist = .*/host_whitelist = sabnzbd.tkuipers.ca, sabnzbd, localhost/' "$CONFIG_FILE"
+            
+            echo "Ensuring categories exist..."
+            # Check if categories section exists, if not add it
+            if ! grep -q "^\[categories\]" "$CONFIG_FILE"; then
+              echo "" >> "$CONFIG_FILE"
+              echo "[categories]" >> "$CONFIG_FILE"
+              echo "[[tv]]" >> "$CONFIG_FILE"
+              echo "name = tv" >> "$CONFIG_FILE"
+              echo "dir = tv" >> "$CONFIG_FILE"
+              echo "[[movies]]" >> "$CONFIG_FILE"
+              echo "name = movies" >> "$CONFIG_FILE"
+              echo "dir = movies" >> "$CONFIG_FILE"
+            fi
           else
             echo "Config file not found, will be created on first run"
           fi
