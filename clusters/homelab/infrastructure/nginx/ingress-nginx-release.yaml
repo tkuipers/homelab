@@ -39,6 +39,7 @@ spec:
         failurePolicy: Ignore
       config:
         strict-validate-path-type: "false"
+        allow-snippet-annotations: "true"
     rbac:
       create: true
       scope: false 
