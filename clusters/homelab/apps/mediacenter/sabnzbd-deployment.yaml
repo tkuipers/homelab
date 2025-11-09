@@ -97,6 +97,10 @@ spec:
             secretKeyRef:
               name: airvpn-credentials
               key: server_country
+        - name: DNS_ADDRESS
+          value: "1.1.1.1"
+        - name: DOT
+          value: "off"
         - name: LOG_LEVEL
           value: "info"
         - name: TZ
