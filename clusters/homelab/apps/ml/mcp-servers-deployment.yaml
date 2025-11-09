@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-servers
+  namespace: ml
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-servers
+  template:
+    metadata:
+      labels:
+        app: mcp-servers
+    spec:
+      containers:
+      # MCP Brave Search Server
+      - name: brave-search
+        image: node:20-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            npm install -g @modelcontextprotocol/server-brave-search &&
+            npx -y @modelcontextprotocol/server-brave-search
+        ports:
+        - containerPort: 8001
+          name: brave
+        env:
+        - name: BRAVE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mcp-api-keys
+              key: brave-api-key
+              optional: true
+        - name: PORT
+          value: "8001"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+      
+      # MCP Fetch Server
+      - name: fetch
+        image: node:20-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            npm install -g @modelcontextprotocol/server-fetch &&
+            npx -y @modelcontextprotocol/server-fetch
+        ports:
+        - containerPort: 8002
+          name: fetch
+        env:
+        - name: PORT
+          value: "8002"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-servers
+  namespace: ml
+spec:
+  selector:
+    app: mcp-servers
+  ports:
+  - name: brave-search
+    port: 8001
+    targetPort: 8001
+  - name: fetch
+    port: 8002
+    targetPort: 8002
+  type: ClusterIP
+
