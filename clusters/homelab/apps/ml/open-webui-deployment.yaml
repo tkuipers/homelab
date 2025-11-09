@@ -48,6 +48,10 @@ spec:
             secretKeyRef:
               name: mcp-api-keys
               key: brave-api-key
+        - name: RAG_WEB_SEARCH_RESULT_COUNT
+          value: "5"
+        - name: RAG_WEB_SEARCH_CONCURRENT_REQUESTS
+          value: "10"
         # Tool/function calling support
         - name: ENABLE_OPENAI_API
           value: "true"
