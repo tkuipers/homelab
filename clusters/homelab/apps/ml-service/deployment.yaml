@@ -16,6 +16,16 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
       initContainers:
+      - name: fix-permissions
+        image: busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          chmod -R 777 /models
+        volumeMounts:
+        - name: models
+          mountPath: /models
       - name: download-model
         image: curlimages/curl:latest
         command:
@@ -38,7 +48,7 @@ spec:
         - /bin/sh
         - -c
         - |
-          exec /server \
+          exec llama-server \
             --model /models/tinyllama.gguf \
             --host 0.0.0.0 \
             --port 8080 \
