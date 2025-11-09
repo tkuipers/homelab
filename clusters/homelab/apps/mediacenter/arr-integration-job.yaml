@@ -249,6 +249,39 @@ data:
                 else:
                     self.log(f"Failed to add Transmission to {service_name}: {body}", "WARNING")
                     
+        def configure_sabnzbd_directories(self):
+            """Configure SABnzbd download directories to use /media paths"""
+            self.log("Configuring SABnzbd download directories...")
+            
+            # SABnzbd API uses different format - GET to retrieve, then POST to update
+            try:
+                # Get current config
+                url = f"{self.sabnzbd_url}/api?mode=get_config&apikey={self.sabnzbd_api_key}&output=json"
+                req = urllib.request.Request(url)
+                response = urllib.request.urlopen(req)
+                config = json.loads(response.read().decode())
+                
+                # Update directories section
+                update_url = f"{self.sabnzbd_url}/api?mode=set_config&apikey={self.sabnzbd_api_key}"
+                update_url += "&section=misc"
+                update_url += "&keyword=download_dir&value=/media/downloads/incomplete"
+                
+                req = urllib.request.Request(update_url)
+                urllib.request.urlopen(req)
+                
+                update_url = f"{self.sabnzbd_url}/api?mode=set_config&apikey={self.sabnzbd_api_key}"
+                update_url += "&section=misc"
+                update_url += "&keyword=complete_dir&value=/media/downloads/complete"
+                
+                req = urllib.request.Request(update_url)
+                urllib.request.urlopen(req)
+                
+                self.log("SABnzbd directories configured to use /media/downloads", "SUCCESS")
+                
+            except Exception as e:
+                self.log(f"Failed to configure SABnzbd directories: {e}", "WARNING")
+                self.log("You may need to configure directories manually in SABnzbd UI", "INFO")
+        
         def add_sabnzbd_client(self, service_name: str, service_url: str, api_key: str, category: str):
             self.log(f"Adding SABnzbd to {service_name}...")
             
@@ -428,6 +461,10 @@ data:
             self.radarr_api_key = self.extract_api_key("/radarr-config/config.xml", "Radarr")
             self.prowlarr_api_key = self.extract_api_key("/prowlarr-config/config.xml", "Prowlarr")
             self.sabnzbd_api_key = self.extract_api_key("/sabnzbd-config/sabnzbd.ini", "SABnzbd")
+            print()
+            
+            # Configure SABnzbd directories
+            self.configure_sabnzbd_directories()
             print()
             
             # Link apps to Prowlarr

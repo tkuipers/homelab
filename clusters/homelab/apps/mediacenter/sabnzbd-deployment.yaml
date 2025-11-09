@@ -138,9 +138,6 @@ spec:
         - name: config
           mountPath: /config
         - name: media-root
-          mountPath: /downloads
-          subPath: downloads
-        - name: media-root
           mountPath: /media
         resources:
           requests:
