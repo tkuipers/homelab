@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: llama-server
-  namespace: ml-service
+  namespace: ml
 spec:
   replicas: 1
   selector:
@@ -40,7 +40,7 @@ spec:
           mountPath: /models
       containers:
       - name: llama-server
-        image: ghcr.io/ggml-org/llama.cpp:server
+        image: ghcr.io/ggml-org/llama.cpp:server-cuda
         ports:
         - containerPort: 8080
           name: http
@@ -55,7 +55,7 @@ spec:
             --port 8080 \
             --ctx-size 2048 \
             --threads 4 \
-            --n-gpu-layers 0 \
+            --n-gpu-layers 99 \
             --api-key "${API_KEY}"
         readinessProbe:
           httpGet:
@@ -84,9 +84,11 @@ spec:
           requests:
             memory: "2Gi"
             cpu: "1000m"
+            nvidia.com/gpu: 1
           limits:
             memory: "4Gi"
             cpu: "4000m"
+            nvidia.com/gpu: 1
       volumes:
       - name: models
         hostPath:
