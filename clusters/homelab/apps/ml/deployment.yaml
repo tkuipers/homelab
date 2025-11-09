@@ -117,7 +117,7 @@ spec:
             --model /models/deepseek-r1-distill-qwen-7b.gguf \
             --host 0.0.0.0 \
             --port 8080 \
-            --ctx-size 32768 \
+            --ctx-size 16384 \
             --threads 4 \
             --n-gpu-layers 22 \
             --api-key "${API_KEY}"
@@ -146,11 +146,11 @@ spec:
           mountPath: /models
         resources:
           requests:
-            memory: "24Gi"
+            memory: "12Gi"
             cpu: "1000m"
             nvidia.com/gpu: 1
           limits:
-            memory: "30Gi"
+            memory: "18Gi"
             cpu: "4000m"
             nvidia.com/gpu: 1
       volumes:
