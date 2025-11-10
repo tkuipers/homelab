@@ -12,8 +12,16 @@ data:
     datasources:
     - name: Loki
       type: loki
+      uid: loki
       access: proxy
       url: http://loki-stack.loki:3100
+      isDefault: false
+      editable: true
       jsonData:
         maxLines: 1000
+        derivedFields:
+          - datasourceUid: loki
+            matcherRegex: "traceID=(\\w+)"
+            name: TraceID
+            url: "$${__value.raw}"
 
