@@ -14,7 +14,7 @@ data:
       type: loki
       uid: loki
       access: proxy
-      url: http://loki-stack.loki:3100
+      url: http://loki-loki-stack.loki:3100
       isDefault: false
       editable: true
       jsonData:
