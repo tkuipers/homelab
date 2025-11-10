@@ -65,9 +65,6 @@ spec:
     # Enable Promtail for log collection
     promtail:
       enabled: true
-      config:
-        clients:
-          - url: http://loki-gateway/loki/api/v1/push
     # Disable other components
     backend:
       replicas: 0
