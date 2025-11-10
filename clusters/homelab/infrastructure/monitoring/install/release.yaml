@@ -1,4 +1,4 @@
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: kube-prometheus-stack
@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: kube-prometheus-stack
-      version: ">=55.0.0"
+      version: ">=65.0.0"
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
@@ -42,8 +42,8 @@ spec:
     prometheus:
       enabled: true
       prometheusSpec:
-        retention: 7d
-        retentionSize: "10GB"
+        retention: 30d
+        retentionSize: "45GB"
         storageSpec:
           volumeClaimTemplate:
             spec:
@@ -51,18 +51,18 @@ spec:
               accessModes: ["ReadWriteOnce"]
               resources:
                 requests:
-                  storage: 15Gi
+                  storage: 50Gi
         resources:
           requests:
-            cpu: 200m
-            memory: 512Mi
+            cpu: 500m
+            memory: 1Gi
           limits:
             cpu: 2000m
-            memory: 2Gi
+            memory: 4Gi
         # Scrape all ServiceMonitors and PodMonitors
-        serviceMonitorSelector: {}
-        podMonitorSelector: {}
-        ruleSelector: {}
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        ruleSelectorNilUsesHelmValues: false
     
     # Alertmanager
     alertmanager:
@@ -94,7 +94,7 @@ spec:
       persistence:
         enabled: true
         storageClassName: local-path
-        size: 5Gi
+        size: 15Gi
       resources:
         requests:
           cpu: 100m
@@ -102,6 +102,32 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
+      # Grafana configuration
+      grafana.ini:
+        server:
+          domain: grafana.tkuipers.ca
+          root_url: https://grafana.tkuipers.ca
+        security:
+          disable_gravatar: true
+        users:
+          allow_sign_up: false
+          auto_assign_org_role: Viewer
+          default_theme: dark
+      # Sidecar for auto-loading datasources and dashboards
+      sidecar:
+        datasources:
+          enabled: true
+          defaultDatasourceEnabled: true
+          label: grafana_datasource
+          labelValue: "1"
+        dashboards:
+          enabled: true
+          searchNamespace: ALL
+          label: grafana_dashboard
+          labelValue: "1"
+          folderAnnotation: grafana_folder
+          provider:
+            foldersFromFilesStructure: true
     
     # Node Exporter
     nodeExporter:

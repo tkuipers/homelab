@@ -10,11 +10,15 @@ metadata:
 data:
   node-resources.json: |
     {
-      "dashboard": {
-        "title": "Node Resources - Homelab",
-        "tags": ["kubernetes", "nodes", "resources"],
-        "timezone": "browser",
-        "panels": [
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "liveNow": false,
+      "panels": [
           {
             "title": "CPU Usage by Node",
             "type": "graph",
@@ -63,8 +67,24 @@ data:
             ],
             "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
           }
-        ]
-      }
+        ],
+      "refresh": "30s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["kubernetes", "nodes", "resources"],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Node Resources - Homelab",
+      "uid": "homelab-node-resources",
+      "version": 1,
+      "weekStart": ""
     }
 ---
 # ConfigMap for GPU Monitoring Dashboard
@@ -78,11 +98,15 @@ metadata:
 data:
   gpu-monitoring.json: |
     {
-      "dashboard": {
-        "title": "GPU Monitoring - Omen Node",
-        "tags": ["gpu", "nvidia", "ml"],
-        "timezone": "browser",
-        "panels": [
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "liveNow": false,
+      "panels": [
           {
             "title": "GPU Utilization",
             "type": "graph",
@@ -157,8 +181,24 @@ data:
             ],
             "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
           }
-        ]
-      }
+        ],
+      "refresh": "10s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["gpu", "nvidia", "ml"],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "GPU Monitoring - Omen Node",
+      "uid": "homelab-gpu-monitoring",
+      "version": 1,
+      "weekStart": ""
     }
 ---
 # ConfigMap for Application Services Dashboard
@@ -172,11 +212,15 @@ metadata:
 data:
   application-services.json: |
     {
-      "dashboard": {
-        "title": "Application Services - Homelab",
-        "tags": ["applications", "services", "mediacenter", "ml", "timemachine"],
-        "timezone": "browser",
-        "panels": [
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "liveNow": false,
+      "panels": [
           {
             "title": "Service Availability",
             "type": "stat",
@@ -236,7 +280,23 @@ data:
             ],
             "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14}
           }
-        ]
-      }
+        ],
+      "refresh": "30s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["applications", "services", "mediacenter", "ml", "timemachine"],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Application Services - Homelab",
+      "uid": "homelab-application-services",
+      "version": 1,
+      "weekStart": ""
     }
 
