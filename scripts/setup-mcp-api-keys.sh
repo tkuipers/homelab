@@ -30,6 +30,24 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Generate a secure API key
+generate_api_key() {
+    # Generate a 64-character hex string (32 bytes)
+    if command -v openssl &> /dev/null; then
+        openssl rand -hex 32
+    elif [ -r /dev/urandom ]; then
+        # Use /dev/urandom with od (more portable than xxd)
+        od -An -N32 -tx1 /dev/urandom | tr -d ' \n'
+    elif command -v sha256sum &> /dev/null; then
+        # Fallback: combine multiple entropy sources
+        (date +%s%N; ps aux; echo $$) | sha256sum | cut -d' ' -f1
+    else
+        log_error "Unable to generate secure random key - no suitable tool found"
+        log_info "Please install openssl or ensure /dev/urandom is available"
+        exit 1
+    fi
+}
+
 # Check if op CLI is available
 check_op_cli() {
     if ! command -v op &> /dev/null; then
@@ -101,10 +119,12 @@ get_current_item() {
         
         # Get current API keys
         CURRENT_BRAVE_KEY=$(op item get "$ITEM_NAME" --vault="$VAULT_NAME" --fields="brave_api_key" 2>/dev/null || echo "")
+        CURRENT_MCPO_KEY=$(op item get "$ITEM_NAME" --vault="$VAULT_NAME" --fields="mcpo_api_key" 2>/dev/null || echo "")
     else
         log_info "Item '$ITEM_NAME' does not exist - will create new item"
         ITEM_EXISTS=false
         CURRENT_BRAVE_KEY=""
+        CURRENT_MCPO_KEY=""
     fi
 }
 
@@ -122,6 +142,26 @@ collect_input() {
     echo
     prompt_for_input "Brave API Key" BRAVE_API_KEY "$CURRENT_BRAVE_KEY" true
     
+    echo
+    log_info "MCPO API Key (for securing public MCP server access):"
+    echo "  - Used to authenticate requests to the MCP server via ingress"
+    echo "  - Will be auto-generated if not provided"
+    echo
+    
+    if [ -n "$CURRENT_MCPO_KEY" ]; then
+        read -p "Generate new MCPO API key? [y/N]: " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            log_info "Generating new MCPO API key..."
+            MCPO_API_KEY=$(generate_api_key)
+        else
+            MCPO_API_KEY="$CURRENT_MCPO_KEY"
+        fi
+    else
+        log_info "Generating new MCPO API key..."
+        MCPO_API_KEY=$(generate_api_key)
+    fi
+    
     # Allow adding more API keys in the future
     echo
     log_info "Additional API keys can be added later by running this script again"
@@ -132,6 +172,7 @@ create_or_update_item() {
     echo
     log_info "Configuration summary:"
     echo "  Brave Search API Key: ${BRAVE_API_KEY:+****}"
+    echo "  MCPO API Key: ${MCPO_API_KEY:0:8}...${MCPO_API_KEY: -8}"
     echo
     
     if [ "$ITEM_EXISTS" = "true" ]; then
@@ -140,6 +181,7 @@ create_or_update_item() {
         # Build the edit command dynamically based on what was provided
         EDIT_ARGS=()
         [ -n "$BRAVE_API_KEY" ] && EDIT_ARGS+=("brave_api_key[password]=$BRAVE_API_KEY")
+        [ -n "$MCPO_API_KEY" ] && EDIT_ARGS+=("mcpo_api_key[password]=$MCPO_API_KEY")
         
         if [ ${#EDIT_ARGS[@]} -gt 0 ]; then
             op item edit "$ITEM_NAME" --vault="$VAULT_NAME" "${EDIT_ARGS[@]}"
@@ -153,6 +195,7 @@ create_or_update_item() {
         # Build the create command
         CREATE_ARGS=()
         [ -n "$BRAVE_API_KEY" ] && CREATE_ARGS+=("brave_api_key[password]=$BRAVE_API_KEY")
+        [ -n "$MCPO_API_KEY" ] && CREATE_ARGS+=("mcpo_api_key[password]=$MCPO_API_KEY")
         
         if [ ${#CREATE_ARGS[@]} -eq 0 ]; then
             log_error "At least one API key must be provided when creating a new item"
@@ -175,12 +218,16 @@ show_next_steps() {
     echo
     log_info "Configured services:"
     [ -n "$BRAVE_API_KEY" ] && echo "  ✓ Brave Search (web search)"
+    [ -n "$MCPO_API_KEY" ] && echo "  ✓ MCPO API Key (${MCPO_API_KEY:0:8}...${MCPO_API_KEY: -8})"
+    echo
+    log_warning "IMPORTANT: Save the MCPO API key for Open WebUI configuration:"
+    echo "  Bearer Token: $MCPO_API_KEY"
     echo
     log_info "Next steps:"
     echo "1. Commit and push your changes to trigger FluxCD deployment"
     echo "2. External Secrets Operator will automatically sync the API keys"
     echo "3. The 'mcp-api-keys' secret will be created in the ml namespace"
-    echo "4. MCP server sidecars in Open WebUI will use these keys automatically"
+    echo "4. MCP servers will be available at https://mcp.tkuipers.ca"
     echo
     log_info "To monitor the deployment:"
     echo "  kubectl get externalsecrets -n ml"
@@ -189,16 +236,14 @@ show_next_steps() {
     echo
     log_info "To configure MCP servers in Open WebUI:"
     echo "  1. Navigate to Admin Settings → External Tools"
-    echo "  2. Add servers with type 'OpenAPI' at these URLs:"
-    echo "     - http://localhost:8001 (Brave Search)"
-    echo "     - http://localhost:8002 (Fetch)"
-    echo "     - http://localhost:8003 (Memory)"
-    echo "     - http://localhost:8004 (Time)"
-    echo "     - http://localhost:8005 (Filesystem)"
-    echo "     - http://localhost:8006 (Git)"
+    echo "  2. Add server with type 'MCP (Streamable HTTP)' or 'OpenAPI'"
+    echo "  3. Server URL: https://mcp.tkuipers.ca"
+    echo "  4. Auth Header: Authorization"
+    echo "  5. Auth Value: Bearer $MCPO_API_KEY"
     echo
     log_info "To retrieve keys later from 1Password:"
     echo "  op item get '$ITEM_NAME' --vault='$VAULT_NAME' --fields='brave_api_key'"
+    echo "  op item get '$ITEM_NAME' --vault='$VAULT_NAME' --fields='mcpo_api_key'"
     echo
 }
 

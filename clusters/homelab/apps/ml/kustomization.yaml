@@ -13,4 +13,5 @@ resources:
   - open-webui-service.yaml
   - open-webui-ingress.yaml
   - mcp-servers-deployment.yaml
+  - mcp-servers-ingress.yaml
 
