@@ -85,9 +85,16 @@ spec:
         datasources:
           enabled: true
           defaultDatasourceEnabled: true
+          label: grafana_datasource
+          labelValue: "1"
         dashboards:
           enabled: true
           searchNamespace: ALL
+          label: grafana_dashboard
+          labelValue: "1"
+          folderAnnotation: grafana_folder
+          provider:
+            foldersFromFilesStructure: true
           
     # AlertManager configuration
     alertmanager:
