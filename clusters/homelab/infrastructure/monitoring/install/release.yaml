@@ -47,6 +47,7 @@ spec:
         storageSpec:
           volumeClaimTemplate:
             spec:
+              storageClassName: smb-omen-worker1
               accessModes: ["ReadWriteOnce"]
               resources:
                 requests:
@@ -70,6 +71,7 @@ spec:
         storage:
           volumeClaimTemplate:
             spec:
+              storageClassName: smb-omen-worker1
               accessModes: ["ReadWriteOnce"]
               resources:
                 requests:
@@ -91,6 +93,7 @@ spec:
         passwordKey: admin-password
       persistence:
         enabled: true
+        storageClassName: smb-omen-worker1
         size: 5Gi
       resources:
         requests:
