@@ -94,13 +94,14 @@ spec:
       persistence:
         enabled: false
       extraVolumes:
-        - name: storage
+        - name: grafana-hostpath-storage
           hostPath:
             path: /var/persist/grafana
             type: DirectoryOrCreate
       extraVolumeMounts:
-        - name: storage
+        - name: grafana-hostpath-storage
           mountPath: /var/lib/grafana
+          subPath: ""
       resources:
         requests:
           cpu: 100m
