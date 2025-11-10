@@ -24,7 +24,7 @@ spec:
             pip install -q --no-cache-dir uv &&
             uv tool install --quiet mcpo &&
             export PATH="/root/.local/bin:$PATH" &&
-            mcpo --host 0.0.0.0 --port 8080 -- npx -y @brave/brave-search-mcp-server
+            mcpo --host 0.0.0.0 --port 8080 --api-key "$MCPO_API_KEY" -- npx -y @brave/brave-search-mcp-server
         ports:
         - containerPort: 8080
           name: brave
@@ -34,6 +34,11 @@ spec:
             secretKeyRef:
               name: mcp-api-keys
               key: brave-api-key
+        - name: MCPO_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mcp-api-keys
+              key: mcpo-api-key
         resources:
           requests:
             memory: "128Mi"
