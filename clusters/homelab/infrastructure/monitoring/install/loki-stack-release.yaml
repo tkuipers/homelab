@@ -27,6 +27,7 @@ spec:
       enabled: true
       persistence:
         enabled: true
+        storageClassName: smb-omen-worker1
         size: 50Gi
       config:
         auth_enabled: false
