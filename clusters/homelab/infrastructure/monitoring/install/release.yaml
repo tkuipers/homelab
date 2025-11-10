@@ -92,16 +92,9 @@ spec:
         userKey: admin-user
         passwordKey: admin-password
       persistence:
-        enabled: false
-      extraVolumes:
-        - name: grafana-hostpath-storage
-          hostPath:
-            path: /var/persist/grafana
-            type: DirectoryOrCreate
-      extraVolumeMounts:
-        - name: grafana-hostpath-storage
-          mountPath: /var/lib/grafana
-          subPath: ""
+        enabled: true
+        storageClassName: local-path
+        size: 5Gi
       resources:
         requests:
           cpu: 100m
