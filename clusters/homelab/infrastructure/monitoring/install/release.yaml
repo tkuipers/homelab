@@ -85,7 +85,10 @@ spec:
     # Grafana
     grafana:
       enabled: true
-      adminPassword: admin  # Change this in production or use a secret
+      admin:
+        existingSecret: monitoring-credentials-secret
+        userKey: admin-user
+        passwordKey: admin-password
       persistence:
         enabled: true
         size: 5Gi
@@ -96,16 +99,6 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
-      # Grafana ingress - commented out, configure based on your ingress setup
-      # ingress:
-      #   enabled: true
-      #   ingressClassName: nginx
-      #   hosts:
-      #     - grafana.your-domain.com
-      #   tls:
-      #     - secretName: grafana-tls
-      #       hosts:
-      #         - grafana.your-domain.com
     
     # Node Exporter
     nodeExporter:
