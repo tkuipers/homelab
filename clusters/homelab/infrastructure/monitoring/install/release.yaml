@@ -92,12 +92,15 @@ spec:
         userKey: admin-user
         passwordKey: admin-password
       persistence:
-        enabled: true
-        type: hostPath
-        hostPath: /var/persist/grafana
-        accessModes:
-          - ReadWriteOnce
-        size: 5Gi
+        enabled: false
+      extraVolumes:
+        - name: storage
+          hostPath:
+            path: /var/persist/grafana
+            type: DirectoryOrCreate
+      extraVolumeMounts:
+        - name: storage
+          mountPath: /var/lib/grafana
       resources:
         requests:
           cpu: 100m
