@@ -93,7 +93,7 @@ spec:
         passwordKey: admin-password
       persistence:
         enabled: true
-        storageClassName: smb-omen-worker1
+        storageClassName: local-path
         size: 5Gi
       resources:
         requests:
