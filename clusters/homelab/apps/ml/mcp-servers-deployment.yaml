@@ -14,9 +14,17 @@ spec:
         app: mcp-servers
     spec:
       containers:
-      # MCP Brave Search Server (official image)
+      # MCP Brave Search Server wrapped with mcpo proxy
       - name: brave-search
-        image: mcp/brave-search
+        image: python:3.12-slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            apt-get update -qq && apt-get install -y -qq nodejs npm > /dev/null 2>&1 &&
+            pip install -q --no-cache-dir uv &&
+            uv tool install --quiet mcpo &&
+            export PATH="/root/.local/bin:$PATH" &&
+            mcpo --host 0.0.0.0 --port 8080 -- npx -y @modelcontextprotocol/server-brave-search
         ports:
         - containerPort: 8080
           name: brave
@@ -26,8 +34,6 @@ spec:
             secretKeyRef:
               name: mcp-api-keys
               key: brave-api-key
-        - name: BRAVE_MCP_TRANSPORT
-          value: "http"
         resources:
           requests:
             memory: "128Mi"
