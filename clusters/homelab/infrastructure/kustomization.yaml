@@ -8,4 +8,4 @@ resources:
   - ./aws-ip-updater
   - ./nfs-provisioner
   - ./monitoring
-  # - ./local-path-provisioner
+  - ./local-path-provisioner
