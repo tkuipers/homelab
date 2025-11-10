@@ -102,6 +102,9 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
+      # Disable init chown to avoid permission errors with local-path storage
+      initChownData:
+        enabled: false
       # Grafana configuration
       grafana.ini:
         server:
