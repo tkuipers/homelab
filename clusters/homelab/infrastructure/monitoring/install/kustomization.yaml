@@ -6,4 +6,14 @@ resources:
   - credentials-external-secret.yaml
   - release.yaml
   - ingress.yaml
-
+  - timemachine-servicemonitor.yaml
+  - nvidia-dcgm-exporter.yaml
+  - loki-stack-release.yaml
+  - grafana-helm-repository.yaml
+  - loki-datasource.yaml
+  - application-servicemonitors.yaml
+  - arr-api-extractor-job.yaml
+  - exportarr-deployment.yaml
+  - grafana-dashboards.yaml
+  - pod-monitors.yaml
+  - prometheus-rules.yaml 
