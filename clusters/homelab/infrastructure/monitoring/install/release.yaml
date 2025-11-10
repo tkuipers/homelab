@@ -93,7 +93,10 @@ spec:
         passwordKey: admin-password
       persistence:
         enabled: true
-        storageClassName: local-path
+        type: hostPath
+        hostPath: /var/persist/grafana
+        accessModes:
+          - ReadWriteOnce
         size: 5Gi
       resources:
         requests:
