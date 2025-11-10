@@ -8,7 +8,7 @@ resources:
   - ingress.yaml
   - timemachine-servicemonitor.yaml
   - nvidia-dcgm-exporter.yaml
-  - loki-stack-release.yaml
+  - loki-release.yaml
   - grafana-helm-repository.yaml
   - loki-datasource.yaml
   - application-servicemonitors.yaml
