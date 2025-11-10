@@ -1,0 +1,242 @@
+---
+# ConfigMap for Node Resources Dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-nodes
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  node-resources.json: |
+    {
+      "dashboard": {
+        "title": "Node Resources - Homelab",
+        "tags": ["kubernetes", "nodes", "resources"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "CPU Usage by Node",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+                "legendFormat": "{{ instance }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "title": "Memory Usage by Node",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "100 * (1 - ((node_memory_MemAvailable_bytes) / (node_memory_MemTotal_bytes)))",
+                "legendFormat": "{{ instance }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "title": "Disk Usage by Node",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\",fstype!=\"rootfs\"} * 100) / node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"rootfs\"})",
+                "legendFormat": "{{ instance }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "title": "Network I/O",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(node_network_receive_bytes_total[5m])",
+                "legendFormat": "{{ instance }} - receive"
+              },
+              {
+                "expr": "rate(node_network_transmit_bytes_total[5m])",
+                "legendFormat": "{{ instance }} - transmit"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          }
+        ]
+      }
+    }
+---
+# ConfigMap for GPU Monitoring Dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-gpu
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  gpu-monitoring.json: |
+    {
+      "dashboard": {
+        "title": "GPU Monitoring - Omen Node",
+        "tags": ["gpu", "nvidia", "ml"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "GPU Utilization",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_GPU_UTIL",
+                "legendFormat": "GPU {{ gpu }} - {{ modelName }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "title": "GPU Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_FB_USED / DCGM_FI_DEV_FB_FREE * 100",
+                "legendFormat": "GPU {{ gpu }} - Memory %"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "title": "GPU Temperature",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_GPU_TEMP",
+                "legendFormat": "GPU {{ gpu }} - Temp (C)"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "title": "GPU Power Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_POWER_USAGE",
+                "legendFormat": "GPU {{ gpu }} - Power (W)"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "title": "GPU Clock Speed",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_SM_CLOCK",
+                "legendFormat": "GPU {{ gpu }} - SM Clock (MHz)"
+              },
+              {
+                "expr": "DCGM_FI_DEV_MEM_CLOCK",
+                "legendFormat": "GPU {{ gpu }} - Mem Clock (MHz)"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "title": "PCIe Throughput",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_PCIE_TX_BYTES",
+                "legendFormat": "GPU {{ gpu }} - TX"
+              },
+              {
+                "expr": "DCGM_FI_DEV_PCIE_RX_BYTES",
+                "legendFormat": "GPU {{ gpu }} - RX"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ]
+      }
+    }
+---
+# ConfigMap for Application Services Dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-apps
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  application-services.json: |
+    {
+      "dashboard": {
+        "title": "Application Services - Homelab",
+        "tags": ["applications", "services", "mediacenter", "ml", "timemachine"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "Service Availability",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "up{namespace=~\"mediacenter|ml|timemachine\"}",
+                "legendFormat": "{{ namespace }}/{{ job }}"
+              }
+            ],
+            "gridPos": {"h": 6, "w": 24, "x": 0, "y": 0}
+          },
+          {
+            "title": "Container CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"mediacenter|ml|timemachine\",container!=\"\"}[5m])) by (namespace, pod)",
+                "legendFormat": "{{ namespace }}/{{ pod }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6}
+          },
+          {
+            "title": "Container Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(container_memory_working_set_bytes{namespace=~\"mediacenter|ml|timemachine\",container!=\"\"}) by (namespace, pod)",
+                "legendFormat": "{{ namespace }}/{{ pod }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6}
+          },
+          {
+            "title": "Pod Restarts (24h)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "increase(kube_pod_container_status_restarts_total{namespace=~\"mediacenter|ml|timemachine\"}[24h])",
+                "legendFormat": "{{ namespace }}/{{ pod }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14}
+          },
+          {
+            "title": "Network I/O by Namespace",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "sum(rate(container_network_receive_bytes_total{namespace=~\"mediacenter|ml|timemachine\"}[5m])) by (namespace)",
+                "legendFormat": "{{ namespace }} - receive"
+              },
+              {
+                "expr": "sum(rate(container_network_transmit_bytes_total{namespace=~\"mediacenter|ml|timemachine\"}[5m])) by (namespace)",
+                "legendFormat": "{{ namespace }} - transmit"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14}
+          }
+        ]
+      }
+    }
+

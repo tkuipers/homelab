@@ -1,0 +1,397 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: arr-api-extractor
+  namespace: mediacenter
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: arr-api-extractor
+  namespace: mediacenter
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: arr-api-extractor
+  namespace: mediacenter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: arr-api-extractor
+subjects:
+- kind: ServiceAccount
+  name: arr-api-extractor
+  namespace: mediacenter
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arr-api-extractor-script
+  namespace: mediacenter
+data:
+  extract-keys.py: |
+    #!/usr/bin/env python3
+    import os
+    import sys
+    import time
+    import json
+    import base64
+    import xml.etree.ElementTree as ET
+    import urllib.request
+    import urllib.error
+    
+    def log(message, level="INFO"):
+        symbols = {"INFO": "ℹ", "SUCCESS": "✓", "ERROR": "✗", "WARNING": "⚠"}
+        print(f"{symbols.get(level, 'ℹ')} {message}")
+    
+    def extract_api_key_xml(config_path, service_name):
+        """Extract API key from XML config file"""
+        log(f"Extracting {service_name} API key from {config_path}...")
+        try:
+            if not os.path.exists(config_path):
+                log(f"Config file not found: {config_path}", "WARNING")
+                return None
+                
+            tree = ET.parse(config_path)
+            root = tree.getroot()
+            api_key = root.find(".//ApiKey")
+            
+            if api_key is not None and api_key.text:
+                log(f"{service_name} API key extracted", "SUCCESS")
+                return api_key.text.strip()
+            else:
+                log(f"API key not found in {service_name} config", "WARNING")
+                return None
+        except Exception as e:
+            log(f"Error extracting {service_name} API key: {e}", "ERROR")
+            return None
+    
+    def extract_api_key_yaml(config_path, service_name):
+        """Extract API key from YAML config file"""
+        log(f"Extracting {service_name} API key from {config_path}...")
+        try:
+            if not os.path.exists(config_path):
+                log(f"Config file not found: {config_path}", "WARNING")
+                return None
+                
+            with open(config_path, 'r') as f:
+                for line in f:
+                    if 'apikey:' in line.lower():
+                        api_key = line.split(':', 1)[1].strip()
+                        if api_key:
+                            log(f"{service_name} API key extracted", "SUCCESS")
+                            return api_key
+            
+            log(f"API key not found in {service_name} config", "WARNING")
+            return None
+        except Exception as e:
+            log(f"Error extracting {service_name} API key: {e}", "ERROR")
+            return None
+    
+    def wait_for_config(config_path, service_name, max_wait=300):
+        """Wait for config file to exist"""
+        log(f"Waiting for {service_name} config file...")
+        waited = 0
+        while not os.path.exists(config_path) and waited < max_wait:
+            time.sleep(5)
+            waited += 5
+        
+        if os.path.exists(config_path):
+            log(f"{service_name} config file found", "SUCCESS")
+            return True
+        else:
+            log(f"Timeout waiting for {service_name} config file", "WARNING")
+            return False
+    
+    def create_or_update_secret(namespace, secret_name, data):
+        """Create or update Kubernetes secret using kubectl"""
+        log(f"Creating/updating secret {secret_name}...")
+        
+        # Build secret data
+        secret_data = {}
+        for key, value in data.items():
+            if value:
+                secret_data[key] = base64.b64encode(value.encode()).decode()
+        
+        if not secret_data:
+            log("No API keys to store", "WARNING")
+            return False
+        
+        secret_manifest = {
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {
+                "name": secret_name,
+                "namespace": namespace
+            },
+            "type": "Opaque",
+            "data": secret_data
+        }
+        
+        # Write manifest to file
+        manifest_path = "/tmp/secret.json"
+        with open(manifest_path, 'w') as f:
+            json.dump(secret_manifest, f)
+        
+        # Apply with kubectl
+        result = os.system(f"kubectl apply -f {manifest_path}")
+        
+        if result == 0:
+            log(f"Secret {secret_name} created/updated successfully", "SUCCESS")
+            return True
+        else:
+            log(f"Failed to create/update secret", "ERROR")
+            return False
+    
+    def main():
+        log("=== Arr Services API Key Extractor ===")
+        
+        # Wait for services to initialize
+        time.sleep(30)
+        
+        # Extract API keys
+        api_keys = {}
+        
+        # Sonarr
+        if wait_for_config("/sonarr-config/config.xml", "Sonarr"):
+            api_keys['sonarr-api-key'] = extract_api_key_xml("/sonarr-config/config.xml", "Sonarr")
+        
+        # Radarr
+        if wait_for_config("/radarr-config/config.xml", "Radarr"):
+            api_keys['radarr-api-key'] = extract_api_key_xml("/radarr-config/config.xml", "Radarr")
+        
+        # Prowlarr
+        if wait_for_config("/prowlarr-config/config.xml", "Prowlarr"):
+            api_keys['prowlarr-api-key'] = extract_api_key_xml("/prowlarr-config/config.xml", "Prowlarr")
+        
+        # Bazarr
+        if wait_for_config("/bazarr-config/config/config.yaml", "Bazarr"):
+            api_keys['bazarr-api-key'] = extract_api_key_yaml("/bazarr-config/config/config.yaml", "Bazarr")
+        
+        # Create/update secret
+        if create_or_update_secret("mediacenter", "arr-api-keys", api_keys):
+            log("API keys successfully stored in Kubernetes secret", "SUCCESS")
+            sys.exit(0)
+        else:
+            log("Failed to store API keys", "ERROR")
+            sys.exit(1)
+    
+    if __name__ == "__main__":
+        main()
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: arr-api-extractor
+  namespace: mediacenter
+spec:
+  ttlSecondsAfterFinished: 86400  # Clean up after 24 hours
+  template:
+    metadata:
+      labels:
+        app: arr-api-extractor
+    spec:
+      serviceAccountName: arr-api-extractor
+      restartPolicy: OnFailure
+      initContainers:
+      - name: wait-for-sonarr
+        image: busybox:latest
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Waiting for Sonarr to be ready..."
+          until wget -q --spider http://sonarr:8989/ping 2>/dev/null || wget -q --spider http://sonarr:8989 2>/dev/null; do
+            echo "Sonarr not ready, waiting..."
+            sleep 5
+          done
+          echo "Sonarr is ready"
+      - name: wait-for-radarr
+        image: busybox:latest
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Waiting for Radarr to be ready..."
+          until wget -q --spider http://radarr:7878/ping 2>/dev/null || wget -q --spider http://radarr:7878 2>/dev/null; do
+            echo "Radarr not ready, waiting..."
+            sleep 5
+          done
+          echo "Radarr is ready"
+      - name: wait-for-prowlarr
+        image: busybox:latest
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Waiting for Prowlarr to be ready..."
+          until wget -q --spider http://prowlarr:9696/ping 2>/dev/null || wget -q --spider http://prowlarr:9696 2>/dev/null; do
+            echo "Prowlarr not ready, waiting..."
+            sleep 5
+          done
+          echo "Prowlarr is ready"
+      - name: wait-for-bazarr
+        image: busybox:latest
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Waiting for Bazarr to be ready..."
+          until wget -q --spider http://bazarr:6767/api 2>/dev/null || wget -q --spider http://bazarr:6767 2>/dev/null; do
+            echo "Bazarr not ready, waiting..."
+            sleep 5
+          done
+          echo "Bazarr is ready"
+      containers:
+      - name: extractor
+        image: bitnami/kubectl:latest
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          # Install Python
+          apt-get update && apt-get install -y python3
+          # Run extraction script
+          python3 /scripts/extract-keys.py
+        volumeMounts:
+        - name: script
+          mountPath: /scripts
+        - name: sonarr-config
+          mountPath: /sonarr-config
+          readOnly: true
+        - name: radarr-config
+          mountPath: /radarr-config
+          readOnly: true
+        - name: prowlarr-config
+          mountPath: /prowlarr-config
+          readOnly: true
+        - name: bazarr-config
+          mountPath: /bazarr-config
+          readOnly: true
+      volumes:
+      - name: script
+        configMap:
+          name: arr-api-extractor-script
+          defaultMode: 0755
+      - name: sonarr-config
+        persistentVolumeClaim:
+          claimName: sonarr-config
+      - name: radarr-config
+        persistentVolumeClaim:
+          claimName: radarr-config
+      - name: prowlarr-config
+        persistentVolumeClaim:
+          claimName: prowlarr-config
+      - name: bazarr-config
+        persistentVolumeClaim:
+          claimName: bazarr-config
+---
+# CronJob to refresh API keys periodically
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: arr-api-extractor
+  namespace: mediacenter
+spec:
+  schedule: "0 2 * * *"  # Run daily at 2 AM
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app: arr-api-extractor
+        spec:
+          serviceAccountName: arr-api-extractor
+          restartPolicy: OnFailure
+          initContainers:
+          - name: wait-for-sonarr
+            image: busybox:latest
+            command: ['sh', '-c']
+            args:
+            - |
+              echo "Waiting for Sonarr to be ready..."
+              until wget -q --spider http://sonarr:8989/ping 2>/dev/null || wget -q --spider http://sonarr:8989 2>/dev/null; do
+                echo "Sonarr not ready, waiting..."
+                sleep 5
+              done
+              echo "Sonarr is ready"
+          - name: wait-for-radarr
+            image: busybox:latest
+            command: ['sh', '-c']
+            args:
+            - |
+              echo "Waiting for Radarr to be ready..."
+              until wget -q --spider http://radarr:7878/ping 2>/dev/null || wget -q --spider http://radarr:7878 2>/dev/null; do
+                echo "Radarr not ready, waiting..."
+                sleep 5
+              done
+              echo "Radarr is ready"
+          - name: wait-for-prowlarr
+            image: busybox:latest
+            command: ['sh', '-c']
+            args:
+            - |
+              echo "Waiting for Prowlarr to be ready..."
+              until wget -q --spider http://prowlarr:9696/ping 2>/dev/null || wget -q --spider http://prowlarr:9696 2>/dev/null; do
+                echo "Prowlarr not ready, waiting..."
+                sleep 5
+              done
+              echo "Prowlarr is ready"
+          - name: wait-for-bazarr
+            image: busybox:latest
+            command: ['sh', '-c']
+            args:
+            - |
+              echo "Waiting for Bazarr to be ready..."
+              until wget -q --spider http://bazarr:6767/api 2>/dev/null || wget -q --spider http://bazarr:6767 2>/dev/null; do
+                echo "Bazarr not ready, waiting..."
+                sleep 5
+              done
+              echo "Bazarr is ready"
+          containers:
+          - name: extractor
+            image: bitnami/kubectl:latest
+            command: ["/bin/bash", "-c"]
+            args:
+            - |
+              # Install Python
+              apt-get update && apt-get install -y python3
+              # Run extraction script
+              python3 /scripts/extract-keys.py
+            volumeMounts:
+            - name: script
+              mountPath: /scripts
+            - name: sonarr-config
+              mountPath: /sonarr-config
+              readOnly: true
+            - name: radarr-config
+              mountPath: /radarr-config
+              readOnly: true
+            - name: prowlarr-config
+              mountPath: /prowlarr-config
+              readOnly: true
+            - name: bazarr-config
+              mountPath: /bazarr-config
+              readOnly: true
+          volumes:
+          - name: script
+            configMap:
+              name: arr-api-extractor-script
+              defaultMode: 0755
+          - name: sonarr-config
+            persistentVolumeClaim:
+              claimName: sonarr-config
+          - name: radarr-config
+            persistentVolumeClaim:
+              claimName: radarr-config
+          - name: prowlarr-config
+            persistentVolumeClaim:
+              claimName: prowlarr-config
+          - name: bazarr-config
+            persistentVolumeClaim:
+              claimName: bazarr-config
+

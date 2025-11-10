@@ -1,0 +1,154 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loki
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: loki-stack
+  namespace: flux-system
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: loki-stack
+      version: ">=2.10.0"
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: flux-system
+  install:
+    createNamespace: false
+  targetNamespace: loki
+  values:
+    loki:
+      enabled: true
+      persistence:
+        enabled: true
+        size: 50Gi
+      config:
+        auth_enabled: false
+        server:
+          http_listen_port: 3100
+        ingester:
+          chunk_idle_period: 3m
+          chunk_block_size: 262144
+          chunk_retain_period: 1m
+          max_transfer_retries: 0
+          lifecycler:
+            ring:
+              kvstore:
+                store: inmemory
+              replication_factor: 1
+        limits_config:
+          enforce_metric_name: false
+          reject_old_samples: true
+          reject_old_samples_max_age: 168h
+          ingestion_rate_mb: 10
+          ingestion_burst_size_mb: 20
+        schema_config:
+          configs:
+          - from: 2020-10-24
+            store: boltdb-shipper
+            object_store: filesystem
+            schema: v11
+            index:
+              prefix: index_
+              period: 24h
+        storage_config:
+          boltdb_shipper:
+            active_index_directory: /data/loki/boltdb-shipper-active
+            cache_location: /data/loki/boltdb-shipper-cache
+            cache_ttl: 24h
+            shared_store: filesystem
+          filesystem:
+            directory: /data/loki/chunks
+        chunk_store_config:
+          max_look_back_period: 720h
+        table_manager:
+          retention_deletes_enabled: true
+          retention_period: 720h
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 200m
+        limits:
+          memory: 2Gi
+          cpu: 1000m
+    
+    promtail:
+      enabled: true
+      config:
+        serverPort: 3101
+        clients:
+        - url: http://loki-stack:3100/loki/api/v1/push
+        positions:
+          filename: /tmp/positions.yaml
+        scrape_configs:
+        # Scrape pod logs
+        - job_name: kubernetes-pods
+          kubernetes_sd_configs:
+          - role: pod
+          pipeline_stages:
+          - cri: {}
+          relabel_configs:
+          - source_labels:
+            - __meta_kubernetes_pod_controller_name
+            regex: ([0-9a-z-.]+?)(-[0-9a-f]{8,10})?
+            action: replace
+            target_label: __tmp_controller_name
+          - source_labels:
+            - __meta_kubernetes_pod_label_app_kubernetes_io_name
+            - __meta_kubernetes_pod_label_app
+            - __tmp_controller_name
+            - __meta_kubernetes_pod_name
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: app
+          - source_labels:
+            - __meta_kubernetes_pod_label_app_kubernetes_io_instance
+            - __meta_kubernetes_pod_label_release
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: instance
+          - source_labels:
+            - __meta_kubernetes_pod_label_app_kubernetes_io_component
+            - __meta_kubernetes_pod_label_component
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: component
+          - source_labels:
+            - __meta_kubernetes_namespace
+            target_label: namespace
+          - source_labels:
+            - __meta_kubernetes_pod_name
+            target_label: pod
+          - source_labels:
+            - __meta_kubernetes_pod_container_name
+            target_label: container
+          - replacement: /var/log/pods/*$1/*.log
+            separator: /
+            source_labels:
+            - __meta_kubernetes_pod_uid
+            - __meta_kubernetes_pod_container_name
+            target_label: __path__
+          - action: replace
+            source_labels:
+            - __meta_kubernetes_pod_node_name
+            target_label: node_name
+      resources:
+        requests:
+          memory: 128Mi
+          cpu: 50m
+        limits:
+          memory: 256Mi
+          cpu: 200m
+    
+    grafana:
+      enabled: false  # We already have Grafana from kube-prometheus-stack
+    
+    prometheus:
+      enabled: false  # We already have Prometheus
+

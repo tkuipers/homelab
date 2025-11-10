@@ -1,0 +1,174 @@
+---
+# Mediacenter ServiceMonitors
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: jellyfin
+  namespace: monitoring
+  labels:
+    app: jellyfin
+spec:
+  selector:
+    matchLabels:
+      app: jellyfin
+  namespaceSelector:
+    matchNames:
+    - mediacenter
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sonarr
+  namespace: monitoring
+  labels:
+    app: sonarr
+spec:
+  selector:
+    matchLabels:
+      app: sonarr
+  namespaceSelector:
+    matchNames:
+    - mediacenter
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: radarr
+  namespace: monitoring
+  labels:
+    app: radarr
+spec:
+  selector:
+    matchLabels:
+      app: radarr
+  namespaceSelector:
+    matchNames:
+    - mediacenter
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prowlarr
+  namespace: monitoring
+  labels:
+    app: prowlarr
+spec:
+  selector:
+    matchLabels:
+      app: prowlarr
+  namespaceSelector:
+    matchNames:
+    - mediacenter
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bazarr
+  namespace: monitoring
+  labels:
+    app: bazarr
+spec:
+  selector:
+    matchLabels:
+      app: bazarr
+  namespaceSelector:
+    matchNames:
+    - mediacenter
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sabnzbd
+  namespace: monitoring
+  labels:
+    app: sabnzbd
+spec:
+  selector:
+    matchLabels:
+      app: sabnzbd
+  namespaceSelector:
+    matchNames:
+    - mediacenter
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: transmission
+  namespace: monitoring
+  labels:
+    app: transmission
+spec:
+  selector:
+    matchLabels:
+      app: transmission
+  namespaceSelector:
+    matchNames:
+    - mediacenter
+  endpoints:
+  - port: webui
+    interval: 30s
+    path: /metrics
+---
+# ML Services ServiceMonitors
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: llama-server
+  namespace: monitoring
+  labels:
+    app: llama-server
+spec:
+  selector:
+    matchLabels:
+      app: llama-server
+  namespaceSelector:
+    matchNames:
+    - ml
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: open-webui
+  namespace: monitoring
+  labels:
+    app: open-webui
+spec:
+  selector:
+    matchLabels:
+      app: open-webui
+  namespaceSelector:
+    matchNames:
+    - ml
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+
