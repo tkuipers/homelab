@@ -1,0 +1,170 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: monitoring
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: ">=65.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: monitoring
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    # Global settings
+    global:
+      rbac:
+        create: true
+    
+    # Prometheus Operator
+    prometheusOperator:
+      enabled: true
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+    
+    # Prometheus
+    prometheus:
+      enabled: true
+      prometheusSpec:
+        retention: 30d
+        retentionSize: "45GB"
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: smb-omen-worker1
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 50Gi
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+        # Scrape all ServiceMonitors and PodMonitors
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        ruleSelectorNilUsesHelmValues: false
+    
+    # Alertmanager
+    alertmanager:
+      enabled: true
+      alertmanagerSpec:
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: smb-omen-worker1
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 2Gi
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+    
+    # Grafana
+    grafana:
+      enabled: true
+      admin:
+        existingSecret: monitoring-credentials-secret
+        userKey: admin-user
+        passwordKey: admin-password
+      persistence:
+        enabled: true
+        storageClassName: local-path
+        size: 5Gi
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      # Disable init chown to avoid permission errors with local-path storage
+      initChownData:
+        enabled: false
+      # Grafana configuration
+      grafana.ini:
+        server:
+          domain: grafana.tkuipers.ca
+          root_url: https://grafana.tkuipers.ca
+        security:
+          disable_gravatar: true
+        users:
+          allow_sign_up: false
+          auto_assign_org_role: Viewer
+          default_theme: dark
+      # Sidecar for auto-loading datasources and dashboards
+      sidecar:
+        datasources:
+          enabled: true
+          defaultDatasourceEnabled: true
+          label: grafana_datasource
+          labelValue: "1"
+        dashboards:
+          enabled: true
+          searchNamespace: ALL
+          label: grafana_dashboard
+          labelValue: "1"
+          folderAnnotation: grafana_folder
+          provider:
+            foldersFromFilesStructure: true
+    
+    # Node Exporter
+    nodeExporter:
+      enabled: true
+    
+    # Kube State Metrics
+    kubeStateMetrics:
+      enabled: true
+    
+    # Default service monitors
+    defaultRules:
+      create: true
+      rules:
+        alertmanager: true
+        etcd: true
+        configReloaders: true
+        general: true
+        k8s: true
+        kubeApiserverAvailability: true
+        kubeApiserverSlos: true
+        kubelet: true
+        kubeProxy: true
+        kubePrometheusGeneral: true
+        kubePrometheusNodeRecording: true
+        kubernetesApps: true
+        kubernetesResources: true
+        kubernetesStorage: true
+        kubernetesSystem: true
+        kubeScheduler: true
+        kubeStateMetrics: true
+        network: true
+        node: true
+        nodeExporterAlerting: true
+        nodeExporterRecording: true
+        prometheus: true
+        prometheusOperator: true
+

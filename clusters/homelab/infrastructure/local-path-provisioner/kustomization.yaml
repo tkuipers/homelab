@@ -16,7 +16,7 @@ patches:
                 "nodePathMap":[
                 {
                         "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
-                        "paths":["/var/mnt/local-path-provisioner"]
+                        "paths":["/var/lib/local-path-provisioner"]
                 }
                 ]
         }
@@ -25,8 +25,6 @@ patches:
     kind: StorageClass
     metadata:
       name: local-path
-      annotations:
-        storageclass.kubernetes.io/is-default-class: "true"
 - patch: |-
     apiVersion: v1
     kind: Namespace
