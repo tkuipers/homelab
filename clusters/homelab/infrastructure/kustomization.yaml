@@ -8,4 +8,5 @@ resources:
   - ./aws-ip-updater
   - ./external-dns
   - ./nfs-provisioner
-  # - ./local-path-provisioner
+  - ./monitoring
+  - ./local-path-provisioner

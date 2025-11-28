@@ -1,0 +1,47 @@
+---
+# PodMonitor for Pterodactyl - monitors pods directly without service
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: pterodactyl
+  namespace: monitoring
+  labels:
+    app: pterodactyl
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pterodactyl
+  namespaceSelector:
+    matchNames:
+    - pterodactyl
+  podMetricsEndpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+---
+# PodMonitor for Flux controllers
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: flux-system
+  namespace: monitoring
+  labels:
+    app: flux
+spec:
+  selector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - helm-controller
+      - kustomize-controller
+      - notification-controller
+      - source-controller
+  namespaceSelector:
+    matchNames:
+    - flux-system
+  podMetricsEndpoints:
+  - port: http-prom
+    interval: 30s
+    path: /metrics
+
