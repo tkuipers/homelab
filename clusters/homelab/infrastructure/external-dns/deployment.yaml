@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: external-dns
+  namespace: external-dns
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: external-dns
+  template:
+    metadata:
+      labels:
+        app: external-dns
+    spec:
+      serviceAccountName: external-dns
+      containers:
+      - name: external-dns
+        image: registry.k8s.io/external-dns/external-dns:v0.15.0
+        args:
+        - --source=ingress
+        - --source=service
+        - --provider=aws
+        - --aws-zone-type=public
+        - --registry=txt
+        - --txt-owner-id=homelab-cluster
+        - --policy=sync
+        - --log-level=info
+        - --interval=1m
+        - --annotation-filter=external-dns.alpha.kubernetes.io/hostname
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: secret-access-key
+        resources:
+          requests:
+            memory: "50Mi"
+            cpu: "10m"
+          limits:
+            memory: "100Mi"
+            cpu: "100m"
+
