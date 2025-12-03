@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-content
+  namespace: homepage
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>T. Kuipers</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap');
+        
+        :root {
+          --bg: #0a0a0b;
+          --surface: #141416;
+          --border: #2a2a2e;
+          --text: #e4e4e7;
+          --muted: #71717a;
+          --accent: #22d3ee;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+          font-family: 'Syne', sans-serif;
+          background: var(--bg);
+          color: var(--text);
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-image: 
+            radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34, 211, 238, 0.15), transparent),
+            radial-gradient(circle at 20% 80%, rgba(34, 211, 238, 0.05), transparent);
+        }
+        
+        .container {
+          text-align: center;
+          padding: 2rem;
+        }
+        
+        h1 {
+          font-size: clamp(2.5rem, 8vw, 5rem);
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          margin-bottom: 0.5rem;
+        }
+        
+        .accent { color: var(--accent); }
+        
+        .tagline {
+          font-family: 'JetBrains Mono', monospace;
+          color: var(--muted);
+          font-size: 0.9rem;
+          margin-bottom: 2rem;
+        }
+        
+        .links {
+          display: flex;
+          gap: 1.5rem;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+        
+        .links a {
+          font-family: 'JetBrains Mono', monospace;
+          color: var(--muted);
+          text-decoration: none;
+          font-size: 0.85rem;
+          padding: 0.5rem 1rem;
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          transition: all 0.2s ease;
+        }
+        
+        .links a:hover {
+          color: var(--accent);
+          border-color: var(--accent);
+          background: rgba(34, 211, 238, 0.05);
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>T<span class="accent">.</span> Kuipers</h1>
+        <p class="tagline">// personal site coming soon</p>
+        <div class="links">
+          <a href="https://github.com/tkuipers">github</a>
+        </div>
+      </div>
+    </body>
+    </html>
+
