@@ -13,6 +13,13 @@ We must must pause and test in between each task to ensure things are working.  
 - Configured readiness/liveness probes
 - Database is running and healthy
 
+✅ **Phase 1 - Task 1.1.5: Redis Deployment**
+- Deployed Redis 7-alpine as cache for Authentik
+- No persistence (ephemeral cache only)
+- Resource limits: 256Mi memory, 250m CPU
+- Configured with maxmemory and LRU eviction policy
+- Running and healthy on omen-worker1
+
 ## Architecture Decisions
 
 ### Database
