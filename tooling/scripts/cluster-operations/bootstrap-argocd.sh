@@ -116,8 +116,8 @@ EOF
             
             if ! op account get &>/dev/null; then
                 log_error "Not signed in to 1Password CLI. Run: eval \$(op signin)"
-                exit 1
-            fi
+        exit 1
+    fi
             
             OP_CONNECT_TOKEN=$(op connect token create "ArgoCD Bootstrap - $(date '+%Y-%m-%d %H:%M:%S')" \
                 --server "homelab" --vault="$VAULT_NAME")
@@ -459,7 +459,7 @@ verify_installation() {
     fi
     
     if [ "$all_good" = "true" ]; then
-        log_success "Installation verification complete!"
+    log_success "Installation verification complete!"
     else
         log_warning "Some components may need attention"
     fi
