@@ -4,4 +4,4 @@ kind: Kustomization
 resources:
   - datadog-namespace.yaml
   - datadog-externalsecret-api-keys.yaml
-
+  - datadog-monitors.yaml

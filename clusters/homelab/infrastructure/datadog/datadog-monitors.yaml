@@ -1,0 +1,163 @@
+---
+# Monitor: Homepage (tkuipers.ca) pod health
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: homepage-pod-health
+  namespace: datadog
+spec:
+  name: "[Homelab] Homepage Pod Not Running"
+  type: query alert
+  query: "min(last_5m):sum:kubernetes.pods.running{kube_deployment:homepage,kube_namespace:homepage} < 1"
+  message: |
+    Homepage pod is down!
+    
+    The personal website at tkuipers.ca may be unreachable.
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:homepage
+    - team:infrastructure
+  options:
+    thresholds:
+      critical: "1"
+    notifyNoData: true
+    noDataTimeframe: 10
+    renotifyInterval: 60
+---
+# Monitor: Homepage HTTP response
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: homepage-http-errors
+  namespace: datadog
+spec:
+  name: "[Homelab] Homepage High Error Rate"
+  type: query alert
+  query: "sum(last_5m):sum:nginx.http.response.5xx{service:homepage}.as_count() / sum:nginx.http.response.total{service:homepage}.as_count() * 100 > 10"
+  message: |
+    Homepage is returning elevated 5xx errors!
+    
+    Error rate is above 10% in the last 5 minutes.
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:homepage
+    - team:infrastructure
+  options:
+    thresholds:
+      critical: "10"
+      warning: "5"
+    notifyNoData: false
+---
+# Monitor: ArgoCD server pod health
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: argocd-server-health
+  namespace: datadog
+spec:
+  name: "[Homelab] ArgoCD Server Not Running"
+  type: query alert
+  query: "min(last_5m):sum:kubernetes.pods.running{kube_deployment:argocd-server,kube_namespace:argocd} < 1"
+  message: |
+    ArgoCD server is down!
+    
+    The GitOps UI at argo.tkuipers.ca may be unreachable.
+    This could affect deployments.
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:argocd
+    - team:infrastructure
+  options:
+    thresholds:
+      critical: "1"
+    notifyNoData: true
+    noDataTimeframe: 10
+    renotifyInterval: 60
+---
+# Monitor: ArgoCD application sync failures
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: argocd-sync-failures
+  namespace: datadog
+spec:
+  name: "[Homelab] ArgoCD Application Sync Failed"
+  type: query alert
+  query: "max(last_10m):sum:argocd.app_info{sync_status:outofsync,cluster:homelab} > 2"
+  message: |
+    Multiple ArgoCD applications are out of sync!
+    
+    More than 2 applications have failed to sync in the last 10 minutes.
+    Check the ArgoCD UI: https://argo.tkuipers.ca
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:argocd
+    - team:infrastructure
+  options:
+    thresholds:
+      critical: "2"
+      warning: "1"
+    notifyNoData: false
+---
+# Monitor: Ingress controller health
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: ingress-nginx-health
+  namespace: datadog
+spec:
+  name: "[Homelab] Ingress NGINX Not Running"
+  type: query alert
+  query: "min(last_5m):sum:kubernetes.pods.running{kube_deployment:infrastructure-ingress-nginx-controller,kube_namespace:ingress-nginx} < 1"
+  message: |
+    Ingress NGINX controller is down!
+    
+    All external traffic to the cluster will fail.
+    This affects: tkuipers.ca, argo.tkuipers.ca, and all other services.
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:ingress-nginx
+    - team:infrastructure
+  options:
+    thresholds:
+      critical: "1"
+    notifyNoData: true
+    noDataTimeframe: 10
+    renotifyInterval: 30
+---
+# Monitor: Certificate expiration
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: cert-expiration
+  namespace: datadog
+spec:
+  name: "[Homelab] TLS Certificate Expiring Soon"
+  type: query alert
+  query: "min(last_1h):min:cert_manager.certificate.expiration_timestamp_seconds{cluster:homelab} - now() < 604800"
+  message: |
+    A TLS certificate is expiring within 7 days!
+    
+    Check cert-manager certificates and ensure renewal is working.
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:cert-manager
+    - team:infrastructure
+  options:
+    thresholds:
+      critical: "604800"
+      warning: "1209600"
+    notifyNoData: false
+

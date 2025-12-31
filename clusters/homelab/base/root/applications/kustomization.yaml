@@ -11,3 +11,5 @@ resources:
   - argocd-application-external-dns.yaml
   - argocd-application-aws-ip-updater.yaml
   - argocd-application-datadog.yaml
+  # Apps
+  - argocd-application-homepage.yaml

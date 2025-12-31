@@ -5,6 +5,9 @@ metadata:
   namespace: homepage
   labels:
     app: homepage
+    tags.datadoghq.com/env: homelab
+    tags.datadoghq.com/service: homepage
+    tags.datadoghq.com/version: "1.0"
 spec:
   replicas: 1
   selector:
@@ -14,6 +17,11 @@ spec:
     metadata:
       labels:
         app: homepage
+        tags.datadoghq.com/env: homelab
+        tags.datadoghq.com/service: homepage
+        tags.datadoghq.com/version: "1.0"
+      annotations:
+        ad.datadoghq.com/homepage.logs: '[{"source":"nginx","service":"homepage"}]'
     spec:
       containers:
       - name: homepage
@@ -48,4 +56,3 @@ spec:
       - name: content
         configMap:
           name: homepage-content
-
