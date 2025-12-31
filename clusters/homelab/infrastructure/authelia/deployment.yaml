@@ -34,6 +34,7 @@ spec:
             }
           }
     spec:
+      enableServiceLinks: false
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
       containers:

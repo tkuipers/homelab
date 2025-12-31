@@ -9,7 +9,7 @@ data:
     users:
       tkuipers:
         displayname: "T. Kuipers"
-        password: "$argon2id$v=19$m=65536,t=3,p=4$PLACEHOLDER_REPLACE_IN_SECRET"
+        password: "$argon2id$v=19$m=65536,t=3,p=4$REPLACE_VIA_EXTERNAL_SECRET"
         email: tkuipers123@gmail.com
         groups:
           - admins
