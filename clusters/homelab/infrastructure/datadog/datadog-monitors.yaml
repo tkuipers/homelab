@@ -26,6 +26,205 @@ spec:
     noDataTimeframe: 10
     renotifyInterval: 60
 ---
+# Monitor: Authentik service pods health
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: authentik-pods-health
+  namespace: datadog
+spec:
+  name: "[Homelab] Authentik Service Down"
+  type: query alert
+  query: "min(last_5m):sum:kubernetes.pods.running{kube_namespace:authentik,app.kubernetes.io/name:authentik} < 2"
+  message: |
+    Authentik SSO service is down!
+    
+    One or more Authentik pods (server/worker) are not running.
+    This affects authentication for all services using SSO.
+    
+    Check: kubectl get pods -n authentik
+  tags:
+    - env:homelab
+    - service:authentik
+    - team:infrastructure
+    - severity:critical
+  options:
+    thresholds:
+      critical: "2"
+    notifyNoData: true
+    noDataTimeframe: 10
+    renotifyInterval: 30
+---
+# Monitor: Authentik PostgreSQL health
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: authentik-postgresql-health
+  namespace: datadog
+spec:
+  name: "[Homelab] Authentik PostgreSQL Down"
+  type: query alert
+  query: "min(last_5m):sum:kubernetes.pods.running{kube_deployment:authentik-postgresql,kube_namespace:authentik} < 1"
+  message: |
+    Authentik PostgreSQL database is down!
+    
+    This will cause authentication failures across all services.
+    
+    Check: kubectl logs -n authentik -l app=authentik-postgresql
+  tags:
+    - env:homelab
+    - service:authentik-postgres
+    - team:infrastructure
+    - severity:critical
+  options:
+    thresholds:
+      critical: "1"
+    notifyNoData: true
+    noDataTimeframe: 10
+    renotifyInterval: 30
+---
+# Monitor: Authentik Redis health
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: authentik-redis-health
+  namespace: datadog
+spec:
+  name: "[Homelab] Authentik Redis Down"
+  type: query alert
+  query: "min(last_5m):sum:kubernetes.pods.running{kube_deployment:authentik-redis,kube_namespace:authentik} < 1"
+  message: |
+    Authentik Redis cache is down!
+    
+    This may cause degraded performance and session issues.
+    
+    Check: kubectl logs -n authentik -l app=authentik-redis
+  tags:
+    - env:homelab
+    - service:authentik-redis
+    - team:infrastructure
+    - severity:warning
+  options:
+    thresholds:
+      critical: "1"
+    notifyNoData: true
+    noDataTimeframe: 10
+    renotifyInterval: 60
+---
+# Monitor: High failed login rate
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: authentik-high-failed-logins
+  namespace: datadog
+spec:
+  name: "[Homelab] Authentik High Failed Login Rate"
+  type: query alert
+  query: "sum(last_5m):sum:authentik.events{action:login_failed,kube_namespace:authentik}.as_count() by {client_ip} > 10"
+  message: |
+    High failed login attempts detected from IP: {{client_ip.name}}
+    
+    {{value}} failed login attempts in the last 5 minutes.
+    This could indicate a brute-force attack.
+    
+    Review logs: kubectl logs -n authentik -l app.kubernetes.io/component=worker | grep login_failed
+  tags:
+    - env:homelab
+    - service:authentik
+    - team:security
+    - severity:warning
+  options:
+    thresholds:
+      critical: "10"
+      warning: "5"
+    notifyNoData: false
+    renotifyInterval: 120
+---
+# Monitor: Authentik certificate expiry
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: authentik-cert-expiry
+  namespace: datadog
+spec:
+  name: "[Homelab] Authentik TLS Certificate Expiring"
+  type: metric alert
+  query: "max(last_1h):avg:cert_manager.certificate.expiration_timestamp{kube_namespace:authentik,name:authentik-tls} - time() < 1209600"
+  message: |
+    TLS certificate for auth.tkuipers.ca is expiring soon!
+    
+    Certificate expires in less than 14 days.
+    
+    Check: kubectl get certificate authentik-tls -n authentik
+  tags:
+    - env:homelab
+    - service:authentik
+    - team:infrastructure
+    - severity:warning
+  options:
+    thresholds:
+      critical: "604800"  # 7 days
+      warning: "1209600"  # 14 days
+    notifyNoData: false
+    renotifyInterval: 1440  # Daily
+---
+# Monitor: Forward auth latency
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: authentik-forward-auth-latency
+  namespace: datadog
+spec:
+  name: "[Homelab] Authentik Forward Auth High Latency"
+  type: metric alert
+  query: "avg(last_10m):avg:trace.http.request.duration.by.service.95p{service:authentik} > 500"
+  message: |
+    Authentik forward authentication is slow!
+    
+    P95 latency: {{value}}ms (threshold: 500ms)
+    This affects all protected services.
+    
+    Check resource usage and database performance.
+  tags:
+    - env:homelab
+    - service:authentik
+    - team:infrastructure
+    - severity:warning
+  options:
+    thresholds:
+      critical: "500"
+      warning: "300"
+    notifyNoData: false
+    evaluationDelay: 300
+---
+# Monitor: PostgreSQL connection pool
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: authentik-postgresql-connections
+  namespace: datadog
+spec:
+  name: "[Homelab] Authentik PostgreSQL High Connections"
+  type: metric alert
+  query: "avg(last_5m):avg:postgresql.connections{service:authentik-postgres} > 90"
+  message: |
+    PostgreSQL connection pool is nearly exhausted!
+    
+    Current connections: {{value}} (warning at 90)
+    
+    This may cause authentication failures.
+    Check for connection leaks or increase pool size.
+  tags:
+    - env:homelab
+    - service:authentik-postgres
+    - team:infrastructure
+    - severity:warning
+  options:
+    thresholds:
+      critical: "95"
+      warning: "90"
+    notifyNoData: false
+---
 # Monitor: Homepage HTTP response
 apiVersion: datadoghq.com/v1alpha1
 kind: DatadogMonitor
