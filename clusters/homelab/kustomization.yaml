@@ -1,8 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - infrastructure/cert-manager/install-kustomization.yaml
-  - infrastructure/cert-manager/config-kustomization.yaml
+  # Note: cert-manager and metallb are now managed by ArgoCD
+  # Flux resources kept for remaining apps during migration
   - infrastructure
   - apps
   - flux-system
