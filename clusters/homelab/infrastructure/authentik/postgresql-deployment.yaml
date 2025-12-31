@@ -23,9 +23,24 @@ spec:
       annotations:
         ad.datadoghq.com/postgres.logs: '[{"source":"postgresql","service":"authentik-postgres"}]'
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: postgresql
         image: postgres:16-alpine
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 999
+          seccompProfile:
+            type: RuntimeDefault
         ports:
         - containerPort: 5432
           name: postgresql
