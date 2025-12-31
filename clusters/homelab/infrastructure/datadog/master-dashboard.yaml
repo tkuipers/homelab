@@ -162,7 +162,7 @@ spec:
           "type": "timeseries",
           "requests": [
             {
-              "q": "avg:kubernetes.memory.usage{*}/1073741824 by {host}",
+              "q": "avg:kubernetes.memory.usage{*} by {host}/1073741824",
               "display_type": "area",
               "style": {
                 "palette": "warm"

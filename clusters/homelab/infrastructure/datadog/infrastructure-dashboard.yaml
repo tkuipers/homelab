@@ -69,7 +69,7 @@ spec:
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "avg:kubernetes.memory.usage{kube_namespace:cert-manager}/1048576 by {kube_deployment}",
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:cert-manager} by {kube_deployment}/1048576",
                     "display_type": "area",
                     "style": {
                       "palette": "purple"

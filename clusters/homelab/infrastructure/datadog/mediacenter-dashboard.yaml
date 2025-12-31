@@ -533,7 +533,7 @@ spec:
           "type": "treemap",
           "requests": [
             {
-              "q": "sum:kubernetes.memory.usage{kube_namespace:mediacenter}/1048576 by {kube_deployment}",
+              "q": "sum:kubernetes.memory.usage{kube_namespace:mediacenter} by {kube_deployment}/1048576",
               "style": {
                 "palette": "warm"
               }
