@@ -11,3 +11,4 @@ resources:
   - infrastructure-dashboard.yaml
   - storage-dashboard.yaml
   - mediacenter-dashboard.yaml
+  - authentik-dashboard.yaml
