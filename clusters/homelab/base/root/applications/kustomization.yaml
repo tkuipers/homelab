@@ -7,4 +7,7 @@ resources:
   - argocd-application-cert-manager.yaml
   - argocd-application-ingress-nginx.yaml
   - argocd-application-csi-driver-smb.yaml
+  - argocd-application-local-path-provisioner.yaml
+  - argocd-application-external-dns.yaml
+  - argocd-application-aws-ip-updater.yaml
   - argocd-application-datadog.yaml
