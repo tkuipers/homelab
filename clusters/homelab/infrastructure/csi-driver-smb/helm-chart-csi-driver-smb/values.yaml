@@ -1,0 +1,9 @@
+# SMB CSI Driver configuration
+csi-driver-smb:
+  controller:
+    replicas: 1
+  
+  node:
+    livenessProbe:
+      healthPort: 29643
+

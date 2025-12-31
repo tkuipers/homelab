@@ -1,11 +1,14 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+
 resources:
+  # Credentials from 1Password
   - ghcr-credentials-external-secret.yaml
   - samba-credentials-external-secret.yaml
+  # Samba servers (provide SMB shares from local storage)
   - samba-server-dell-r620.yaml
   - samba-server-omen-worker1.yaml
-  - smb-csi-helm-repository.yaml
-  - smb-csi-driver-release.yaml
-  - smb-storageclass-omen-worker1.yaml
+  # StorageClasses for PVCs
   - smb-storageclass-dell-r620.yaml
+  - smb-storageclass-omen-worker1.yaml
+

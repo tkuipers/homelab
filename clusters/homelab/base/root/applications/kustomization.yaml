@@ -6,4 +6,5 @@ resources:
   - argocd-application-metallb.yaml
   - argocd-application-cert-manager.yaml
   - argocd-application-ingress-nginx.yaml
+  - argocd-application-csi-driver-smb.yaml
   - argocd-application-datadog.yaml
