@@ -7,7 +7,11 @@ Phased rollout of Authentik as the centralized SSO provider for homelab services
 We must must pause and test in between each task to ensure things are working.  We should keep track of where we are in the next section
 
 ## Completed tasks and phases
-Nothing started
+✅ **Phase 1 - Task 1.1: PostgreSQL Deployment**
+- Deployed PostgreSQL 16 with hostPath storage on omen-worker1
+- Fixed permission issues (SMB doesn't support chmod/chown)
+- Configured readiness/liveness probes
+- Database is running and healthy
 
 ## Architecture Decisions
 
