@@ -51,6 +51,21 @@ spec:
           value: "json"
         - name: TZ
           value: "America/Edmonton"
+        - name: AUTHELIA_STORAGE_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: authelia-secrets
+              key: storage-encryption-key
+        - name: AUTHELIA_SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: authelia-secrets
+              key: session-secret
+        - name: AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: authelia-secrets
+              key: jwt-secret
         volumeMounts:
         - name: config
           mountPath: /config/configuration.yml
@@ -60,9 +75,6 @@ spec:
           mountPath: /config/users_database.yml
           subPath: users_database.yml
           readOnly: false
-        - name: secrets
-          mountPath: /secrets
-          readOnly: true
         - name: data
           mountPath: /config
         resources:
@@ -93,9 +105,6 @@ spec:
       - name: users
         configMap:
           name: authelia-users
-      - name: secrets
-        secret:
-          secretName: authelia-secrets
       - name: data
         emptyDir: {}
 

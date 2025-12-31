@@ -85,9 +85,11 @@ collect_input() {
     
     log_info "Generating cryptographic keys..."
     STORAGE_ENCRYPTION_KEY=$(generate_storage_encryption_key)
+    SESSION_SECRET=$(generate_session_secret)
     JWT_SECRET=$(generate_jwt_secret)
     
     log_success "Generated storage encryption key"
+    log_success "Generated session secret"
     log_success "Generated JWT secret"
     
     echo
@@ -112,6 +114,7 @@ create_or_update_item() {
     echo
     log_info "Configuration summary:"
     echo "  Storage Encryption Key: **** (generated)"
+    echo "  Session Secret: **** (generated)"
     echo "  JWT Secret: **** (generated)"
     echo "  User Password: $USER_PASSWORD"
     echo
@@ -131,6 +134,7 @@ create_or_update_item() {
             "username=tkuipers" \
             "password=$USER_PASSWORD" \
             "storage_encryption_key[password]=$STORAGE_ENCRYPTION_KEY" \
+            "session_secret[password]=$SESSION_SECRET" \
             "jwt_secret[password]=$JWT_SECRET" \
             "user_password_hash[password]=$USER_PASSWORD_HASH"
         
@@ -145,6 +149,7 @@ create_or_update_item() {
             "username=tkuipers" \
             "password=$USER_PASSWORD" \
             "storage_encryption_key[password]=$STORAGE_ENCRYPTION_KEY" \
+            "session_secret[password]=$SESSION_SECRET" \
             "jwt_secret[password]=$JWT_SECRET" \
             "user_password_hash[password]=$USER_PASSWORD_HASH"
         
