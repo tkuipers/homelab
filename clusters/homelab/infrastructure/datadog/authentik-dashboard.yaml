@@ -46,7 +46,7 @@ spec:
                 "check": "postgres.can_connect",
                 "grouping": "cluster",
                 "group_by": ["kube_namespace:authentik"],
-                "tags": ["service:authentik-postgres"]
+                "tags": []
               }
             },
             {
@@ -56,7 +56,7 @@ spec:
                 "check": "redis.can_connect",
                 "grouping": "cluster",
                 "group_by": ["kube_namespace:authentik"],
-                "tags": ["service:authentik-redis"]
+                "tags": []
               }
             },
             {
