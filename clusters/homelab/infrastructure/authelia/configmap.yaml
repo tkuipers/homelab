@@ -82,11 +82,13 @@ data:
           policy: one_factor
     
     session:
-      name: authelia_session
-      same_site: lax
-      expiration: 1h
-      inactivity: 5m
-      remember_me: 1M
+      cookies:
+        - name: authelia_session
+          domain: tkuipers.ca
+          same_site: lax
+          expiration: 1h
+          inactivity: 5m
+          remember_me: 1M
       redis:
         host: authelia-redis
         port: 6379
