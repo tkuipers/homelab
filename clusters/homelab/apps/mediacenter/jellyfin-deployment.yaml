@@ -17,9 +17,40 @@ spec:
       annotations:
         # Datadog logs for playback tracking
         ad.datadoghq.com/jellyfin.logs: '[{"source":"jellyfin","service":"jellyfin"}]'
+        # Datadog Prometheus scraping for Jellyfin metrics (active streams, bandwidth)
+        ad.datadoghq.com/jellyfin.checks: |
+          {
+            "openmetrics": {
+              "instances": [
+                {
+                  "openmetrics_endpoint": "http://%%host%%:8096/metrics",
+                  "namespace": "jellyfin",
+                  "metrics": [".*"]
+                }
+              ]
+            }
+          }
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
+      # Enable Jellyfin metrics on startup
+      initContainers:
+      - name: enable-metrics
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - |
+          CONFIG_FILE="/config/config/system.xml"
+          if [ -f "$CONFIG_FILE" ]; then
+            sed -i 's/<EnableMetrics>false<\/EnableMetrics>/<EnableMetrics>true<\/EnableMetrics>/g' "$CONFIG_FILE"
+            echo "Metrics enabled in $CONFIG_FILE"
+          else
+            echo "Config file not found, Jellyfin will create it on first start"
+          fi
+        volumeMounts:
+        - name: config
+          mountPath: /config
       containers:
       - name: jellyfin
         image: jellyfin/jellyfin:latest
