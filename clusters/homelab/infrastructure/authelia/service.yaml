@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: authelia
+  namespace: authelia
+  labels:
+    app: authelia
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 9091
+    protocol: TCP
+    name: http
+  - port: 9959
+    targetPort: 9959
+    protocol: TCP
+    name: metrics
+  selector:
+    app: authelia
+

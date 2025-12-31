@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authelia-config
+  namespace: authelia
+data:
+  configuration.yml: |
+    ---
+    theme: dark
+    default_2fa_method: totp
+    
+    server:
+      host: 0.0.0.0
+      port: 9091
+      path: ""
+      asset_path: ""
+      headers:
+        csp_template: ""
+      buffers:
+        read: 4096
+        write: 4096
+      timeouts:
+        read: 6s
+        write: 6s
+        idle: 30s
+    
+    log:
+      level: info
+      format: json
+      file_path: ""
+      keep_stdout: true
+    
+    telemetry:
+      metrics:
+        enabled: true
+        address: tcp://0.0.0.0:9959
+        buffers:
+          read: 4096
+          write: 4096
+        timeouts:
+          read: 6s
+          write: 6s
+          idle: 30s
+    
+    totp:
+      disable: false
+      issuer: auth.tkuipers.ca
+      algorithm: sha1
+      digits: 6
+      period: 30
+      skew: 1
+      secret_size: 32
+    
+    webauthn:
+      disable: false
+      display_name: Authelia
+      attestation_conveyance_preference: indirect
+      user_verification: preferred
+      timeout: 60s
+    
+    authentication_backend:
+      password_reset:
+        disable: false
+      refresh_interval: 5m
+      file:
+        path: /config/users_database.yml
+        watch: true
+        password:
+          algorithm: argon2
+          argon2:
+            variant: argon2id
+            iterations: 3
+            memory: 65536
+            parallelism: 4
+            key_length: 32
+            salt_length: 16
+    
+    access_control:
+      default_policy: deny
+      rules:
+        # Allow all authenticated users to access protected services
+        - domain: "*.tkuipers.ca"
+          policy: one_factor
+    
+    session:
+      name: authelia_session
+      domain: tkuipers.ca
+      same_site: lax
+      expiration: 1h
+      inactivity: 5m
+      remember_me_duration: 1M
+      redis:
+        host: authelia-redis
+        port: 6379
+        database_index: 0
+    
+    regulation:
+      max_retries: 3
+      find_time: 2m
+      ban_time: 5m
+    
+    storage:
+      encryption_key_path: /secrets/storage-encryption-key
+      local:
+        path: /config/db.sqlite3
+    
+    notifier:
+      disable_startup_check: true
+      filesystem:
+        filename: /config/notification.txt
+
