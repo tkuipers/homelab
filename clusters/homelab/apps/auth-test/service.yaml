@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-test
+  namespace: auth-test
+  labels:
+    app: auth-test
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: auth-test
+
