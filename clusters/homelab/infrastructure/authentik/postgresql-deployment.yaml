@@ -28,23 +28,13 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-      - name: init-db
+      - name: fix-permissions
         image: busybox:latest
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            add:
-            - CHOWN
-            - FOWNER
-          runAsUser: 0
-          seccompProfile:
-            type: RuntimeDefault
         command:
         - sh
         - -c
         - |
-          # Create directory and set proper ownership for postgres user (UID 999)
-          mkdir -p /var/lib/postgresql/data
+          # Set proper ownership for postgres user (UID 999)
           chown -R 999:999 /var/lib/postgresql/data
           chmod 700 /var/lib/postgresql/data
         volumeMounts:
