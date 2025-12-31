@@ -43,10 +43,9 @@ spec:
         - sh
         - -c
         - |
-          # Ensure the data directory exists and has correct permissions
-          mkdir -p /var/lib/postgresql/data/pgdata
-          chown -R 999:999 /var/lib/postgresql/data
-          chmod 700 /var/lib/postgresql/data/pgdata || true
+          # Ensure the data directory exists
+          mkdir -p /var/lib/postgresql/data
+          # fsGroup will handle ownership, we just ensure it exists
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
@@ -79,7 +78,7 @@ spec:
         - name: POSTGRES_DB
           value: "authentik"
         - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
+          value: /var/lib/postgresql/data
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
