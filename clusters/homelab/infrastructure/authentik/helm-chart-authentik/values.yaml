@@ -24,8 +24,32 @@ global:
     runAsGroup: 1000
     fsGroup: 1000
 
-# Authentik configuration - most values set via infrastructure-authentik secret
-# which is populated by ExternalSecrets from 1Password
+# Authentik configuration - bootstrap credentials from secrets
+authentik:
+  secret_key: ""  # Set via secret
+  bootstrap_password: ""  # Set via secret
+  bootstrap_token: ""  # Set via secret
+  bootstrap_email: "tkuipers123@gmail.com"
+  
+  # External PostgreSQL configuration
+  postgresql:
+    host: "authentik-postgresql"
+    port: 5432
+    name: "authentik"
+    user: ""  # Set via secret
+    password: ""  # Set via secret
+  
+  # External Redis configuration
+  redis:
+    host: "authentik-redis"
+    port: 6379
+  
+  # External hostname
+  host: "https://auth.tkuipers.ca"
+  host_https: true
+  
+  error_reporting:
+    enabled: false
 
 # Disable embedded PostgreSQL - using external
 postgresql:
@@ -48,50 +72,8 @@ server:
       memory: "1Gi"
       cpu: "1000m"
 
-  # Environment variables for external services
+  # Additional environment variables
   env:
-    # PostgreSQL connection
-    - name: AUTHENTIK_POSTGRESQL__HOST
-      value: "authentik-postgresql"
-    - name: AUTHENTIK_POSTGRESQL__PORT
-      value: "5432"
-    - name: AUTHENTIK_POSTGRESQL__NAME
-      value: "authentik"
-    - name: AUTHENTIK_POSTGRESQL__USER
-      valueFrom:
-        secretKeyRef:
-          name: authentik-postgresql-credentials
-          key: username
-    - name: AUTHENTIK_POSTGRESQL__PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: authentik-postgresql-credentials
-          key: password
-    # Redis connection
-    - name: AUTHENTIK_REDIS__HOST
-      value: "authentik-redis"
-    - name: AUTHENTIK_REDIS__PORT
-      value: "6379"
-    # Secret key
-    - name: AUTHENTIK_SECRET_KEY
-      valueFrom:
-        secretKeyRef:
-          name: authentik-credentials
-          key: secret_key
-    # Bootstrap configuration
-    - name: AUTHENTIK_BOOTSTRAP_EMAIL
-      value: "tkuipers123@gmail.com"
-    - name: AUTHENTIK_BOOTSTRAP_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: authentik-credentials
-          key: bootstrap_password
-    - name: AUTHENTIK_BOOTSTRAP_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: authentik-credentials
-          key: bootstrap_token
-    # External hostname
     - name: AUTHENTIK_DISABLE_UPDATE_CHECK
       value: "true"
     - name: AUTHENTIK_DISABLE_STARTUP_ANALYTICS
@@ -116,37 +98,8 @@ worker:
       memory: "512Mi"
       cpu: "500m"
 
-  # Environment variables (same as server for external services)
+  # Additional environment variables
   env:
-    # PostgreSQL connection
-    - name: AUTHENTIK_POSTGRESQL__HOST
-      value: "authentik-postgresql"
-    - name: AUTHENTIK_POSTGRESQL__PORT
-      value: "5432"
-    - name: AUTHENTIK_POSTGRESQL__NAME
-      value: "authentik"
-    - name: AUTHENTIK_POSTGRESQL__USER
-      valueFrom:
-        secretKeyRef:
-          name: authentik-postgresql-credentials
-          key: username
-    - name: AUTHENTIK_POSTGRESQL__PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: authentik-postgresql-credentials
-          key: password
-    # Redis connection
-    - name: AUTHENTIK_REDIS__HOST
-      value: "authentik-redis"
-    - name: AUTHENTIK_REDIS__PORT
-      value: "6379"
-    # Secret key
-    - name: AUTHENTIK_SECRET_KEY
-      valueFrom:
-        secretKeyRef:
-          name: authentik-credentials
-          key: secret_key
-    # Disable analytics
     - name: AUTHENTIK_DISABLE_UPDATE_CHECK
       value: "true"
     - name: AUTHENTIK_DISABLE_STARTUP_ANALYTICS
