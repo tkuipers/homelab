@@ -178,6 +178,8 @@ create_or_update_item() {
             "bootstrap_token=$BOOTSTRAP_TOKEN" \
             "bootstrap_email=tkuipers123@gmail.com" \
             "postgresql_host=authentik-postgresql" \
+            "postgresql_port=5432" \
+            "postgresql_db=authentik" \
             "redis_host=authentik-redis" \
             "redis_port=6379" \
             "external_host=https://auth.tkuipers.ca" \
@@ -196,6 +198,8 @@ create_or_update_item() {
             "bootstrap_token=$BOOTSTRAP_TOKEN" \
             "bootstrap_email=tkuipers123@gmail.com" \
             "postgresql_host=authentik-postgresql" \
+            "postgresql_port=5432" \
+            "postgresql_db=authentik" \
             "redis_host=authentik-redis" \
             "redis_port=6379" \
             "external_host=https://auth.tkuipers.ca" \
