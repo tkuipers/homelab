@@ -1,8 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  # All infrastructure and apps now managed by ArgoCD
-  # This file kept for reference only
-  # - infrastructure  # Managed by ArgoCD
-  # - apps            # Managed by ArgoCD
-  # - flux-system     # DELETED - Flux uninstalled
