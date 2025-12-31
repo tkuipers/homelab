@@ -1,18 +1,51 @@
 # Datadog Agent Configuration
-# Datadog Pro tier - all features enabled
-# Configured for Talos OS (read-only root filesystem)
+# Configured for Talos Linux per official docs
+# https://docs.datadoghq.com/containers/kubernetes/installation/?tab=helm
 
 datadog:
   datadog:
-    # Site configuration
-    site: datadoghq.com
-
     # API keys from ExternalSecret
     apiKeyExistingSecret: datadog-api-keys
     appKeyExistingSecret: datadog-api-keys
 
-    # Cluster name for identification
+    # Cluster identification
     clusterName: homelab
+    site: datadoghq.com
+
+    # Talos-specific: disable TLS verification for kubelet
+    kubelet:
+      tlsVerify: false
+
+    # Ignore auto-config for components we'll configure manually
+    ignoreAutoConfig:
+      - etcd
+      - kube_scheduler
+      - kube_controller_manager
+
+    # Manual configuration for control plane components
+    confd:
+      etcd.yaml: |-
+        ad_identifiers:
+          - kube-scheduler
+        instances:
+          - prometheus_url: https://%%host%%:2379/metrics
+            tls_ca_cert: /host/etc/kubernetes/pki/etcd/ca.crt
+            tls_cert: /host/etc/kubernetes/pki/etcd/server.crt
+            tls_private_key: /host/etc/kubernetes/pki/etcd/server.key
+      kube_scheduler.yaml: |-
+        ad_identifiers:
+          - kube-scheduler
+        instances:
+          - prometheus_url: https://%%host%%:10259/metrics
+            ssl_verify: false
+            bearer_token_auth: true
+      kube_controller_manager.yaml: |-
+        ad_identifiers:
+          - kube-controller-manager
+        instances:
+          - prometheus_url: https://%%host%%:10257/metrics
+            ssl_verify: false
+            bearer_token_auth: true
 
     # Kubernetes integration
     kubeStateMetricsEnabled: true
@@ -20,114 +53,62 @@ datadog:
       enabled: true
     collectEvents: true
 
-    # APM (Application Performance Monitoring)
+    # APM
     apm:
       portEnabled: true
       socketEnabled: true
 
-    # Log Collection
+    # Logs
     logs:
       enabled: true
       containerCollectAll: true
 
-    # Live Processes
+    # Processes
     processAgent:
       enabled: true
       processCollection: true
-
-    # Network Performance Monitoring - DISABLED for Talos
-    # NPM requires kernel headers which Talos doesn't have
-    networkMonitoring:
-      enabled: false
 
     # Orchestrator Explorer
     orchestratorExplorer:
       enabled: true
 
-    # Tags for all metrics
+    # Tags
     tags:
       - "env:homelab"
       - "cluster:homelab"
 
-    # Talos-specific: Container runtime socket
-    criSocketPath: /var/run/containerd/containerd.sock
-
-  # Enable the agent DaemonSet
+  # Agent DaemonSet configuration
   agents:
-    enabled: true
-    
-    # Talos-specific: Use containerd
-    containers:
-      agent:
-        # Talos-specific: Need to disable some features
-        env:
-          - name: DD_CONTAINER_EXCLUDE
-            value: "name:pause name:POD"
-        resources:
-          requests:
-            cpu: 200m
-            memory: 256Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        # Talos: Disable security context that causes issues
-        securityContext:
-          readOnlyRootFilesystem: false
-      
-      traceAgent:
-        securityContext:
-          readOnlyRootFilesystem: false
-      
-      processAgent:
-        securityContext:
-          readOnlyRootFilesystem: false
-    
-    # Run on all nodes
     tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
       - operator: Exists
-    
-    # Don't use host network - can cause issues
-    useHostNetwork: false
-    
-    # Talos: Mount containerd socket
+
+    # Talos: Mount etcd certs from Talos path
     volumes:
-      - name: containerdsocket
-        hostPath:
-          path: /var/run/containerd/containerd.sock
-      - name: proc
-        hostPath:
-          path: /proc
-      - name: cgroup
-        hostPath:
-          path: /sys/fs/cgroup
-      - name: var-log
-        hostPath:
-          path: /var/log
-          
+      - hostPath:
+          path: /system/secrets/etcd
+        name: etcd-certs
+
     volumeMounts:
-      - name: containerdsocket
-        mountPath: /var/run/containerd/containerd.sock
-        readOnly: true
-      - name: proc
-        mountPath: /host/proc
-        readOnly: true
-      - name: cgroup
-        mountPath: /host/sys/fs/cgroup
-        readOnly: true
-      - name: var-log
-        mountPath: /var/log/pods
+      - name: etcd-certs
+        mountPath: /host/etc/kubernetes/pki/etcd
         readOnly: true
 
-  # Cluster Agent for Kubernetes metrics
+  # Cluster Agent
   clusterAgent:
     enabled: true
     replicas: 1
     metricsProvider:
       enabled: true
       useDatadogMetrics: true
-    admissionController:
-      enabled: false  # Disable - can cause issues with Talos
 
-  # Cluster checks runner - disable for simplicity
+  # CRITICAL: Enable Talos provider
+  providers:
+    talos:
+      enabled: true
+
+  # Disable cluster checks runner for simplicity
   clusterChecksRunner:
     enabled: false
