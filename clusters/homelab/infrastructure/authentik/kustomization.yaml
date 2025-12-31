@@ -10,5 +10,6 @@ resources:
   - redis-deployment.yaml
   - redis-service.yaml
   - authentik-credentials-external-secret.yaml
+  - authentik-chart-secret-sync.yaml
   - ingress.yaml
 
