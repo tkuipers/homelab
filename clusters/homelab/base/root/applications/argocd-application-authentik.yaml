@@ -19,8 +19,8 @@ spec:
           - values.yaml
     # Additional resources (namespace, external secrets, ingress, postgresql, redis)
     - repoURL: ssh://git@github.com/tkuipers/homelab.git
-    targetRevision: main
-    path: clusters/homelab/infrastructure/authentik
+      targetRevision: main
+      path: clusters/homelab/infrastructure/authentik
   destination:
     server: https://kubernetes.default.svc
     namespace: authentik
