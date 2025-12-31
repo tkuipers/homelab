@@ -105,3 +105,12 @@ datadog:
   providers:
     talos:
       enabled: true
+
+  # Datadog Operator settings
+  operators:
+    datadogMonitor:
+      enabled: true
+    datadogSLO:
+      enabled: true
+    datadogDashboard:
+      enabled: true
