@@ -1,0 +1,352 @@
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogDashboard
+metadata:
+  name: mediacenter-overview
+  namespace: mediacenter
+spec:
+  title: "🎬 Media Center Overview"
+  description: "Jellyfin, Sonarr, and Radarr monitoring dashboard"
+  layoutType: ordered
+  tags:
+    - "team:homelab"
+    - "env:homelab"
+  widgets: |
+    [
+      {
+        "definition": {
+          "title": "📺 TV Shows Overview",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Series Monitored",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_series_monitored_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Episodes Downloaded",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_episode_downloaded_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Episodes Missing",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_episode_missing_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Seasons Monitored",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_season_monitored_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🎥 Movies Overview",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Movies Monitored",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_movie_monitored_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Movies Downloaded",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_movie_downloaded_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Movies Missing",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_movie_missing_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Movies Wanted",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_movie_wanted_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "💾 Storage",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "TV Storage Free (GB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_rootfolder_freespace_bytes{*}/1073741824",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 1
+              }
+            },
+            {
+              "definition": {
+                "title": "Movie Storage Free (GB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_rootfolder_freespace_bytes{*}/1073741824",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 1
+              }
+            },
+            {
+              "definition": {
+                "title": "TV Library Size (GB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_series_filesize_bytes{*}/1073741824",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 1
+              }
+            },
+            {
+              "definition": {
+                "title": "Movie Library Size (GB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_movie_filesize_total{*}/1073741824",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📊 Storage Over Time",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "avg:sonarr.sonarr_rootfolder_freespace_bytes{*}/1073741824",
+              "display_type": "line",
+              "style": {
+                "palette": "dog_classic",
+                "line_type": "solid",
+                "line_width": "normal"
+              }
+            },
+            {
+              "q": "avg:radarr.radarr_rootfolder_freespace_bytes{*}/1073741824",
+              "display_type": "line",
+              "style": {
+                "palette": "warm",
+                "line_type": "solid",
+                "line_width": "normal"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "GB Free"
+          }
+        }
+      },
+      {
+        "definition": {
+          "title": "🎬 Movie Quality Distribution",
+          "type": "toplist",
+          "requests": [
+            {
+              "q": "avg:radarr.radarr_movie_quality_total{*} by {quality}",
+              "style": {
+                "palette": "dog_classic"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📈 History Events",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "avg:sonarr.sonarr_history_total{*}",
+              "display_type": "line",
+              "style": {
+                "palette": "dog_classic"
+              }
+            },
+            {
+              "q": "avg:radarr.radarr_history_total{*}",
+              "display_type": "line",
+              "style": {
+                "palette": "warm"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🏥 Service Health",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Sonarr Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_system_status{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Radarr Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_system_status{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Sonarr Health Issues",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_system_health_issues{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Radarr Health Issues",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_system_health_issues{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📝 Recent Sonarr Logs",
+          "type": "log_stream",
+          "query": "source:sonarr",
+          "columns": ["timestamp", "message"],
+          "message_display": "expanded-md"
+        }
+      },
+      {
+        "definition": {
+          "title": "📝 Recent Radarr Logs",
+          "type": "log_stream",
+          "query": "source:radarr",
+          "columns": ["timestamp", "message"],
+          "message_display": "expanded-md"
+        }
+      },
+      {
+        "definition": {
+          "title": "🎬 Jellyfin Logs",
+          "type": "log_stream",
+          "query": "source:jellyfin",
+          "columns": ["timestamp", "message"],
+          "message_display": "expanded-md"
+        }
+      }
+    ]
+
