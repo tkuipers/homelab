@@ -111,11 +111,21 @@ datadog:
     apiKeyExistingSecret: datadog-api-keys
     appKeyExistingSecret: datadog-api-keys
     site: us5.datadoghq.com
-    # Watch all namespaces for DatadogMonitor, DatadogSLO, DatadogDashboard CRDs
-    watchNamespaces: []
     datadogMonitor:
       enabled: true
     datadogSLO:
       enabled: true
     datadogDashboard:
       enabled: true
+
+# Datadog Operator sub-chart config (different from datadog.operator)
+operator:
+  # Watch all namespaces for DatadogMonitor, DatadogSLO, DatadogDashboard CRDs
+  watchNamespaces:
+    - ""
+  datadogMonitor:
+    enabled: true
+  datadogSLO:
+    enabled: true
+  datadogDashboard:
+    enabled: true
