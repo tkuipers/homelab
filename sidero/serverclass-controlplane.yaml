@@ -39,6 +39,15 @@ spec:
     - op: add
       path: /cluster/allowSchedulingOnControlPlanes
       value: true
+    # Datadog control plane monitoring - expose metrics on all interfaces
+    - op: add
+      path: /cluster/controllerManager/extraArgs
+      value:
+        bind-address: "0.0.0.0"
+    - op: add
+      path: /cluster/scheduler/extraArgs
+      value:
+        bind-address: "0.0.0.0"
     - op: replace
       path: /cluster/network/cni
       value:
