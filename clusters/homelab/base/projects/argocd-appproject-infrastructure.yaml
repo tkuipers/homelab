@@ -50,6 +50,8 @@ spec:
         name: infrastructure-datadogtoken
       - kind: Secret
         name: webhook-certificate
-      # Helm release secrets (legacy)
+      # ingress-nginx runtime resources
       - kind: Secret
-        name: sh.helm.release.v1.metallb.v1
+        name: infrastructure-ingress-nginx-admission
+      - kind: Secret
+        name: k8s-tkuipers-ca-tls
