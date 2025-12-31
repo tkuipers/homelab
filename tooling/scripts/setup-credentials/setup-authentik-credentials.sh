@@ -174,7 +174,11 @@ create_or_update_item() {
         op item edit "$ITEM_NAME" --vault="$VAULT_NAME" \
             "secret_key=$SECRET_KEY" \
             "bootstrap_password=$BOOTSTRAP_PASSWORD" \
-            "bootstrap_token=$BOOTSTRAP_TOKEN"
+            "bootstrap_token=$BOOTSTRAP_TOKEN" \
+            "bootstrap_email=tkuipers123@gmail.com" \
+            "postgresql_host=authentik-postgresql" \
+            "redis_host=authentik-redis" \
+            "redis_port=6379"
         
         log_success "Item '$ITEM_NAME' updated successfully"
     else
@@ -185,7 +189,11 @@ create_or_update_item() {
             --title="$ITEM_NAME" \
             "secret_key=$SECRET_KEY" \
             "bootstrap_password=$BOOTSTRAP_PASSWORD" \
-            "bootstrap_token=$BOOTSTRAP_TOKEN"
+            "bootstrap_token=$BOOTSTRAP_TOKEN" \
+            "bootstrap_email=tkuipers123@gmail.com" \
+            "postgresql_host=authentik-postgresql" \
+            "redis_host=authentik-redis" \
+            "redis_port=6379"
         
         log_success "Item '$ITEM_NAME' created successfully"
     fi
