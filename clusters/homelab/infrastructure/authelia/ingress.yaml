@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: authelia
+  namespace: authelia
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/hostname: auth.tkuipers.ca
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - auth.tkuipers.ca
+    secretName: authelia-tls
+  rules:
+  - host: auth.tkuipers.ca
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: authelia
+            port:
+              number: 80
+

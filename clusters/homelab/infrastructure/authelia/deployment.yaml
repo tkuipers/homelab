@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authelia
+  namespace: authelia
+  labels:
+    app: authelia
+    tags.datadoghq.com/env: homelab
+    tags.datadoghq.com/service: authelia
+    tags.datadoghq.com/version: "1.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authelia
+  template:
+    metadata:
+      labels:
+        app: authelia
+        tags.datadoghq.com/env: homelab
+        tags.datadoghq.com/service: authelia
+        tags.datadoghq.com/version: "1.0"
+      annotations:
+        ad.datadoghq.com/authelia.logs: '[{"source":"authelia","service":"authelia"}]'
+        ad.datadoghq.com/authelia.checks: |
+          {
+            "openmetrics": {
+              "init_config": {},
+              "instances": [{
+                "openmetrics_endpoint": "http://%%host%%:9959/metrics",
+                "namespace": "authelia",
+                "metrics": [".*"]
+              }]
+            }
+          }
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      containers:
+      - name: authelia
+        image: authelia/authelia:latest
+        ports:
+        - containerPort: 9091
+          name: http
+        - containerPort: 9959
+          name: metrics
+        env:
+        - name: AUTHELIA_LOG_LEVEL
+          value: "info"
+        - name: AUTHELIA_LOG_FORMAT
+          value: "json"
+        - name: TZ
+          value: "America/Edmonton"
+        volumeMounts:
+        - name: config
+          mountPath: /config/configuration.yml
+          subPath: configuration.yml
+          readOnly: true
+        - name: users
+          mountPath: /config/users_database.yml
+          subPath: users_database.yml
+          readOnly: false
+        - name: secrets
+          mountPath: /secrets
+          readOnly: true
+        - name: data
+          mountPath: /config
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 9091
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 9091
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: authelia-config
+      - name: users
+        configMap:
+          name: authelia-users
+      - name: secrets
+        secret:
+          secretName: authelia-secrets
+      - name: data
+        emptyDir: {}
+

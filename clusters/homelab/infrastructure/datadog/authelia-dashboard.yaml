@@ -1,0 +1,174 @@
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogDashboard
+metadata:
+  name: authelia-dashboard
+  namespace: datadog
+spec:
+  title: "🔐 Authelia SSO Dashboard"
+  description: "Authentication and authorization monitoring"
+  layoutType: ordered
+  tags:
+    - "team:infrastructure"
+    - "service:authelia"
+  widgets: |
+    [
+      {
+        "definition": {
+          "title": "📊 Service Health",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Pod Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:authelia,app:authelia}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {
+                        "comparator": ">=",
+                        "value": 1,
+                        "palette": "white_on_green"
+                      },
+                      {
+                        "comparator": "<",
+                        "value": 1,
+                        "palette": "white_on_red"
+                      }
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Redis Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:authelia,app:authelia-redis}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {
+                        "comparator": ">=",
+                        "value": 1,
+                        "palette": "white_on_green"
+                      },
+                      {
+                        "comparator": "<",
+                        "value": 1,
+                        "palette": "white_on_red"
+                      }
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🔑 Authentication Metrics",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Authentication Attempts (Rate)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "sum:authelia_authentication_1fa_attempts_total{*}.as_rate()",
+                    "display_type": "line",
+                    "style": {
+                      "palette": "dog_classic",
+                      "line_type": "solid",
+                      "line_width": "normal"
+                    }
+                  }
+                ],
+                "yaxis": {
+                  "scale": "linear",
+                  "include_zero": true,
+                  "min": "auto",
+                  "max": "auto"
+                }
+              }
+            },
+            {
+              "definition": {
+                "title": "Request Latency (p95)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "p95:authelia_request_duration_seconds.quantile{*}",
+                    "display_type": "line",
+                    "style": {
+                      "palette": "cool",
+                      "line_type": "solid",
+                      "line_width": "normal"
+                    }
+                  }
+                ],
+                "markers": [
+                  {
+                    "value": "y = 0.2",
+                    "display_type": "warning dashed"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📈 Resource Usage",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "CPU Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:authelia,app:authelia}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Memory Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:authelia,app:authelia}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📝 Recent Logs",
+          "type": "log_stream",
+          "query": "source:authelia service:authelia",
+          "columns": ["host", "service", "level", "message"],
+          "show_date_column": true,
+          "show_message_column": true,
+          "message_display": "expanded-md"
+        }
+      }
+    ]
+
