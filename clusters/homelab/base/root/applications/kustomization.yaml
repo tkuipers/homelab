@@ -5,4 +5,5 @@ resources:
   # Infrastructure - deployed first (sync waves control order)
   - argocd-application-metallb.yaml
   - argocd-application-cert-manager.yaml
+  - argocd-application-ingress-nginx.yaml
   - argocd-application-datadog.yaml

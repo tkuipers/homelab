@@ -1,8 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  # metallb and cert-manager now managed by ArgoCD
-  - ./nginx
+  # metallb, cert-manager, ingress-nginx now managed by ArgoCD
   - ./metrics-server
   - ./aws-ip-updater
   - ./external-dns

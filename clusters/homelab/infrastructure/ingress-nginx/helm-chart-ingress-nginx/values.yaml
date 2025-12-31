@@ -1,0 +1,47 @@
+# ingress-nginx controller configuration
+ingress-nginx:
+  controller:
+    # LoadBalancer service with static IP from MetalLB
+    service:
+      type: LoadBalancer
+      loadBalancerIP: 10.0.0.70
+
+    # Ingress class configuration
+    ingressClassResource:
+      name: nginx
+      enabled: true
+      default: true
+
+    # Admission webhooks
+    admissionWebhooks:
+      enabled: true
+      patch:
+        enabled: true
+      certManager:
+        enabled: false
+      annotations:
+        nginx.ingress.kubernetes.io/enable-annotation-validation: "false"
+      failurePolicy: Ignore
+
+    # Controller config
+    config:
+      strict-validate-path-type: "false"
+
+    # Resources
+    resources:
+      requests:
+        cpu: 100m
+        memory: 90Mi
+
+  # RBAC
+  rbac:
+    create: true
+    scope: false
+
+  # TCP services passthrough
+  tcp:
+    # TimeMachine SMB
+    "445": "timemachine/timemachine:445"
+    # Minecraft (if needed)
+    "25565": "pterodactyl/pterodactyl-pterodactyl-wings-gameservers:25565"
+
