@@ -20,6 +20,140 @@ KUBECONFIG="${KUBECONFIG:-$REPO_ROOT/cluster-configs/kubeconfig}"
 UNINSTALL_FLUX="${UNINSTALL_FLUX:-false}"
 VAULT_NAME="${OP_VAULT_NAME:-Homelab}"
 
+# Install External Secrets Operator
+install_external_secrets() {
+    log_info "Checking External Secrets Operator..."
+    
+    if kubectl --kubeconfig="$KUBECONFIG" get crd externalsecrets.external-secrets.io &>/dev/null; then
+        log_success "External Secrets Operator already installed"
+        return 0
+    fi
+    
+    log_info "Installing External Secrets Operator..."
+    
+    # Install CRDs first
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side -f \
+        "https://raw.githubusercontent.com/external-secrets/external-secrets/main/deploy/crds/bundle.yaml"
+    
+    # Install ESO
+    kubectl --kubeconfig="$KUBECONFIG" apply --server-side -f \
+        "https://github.com/external-secrets/external-secrets/releases/download/v0.10.0/external-secrets.yaml"
+    
+    log_info "Waiting for External Secrets Operator to be ready..."
+    kubectl --kubeconfig="$KUBECONFIG" wait --for=condition=available --timeout=120s \
+        deployment/external-secrets -n external-secrets || true
+    kubectl --kubeconfig="$KUBECONFIG" wait --for=condition=available --timeout=120s \
+        deployment/external-secrets-webhook -n external-secrets || true
+    kubectl --kubeconfig="$KUBECONFIG" wait --for=condition=available --timeout=120s \
+        deployment/external-secrets-cert-controller -n external-secrets || true
+    
+    log_success "External Secrets Operator installed"
+}
+
+# Install 1Password Connect
+install_1password_connect() {
+    log_info "Checking 1Password Connect..."
+    
+    if kubectl --kubeconfig="$KUBECONFIG" get deployment op-connect -n default &>/dev/null; then
+        log_success "1Password Connect already running"
+    else
+        log_info "Installing 1Password Connect..."
+        
+        # Check for credentials file
+        if [[ ! -f "$REPO_ROOT/1password-credentials.json" ]]; then
+            log_error "1password-credentials.json not found in repo root"
+            log_info "Download it from: https://my.1password.com/integrations/infrastructure-secrets"
+            exit 1
+        fi
+        
+        # Create credentials secret
+        kubectl --kubeconfig="$KUBECONFIG" create secret generic op-credentials \
+            --from-file=1password-credentials.json="$REPO_ROOT/1password-credentials.json" \
+            -n default --dry-run=client -o yaml | kubectl --kubeconfig="$KUBECONFIG" apply -f -
+        
+        # Deploy 1Password Connect
+        kubectl --kubeconfig="$KUBECONFIG" apply --server-side -f \
+            "https://raw.githubusercontent.com/1Password/connect/refs/heads/main/examples/kubernetes/op-connect-deployment.yaml"
+        
+        # Create service
+        kubectl --kubeconfig="$KUBECONFIG" apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: op-connect
+  namespace: default
+spec:
+  selector:
+    app: op-connect
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+EOF
+        
+        log_info "Waiting for 1Password Connect to be ready..."
+        kubectl --kubeconfig="$KUBECONFIG" wait --for=condition=available --timeout=120s \
+            deployment/op-connect -n default
+        
+        log_success "1Password Connect installed"
+    fi
+    
+    # Check/create ClusterSecretStore
+    log_info "Checking ClusterSecretStore..."
+    if kubectl --kubeconfig="$KUBECONFIG" get clustersecretstore onepassword-store &>/dev/null; then
+        log_success "ClusterSecretStore already exists"
+    else
+        log_info "Creating ClusterSecretStore..."
+        
+        # Create connect token if needed
+        if ! kubectl --kubeconfig="$KUBECONFIG" get secret onepassword-connect-token -n external-secrets &>/dev/null; then
+            log_info "Creating 1Password Connect token..."
+            
+            if ! command_exists op; then
+                log_error "1Password CLI required to create connect token"
+                exit 1
+            fi
+            
+            if ! op account get &>/dev/null; then
+                log_error "Not signed in to 1Password CLI. Run: eval \$(op signin)"
+                exit 1
+            fi
+            
+            OP_CONNECT_TOKEN=$(op connect token create "ArgoCD Bootstrap - $(date '+%Y-%m-%d %H:%M:%S')" \
+                --server "homelab" --vault="$VAULT_NAME")
+            
+            kubectl --kubeconfig="$KUBECONFIG" create namespace external-secrets --dry-run=client -o yaml | \
+                kubectl --kubeconfig="$KUBECONFIG" apply -f -
+            
+            kubectl --kubeconfig="$KUBECONFIG" create secret generic onepassword-connect-token \
+                --from-literal=token="$OP_CONNECT_TOKEN" \
+                -n external-secrets --dry-run=client -o yaml | kubectl --kubeconfig="$KUBECONFIG" apply -f -
+        fi
+        
+        # Create ClusterSecretStore
+        kubectl --kubeconfig="$KUBECONFIG" apply -f - <<EOF
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: onepassword-store
+spec:
+  provider:
+    onepassword:
+      connectHost: http://op-connect.default.svc.cluster.local:8080
+      vaults:
+        Homelab: 1
+      auth:
+        secretRef:
+          connectTokenSecretRef:
+            name: onepassword-connect-token
+            namespace: external-secrets
+            key: token
+EOF
+        
+        log_success "ClusterSecretStore created"
+    fi
+}
+
 # Uninstall Flux if requested
 uninstall_flux() {
     if [[ "$UNINSTALL_FLUX" != "true" ]]; then
@@ -122,27 +256,23 @@ deploy_ingress() {
 deploy_git_secret() {
     log_info "Deploying git SSH ExternalSecret..."
     
-    # Check if External Secrets Operator is available
-    if ! kubectl --kubeconfig="$KUBECONFIG" get crd externalsecrets.external-secrets.io &>/dev/null; then
-        log_warning "External Secrets Operator CRD not found - skipping git SSH secret"
-        log_info "You'll need to create the secret manually or install External Secrets Operator"
-        return 0
-    fi
-    
     kubectl --kubeconfig="$KUBECONFIG" apply \
         -f "$REPO_ROOT/clusters/homelab/base/argocd/argocd-externalsecret-git-ssh.yaml"
     
-    # Wait a moment for the secret to sync
+    # Wait for the secret to sync
     log_info "Waiting for ExternalSecret to sync..."
-    sleep 5
+    local timeout=30
+    while ! kubectl --kubeconfig="$KUBECONFIG" get secret argocd-git-ssh -n "$ARGOCD_NAMESPACE" &>/dev/null; do
+        if [ $timeout -le 0 ]; then
+            log_warning "Git SSH secret not yet synced - check ExternalSecret status:"
+            kubectl --kubeconfig="$KUBECONFIG" get externalsecret argocd-git-ssh -n "$ARGOCD_NAMESPACE" 2>/dev/null || true
+            return 1
+        fi
+        sleep 2
+        timeout=$((timeout - 2))
+    done
     
-    # Check if secret was created
-    if kubectl --kubeconfig="$KUBECONFIG" get secret argocd-git-ssh -n "$ARGOCD_NAMESPACE" &>/dev/null; then
-        log_success "Git SSH secret created via ExternalSecret"
-    else
-        log_warning "Git SSH secret not yet synced - check ExternalSecret status"
-        kubectl --kubeconfig="$KUBECONFIG" get externalsecret argocd-git-ssh -n "$ARGOCD_NAMESPACE" 2>/dev/null || true
-    fi
+    log_success "Git SSH secret created via ExternalSecret"
 }
 
 # Apply ArgoCD repo configuration
@@ -351,6 +481,10 @@ main() {
     
     # Optionally uninstall Flux first
     uninstall_flux
+    
+    # Install prerequisites (External Secrets + 1Password Connect)
+    install_external_secrets
+    install_1password_connect
     
     # Install ArgoCD
     create_namespace
