@@ -28,30 +28,41 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-      - name: fix-permissions
-        image: busybox:latest
+      - name: init-db
+        image: postgres:16-alpine
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: authentik-postgresql-credentials
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: authentik-postgresql-credentials
+              key: password
+        - name: POSTGRES_DB
+          value: "authentik"
+        - name: PGDATA
+          value: /var/lib/postgresql/data
         command:
         - sh
         - -c
         - |
-          # Set proper ownership for postgres user (UID 999)
-          chown -R 999:999 /var/lib/postgresql/data
-          chmod 700 /var/lib/postgresql/data
+          # Only initialize if database doesn't exist
+          if [ ! -f "$PGDATA/PG_VERSION" ]; then
+            echo "Initializing database cluster..."
+            initdb -D "$PGDATA" --auth-host=scram-sha-256 --auth-local=scram-sha-256
+            echo "Database cluster initialized"
+          else
+            echo "Database cluster already exists"
+          fi
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
       containers:
       - name: postgresql
         image: postgres:16-alpine
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          runAsNonRoot: true
-          runAsUser: 999
-          seccompProfile:
-            type: RuntimeDefault
         ports:
         - containerPort: 5432
           name: postgresql
