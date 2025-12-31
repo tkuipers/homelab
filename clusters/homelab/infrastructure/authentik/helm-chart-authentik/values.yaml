@@ -24,24 +24,15 @@ global:
     runAsGroup: 1000
     fsGroup: 1000
 
+# Authentik configuration - most values set via infrastructure-authentik secret
+# which is populated by ExternalSecrets from 1Password
+
 # Disable embedded PostgreSQL - using external
 postgresql:
   enabled: false
-  # External PostgreSQL connection details
-  host: authentik-postgresql
-  name: authentik
-  user: authentik
-  password: ""  # Set via secret
-  port: 5432
 
-# Secret key from external secret
-secret_key: ""  # Set via secret
-
-# Bootstrap configuration
-bootstrap:
-  email: tkuipers123@gmail.com
-  password: ""  # Set via secret
-  token: ""     # Set via secret
+# Configuration will be loaded from infrastructure-authentik secret via envFrom
+# Secret is managed by authentik-chart-secret-sync ExternalSecret
 
 # Server configuration
 server:
