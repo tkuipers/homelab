@@ -34,20 +34,22 @@ spec:
       # Kubernetes auto-generated
       - kind: ConfigMap
         name: kube-root-ca.crt
-      # cert-manager runtime secrets
+      # cert-manager runtime secrets (explicit names since globs may not work)
       - kind: Secret
-        name: letsencrypt-*
+        name: letsencrypt-prod
       - kind: Secret
-        name: "*-webhook-ca"
+        name: letsencrypt-staging
+      - kind: Secret
+        name: infrastructure-cert-manager-webhook-ca
       # Datadog runtime state
       - kind: ConfigMap
         name: datadog-cluster-id
       - kind: ConfigMap
-        name: "*-leader-election"
+        name: infrastructure-datadog-leader-election
       - kind: ConfigMap
-        name: "*datadogtoken"
+        name: infrastructure-datadogtoken
       - kind: Secret
         name: webhook-certificate
       # Helm release secrets (legacy)
       - kind: Secret
-        name: sh.helm.release.*
+        name: sh.helm.release.v1.metallb.v1

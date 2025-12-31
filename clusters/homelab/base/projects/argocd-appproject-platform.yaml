@@ -32,6 +32,3 @@ spec:
       # Kubernetes auto-generated
       - kind: ConfigMap
         name: kube-root-ca.crt
-      # Helm release secrets (legacy)
-      - kind: Secret
-        name: sh.helm.release.*
