@@ -25,22 +25,9 @@ spec:
     spec:
       securityContext:
         fsGroup: 999
+        fsGroupChangePolicy: "OnRootMismatch"
         seccompProfile:
           type: RuntimeDefault
-      initContainers:
-      - name: fix-permissions
-        image: busybox:latest
-        command:
-        - sh
-        - -c
-        - |
-          # Ensure directory exists and set proper ownership for postgres user (UID 999)
-          mkdir -p /var/lib/postgresql/data
-          chown -R 999:999 /var/lib/postgresql/data
-          chmod 700 /var/lib/postgresql/data
-        volumeMounts:
-        - name: data
-          mountPath: /var/lib/postgresql/data
       containers:
       - name: postgresql
         image: postgres:16-alpine
@@ -63,6 +50,7 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
+          subPath: pgdata
         resources:
           requests:
             memory: "256Mi"
