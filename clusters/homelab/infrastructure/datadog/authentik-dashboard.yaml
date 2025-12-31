@@ -9,8 +9,6 @@ spec:
   layoutType: ordered
   tags:
     - team:infrastructure
-    - service:authentik
-    - env:homelab
   widgets: |
     [
       {
