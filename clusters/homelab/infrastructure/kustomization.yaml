@@ -1,9 +1,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  # metallb, cert-manager, ingress-nginx, csi-driver-smb now managed by ArgoCD
-  # monitoring (loki, prometheus) removed - Datadog covers this
-  - ./metrics-server
-  - ./aws-ip-updater
-  - ./external-dns
-  - ./local-path-provisioner
+  # All infrastructure now managed by ArgoCD Applications
+  # This file kept for reference but no longer used by Flux
