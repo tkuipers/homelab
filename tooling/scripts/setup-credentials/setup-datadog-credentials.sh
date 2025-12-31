@@ -10,7 +10,7 @@ source "$SCRIPT_DIR/../../lib/common.sh"
 
 # Configuration
 ITEM_NAME="Datadog API Keys"
-ITEM_CATEGORY="api_credential"
+ITEM_CATEGORY="API Credential"
 
 # Get current item if it exists
 get_current_item() {
