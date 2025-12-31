@@ -1,0 +1,125 @@
+# Datadog Agent Configuration
+# Datadog Pro tier - all features enabled
+
+datadog:
+  # Site configuration
+  site: datadoghq.com
+
+  # API keys from ExternalSecret
+  apiKeyExistingSecret: datadog-api-keys
+  appKeyExistingSecret: datadog-api-keys
+
+  # Cluster name for identification
+  clusterName: homelab
+
+  # Kubernetes integration
+  kubeStateMetricsEnabled: true
+  kubeStateMetricsCore:
+    enabled: true
+  collectEvents: true
+
+  # APM (Application Performance Monitoring)
+  apm:
+    portEnabled: true
+    socketEnabled: true
+    socketPath: /var/run/datadog/apm.socket
+    hostSocketPath: /var/run/datadog/
+
+  # Log Collection
+  logs:
+    enabled: true
+    containerCollectAll: true
+    containerCollectUsingFiles: true
+
+  # Live Processes
+  processAgent:
+    enabled: true
+    processCollection: true
+
+  # Network Performance Monitoring
+  networkMonitoring:
+    enabled: true
+
+  # Universal Service Monitoring
+  serviceMonitoring:
+    enabled: true
+
+  # Continuous Profiler
+  profiling:
+    enabled: true
+
+  # Orchestrator Explorer
+  orchestratorExplorer:
+    enabled: true
+
+  # Prometheus scraping
+  prometheusScrape:
+    enabled: true
+    serviceEndpoints: true
+
+  # Tags for all metrics
+  tags:
+    - "env:homelab"
+    - "cluster:homelab"
+
+# Cluster Agent for Kubernetes metrics
+clusterAgent:
+  enabled: true
+  replicas: 1
+
+  # Metrics provider for HPA
+  metricsProvider:
+    enabled: true
+    useDatadogMetrics: true
+
+  # Admission controller for APM injection
+  admissionController:
+    enabled: true
+    mutateUnlabelled: false
+
+# Agent configuration
+agents:
+  # Run on all nodes including control plane
+  tolerations:
+    - operator: Exists
+
+  # Use host network for better network monitoring
+  useHostNetwork: true
+
+  # Volume mounts for logs and docker
+  volumeMounts:
+    - name: containerdsocket
+      mountPath: /var/run/containerd/containerd.sock
+      readOnly: true
+    - name: proc
+      mountPath: /host/proc
+      readOnly: true
+    - name: cgroup
+      mountPath: /host/sys/fs/cgroup
+      readOnly: true
+
+  volumes:
+    - name: containerdsocket
+      hostPath:
+        path: /var/run/containerd/containerd.sock
+    - name: proc
+      hostPath:
+        path: /proc
+    - name: cgroup
+      hostPath:
+        path: /sys/fs/cgroup
+
+  # Resource limits
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Cluster checks runner
+clusterChecksRunner:
+  enabled: true
+  replicas: 1
+

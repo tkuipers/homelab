@@ -1,0 +1,27 @@
+# MetalLB Configuration
+# Minimal config - most setup happens via CRDs after install
+
+metallb:
+  # Controller configuration
+  controller:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+  # Speaker configuration (L2 announcements)
+  speaker:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    # Run on all nodes
+    tolerations:
+      - operator: Exists
+

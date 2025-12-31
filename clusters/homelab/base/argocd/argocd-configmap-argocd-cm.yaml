@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Repository configuration
+  repositories: |
+    - url: ssh://git@github.com/tkuipers/homelab.git
+      sshPrivateKeySecret:
+        name: argocd-git-ssh
+        key: identity
+      name: homelab
+      type: git
+
+  # Resource tracking method
+  application.resourceTrackingMethod: annotation
+
+  # Enable status badge
+  statusbadge.enabled: "true"
+
+  # Exclude resources from being managed
+  resource.exclusions: |
+    - apiGroups:
+        - cilium.io
+      kinds:
+        - CiliumIdentity
+      clusters:
+        - "*"
+

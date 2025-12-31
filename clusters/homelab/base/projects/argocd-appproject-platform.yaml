@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Shared platform services (monitoring, storage provisioners)
+
+  # Allow deploying to any namespace
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+
+  sourceRepos:
+    - "*"
+
+  # Allow cluster-scoped resources for storage classes, etc.
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  orphanedResources:
+    warn: true
+

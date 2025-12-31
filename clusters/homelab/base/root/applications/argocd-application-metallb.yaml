@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infrastructure-metallb
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infrastructure
+
+  sources:
+    # Helm chart for MetalLB
+    - repoURL: ssh://git@github.com/tkuipers/homelab.git
+      targetRevision: main
+      path: clusters/homelab/infrastructure/metallb/helm-chart-metallb
+      helm:
+        valueFiles:
+          - values.yaml
+
+    # Additional manifests (namespace, IP pool config)
+    - repoURL: ssh://git@github.com/tkuipers/homelab.git
+      targetRevision: main
+      path: clusters/homelab/infrastructure/metallb
+      directory:
+        include: "metallb-*.yaml"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: metallb-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
