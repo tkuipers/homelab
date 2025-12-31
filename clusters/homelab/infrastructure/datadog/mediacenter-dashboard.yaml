@@ -261,6 +261,96 @@ spec:
       },
       {
         "definition": {
+          "title": "📡 Jellyfin Streaming",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Active HTTP Requests",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:jellyfin.http_requests_in_progress{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Active Connections",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:jellyfin.dotnet_sockets_connections_established_incoming_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "CPU Usage (s)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:jellyfin.process_cpu_seconds_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 1
+              }
+            },
+            {
+              "definition": {
+                "title": "Memory (MB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:jellyfin.process_working_set_bytes{*}/1048576",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📊 Jellyfin Bandwidth",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "rate(avg:jellyfin.dotnet_sockets_bytes_sent_total{*})/1048576",
+              "display_type": "line",
+              "style": {
+                "palette": "cool",
+                "line_type": "solid",
+                "line_width": "normal"
+              }
+            },
+            {
+              "q": "rate(avg:jellyfin.dotnet_sockets_bytes_received_total{*})/1048576",
+              "display_type": "line",
+              "style": {
+                "palette": "warm",
+                "line_type": "solid",
+                "line_width": "normal"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "MB/s"
+          }
+        }
+      },
+      {
+        "definition": {
           "title": "🏥 Service Health",
           "type": "group",
           "layout_type": "ordered",
