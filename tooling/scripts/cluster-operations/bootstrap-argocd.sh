@@ -18,6 +18,7 @@ ARGOCD_NAMESPACE="argocd"
 ARGOCD_VERSION="v2.13.2"
 KUBECONFIG="${KUBECONFIG:-$REPO_ROOT/cluster-configs/kubeconfig}"
 UNINSTALL_FLUX="${UNINSTALL_FLUX:-false}"
+VAULT_NAME="${OP_VAULT_NAME:-Homelab}"
 
 # Uninstall Flux if requested
 uninstall_flux() {
@@ -204,6 +205,48 @@ get_admin_password() {
     log_success "Admin password retrieved"
 }
 
+# Save credentials to 1Password
+save_credentials_to_1password() {
+    log_info "Saving ArgoCD credentials to 1Password..."
+    
+    local ITEM_NAME="ArgoCD Admin"
+    local ARGOCD_URL="https://argo.tkuipers.ca"
+    
+    # Check if op CLI is available
+    if ! command_exists op; then
+        log_warning "1Password CLI not installed, skipping credential save"
+        return 0
+    fi
+    
+    # Check if signed in
+    if ! op account get &> /dev/null; then
+        log_warning "Not signed in to 1Password CLI, skipping credential save"
+        log_info "Run 'eval \$(op signin)' and re-run this script to save credentials"
+        return 0
+    fi
+    
+    # Check if item exists
+    if op item get "$ITEM_NAME" --vault="$VAULT_NAME" &> /dev/null; then
+        log_info "Updating existing 1Password item..."
+        op item edit "$ITEM_NAME" --vault="$VAULT_NAME" \
+            "username=admin" \
+            "password=$ARGOCD_PASSWORD" \
+            "website=$ARGOCD_URL" \
+            >/dev/null
+    else
+        log_info "Creating new 1Password item..."
+        op item create --vault="$VAULT_NAME" \
+            --category="Login" \
+            --title="$ITEM_NAME" \
+            --url="$ARGOCD_URL" \
+            "username=admin" \
+            "password=$ARGOCD_PASSWORD" \
+            >/dev/null
+    fi
+    
+    log_success "ArgoCD credentials saved to 1Password ($ITEM_NAME)"
+}
+
 # Verify installation
 verify_installation() {
     log_info "Verifying installation..."
@@ -274,6 +317,9 @@ main() {
     
     # Get admin credentials
     get_admin_password
+    
+    # Save to 1Password
+    save_credentials_to_1password
     
     # Verify everything is working
     verify_installation
