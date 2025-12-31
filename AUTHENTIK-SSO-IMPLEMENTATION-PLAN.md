@@ -20,6 +20,21 @@ We must must pause and test in between each task to ensure things are working.  
 - Configured with maxmemory and LRU eviction policy
 - Running and healthy on omen-worker1
 
+✅ **Phase 1 - Task 1.2: Authentik Deployment (Configuration Files)**
+- Created Helm chart with Authentik 2025.10.3
+- Configured for external PostgreSQL and Redis
+- Added Datadog annotations and monitoring
+- Created external secret for Authentik credentials
+- Created ingress for auth.tkuipers.ca with TLS
+- Configured bootstrap settings
+- **Note:** Deployment pending secrets setup (1.5) and ArgoCD Application (1.6)
+
+✅ **Phase 1 - Task 1.5: Setup Script**
+- Created setup-authentik-credentials.sh script
+- Generates secure secret key, bootstrap password, and token
+- Stores credentials in 1Password
+- Ready to run: ./tooling/scripts/setup-credentials/setup-authentik-credentials.sh
+
 ## Architecture Decisions
 
 ### Database
