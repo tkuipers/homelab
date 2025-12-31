@@ -63,7 +63,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - postgres
+            - authentik
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -72,7 +72,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - postgres
+            - authentik
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
