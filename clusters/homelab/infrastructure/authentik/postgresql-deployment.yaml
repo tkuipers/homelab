@@ -53,7 +53,30 @@ spec:
           if [ ! -f "$PGDATA/PG_VERSION" ]; then
             echo "Initializing database cluster..."
             initdb -D "$PGDATA" --auth-host=scram-sha-256 --auth-local=scram-sha-256
-            echo "Database cluster initialized"
+            
+            # Start postgres temporarily to create user and database
+            echo "Starting postgres for user/database creation..."
+            postgres -D "$PGDATA" &
+            PG_PID=$!
+            
+            # Wait for postgres to be ready
+            for i in {1..30}; do
+              if pg_isready -U postgres -d postgres >/dev/null 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+            
+            # Create user and database
+            psql -U postgres -c "CREATE USER \"$POSTGRES_USER\" WITH PASSWORD '$POSTGRES_PASSWORD';" || true
+            psql -U postgres -c "CREATE DATABASE \"$POSTGRES_DB\" OWNER \"$POSTGRES_USER\";" || true
+            psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE \"$POSTGRES_DB\" TO \"$POSTGRES_USER\";" || true
+            
+            # Stop postgres
+            kill $PG_PID
+            wait $PG_PID 2>/dev/null || true
+            
+            echo "Database initialization complete"
           else
             echo "Database cluster already exists"
           fi
@@ -63,6 +86,10 @@ spec:
       containers:
       - name: postgresql
         image: postgres:16-alpine
+        command:
+        - postgres
+        - -c
+        - listen_addresses=*
         ports:
         - containerPort: 5432
           name: postgresql
