@@ -1,8 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  # Note: cert-manager and metallb are now managed by ArgoCD
-  # Flux resources kept for remaining apps during migration
-  - infrastructure
-  - apps
-  - flux-system
+  # All infrastructure and apps now managed by ArgoCD
+  # This file kept for reference only
+  # - infrastructure  # Managed by ArgoCD
+  # - apps            # Managed by ArgoCD
+  # - flux-system     # DELETED - Flux uninstalled
