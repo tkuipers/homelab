@@ -75,7 +75,7 @@ spec:
         - name: users
           mountPath: /config/users_database.yml
           subPath: users_database.yml
-          readOnly: false
+          readOnly: true
         - name: data
           mountPath: /config
         resources:
@@ -104,8 +104,11 @@ spec:
         configMap:
           name: authelia-config
       - name: users
-        configMap:
-          name: authelia-users
+        secret:
+          secretName: authelia-secrets
+          items:
+            - key: users_database.yml
+              path: users_database.yml
       - name: data
         emptyDir: {}
 
