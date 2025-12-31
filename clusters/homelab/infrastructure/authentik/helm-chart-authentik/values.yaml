@@ -25,27 +25,10 @@ global:
     fsGroup: 1000
 
 # Authentik configuration
+# Note: Most sensitive values are loaded via envFrom from infrastructure-authentik secret
 authentik:
-  # Secret key - must be provided directly or via valueFrom
-  secret_key: "652ZyKJ6hfw7vGW4J1cFshBgP6rkKb3TCj/69u7F59Y="
-  
-  # Bootstrap credentials
-  bootstrap_password: "niaq7VpzX3Lintz9HJhjy24NZ9yQsbJA"
-  bootstrap_token: "c453a3bf5c572d247da9c4cfba8ac771"
+  # Bootstrap email (static, can be in values)
   bootstrap_email: "tkuipers123@gmail.com"
-  
-  # External PostgreSQL configuration
-  postgresql:
-    host: "authentik-postgresql"
-    port: 5432
-    name: "authentik"
-    user: "authentik"
-    password: "hmJIJyDAvnAvAyxr2yph5y2MePhlm76"
-  
-  # External Redis configuration
-  redis:
-    host: "authentik-redis"
-    port: 6379
   
   # External hostname
   host: "https://auth.tkuipers.ca"
@@ -75,6 +58,11 @@ server:
       memory: "1Gi"
       cpu: "1000m"
 
+  # Load all configuration from secret
+  envFrom:
+    - secretRef:
+        name: infrastructure-authentik
+
   # Additional environment variables
   env:
     - name: AUTHENTIK_DISABLE_UPDATE_CHECK
@@ -100,6 +88,11 @@ worker:
     limits:
       memory: "512Mi"
       cpu: "500m"
+
+  # Load all configuration from secret
+  envFrom:
+    - secretRef:
+        name: infrastructure-authentik
 
   # Additional environment variables
   env:
