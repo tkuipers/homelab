@@ -10,6 +10,7 @@ spec:
   tags:
     - "team:infrastructure"
     - "service:authentik"
+    - "env:homelab"
   widgets: |
     [
       {
