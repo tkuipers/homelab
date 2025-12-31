@@ -27,7 +27,27 @@ spec:
     - group: "*"
       kind: "*"
 
-  # Orphaned resource monitoring
+  # Orphaned resource monitoring with exclusions for runtime-generated resources
   orphanedResources:
     warn: true
-
+    ignore:
+      # Kubernetes auto-generated
+      - kind: ConfigMap
+        name: kube-root-ca.crt
+      # cert-manager runtime secrets
+      - kind: Secret
+        name: letsencrypt-*
+      - kind: Secret
+        name: "*-webhook-ca"
+      # Datadog runtime state
+      - kind: ConfigMap
+        name: datadog-cluster-id
+      - kind: ConfigMap
+        name: "*-leader-election"
+      - kind: ConfigMap
+        name: "*datadogtoken"
+      - kind: Secret
+        name: webhook-certificate
+      # Helm release secrets (legacy)
+      - kind: Secret
+        name: sh.helm.release.*
