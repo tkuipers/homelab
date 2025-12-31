@@ -1,0 +1,32 @@
+# cert-manager configuration
+cert-manager:
+  # Install CRDs with the chart
+  crds:
+    enabled: true
+    keep: true
+
+  # Global settings
+  global:
+    leaderElection:
+      namespace: cert-manager
+
+  # Resource requests/limits
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+  # Webhook configuration
+  webhook:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+
+  # CA Injector configuration
+  cainjector:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+

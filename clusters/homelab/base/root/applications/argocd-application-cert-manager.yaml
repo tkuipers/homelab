@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infrastructure-cert-manager
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: infrastructure
+  sources:
+    # Helm chart for cert-manager
+    - repoURL: ssh://git@github.com/tkuipers/homelab.git
+      targetRevision: main
+      path: clusters/homelab/infrastructure/cert-manager/helm-chart-cert-manager
+      helm:
+        valueFiles:
+          - values.yaml
+    # Additional resources (namespace, clusterissuers)
+    - repoURL: ssh://git@github.com/tkuipers/homelab.git
+      targetRevision: main
+      path: clusters/homelab/infrastructure/cert-manager
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
