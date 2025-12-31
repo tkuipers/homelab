@@ -1,0 +1,180 @@
+# Authentik Helm Chart Values
+# Configured for external PostgreSQL and Redis
+
+global:
+  # Datadog labels
+  additionalLabels:
+    tags.datadoghq.com/env: homelab
+    tags.datadoghq.com/service: authentik
+
+  # Pod annotations for Datadog
+  podAnnotations:
+    ad.datadoghq.com/authentik.logs: '[{"source":"authentik","service":"authentik"}]'
+    ad.datadoghq.com/authentik.check_names: '["http_check"]'
+    ad.datadoghq.com/authentik.init_configs: '[{}]'
+    ad.datadoghq.com/authentik.instances: '[{"name":"authentik","url":"http://%%host%%:9000/if/flow/initial-setup/","timeout":1}]'
+
+  # Node selector to pin to omen-worker1
+  nodeSelector:
+    kubernetes.io/hostname: omen-worker1
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+# Disable embedded PostgreSQL - using external
+postgresql:
+  enabled: false
+  # External PostgreSQL connection details
+  host: authentik-postgresql
+  name: authentik
+  user: authentik
+  password: ""  # Set via secret
+  port: 5432
+
+# Secret key from external secret
+secret_key: ""  # Set via secret
+
+# Bootstrap configuration
+bootstrap:
+  email: tkuipers123@gmail.com
+  password: ""  # Set via secret
+  token: ""     # Set via secret
+
+# Server configuration
+server:
+  enabled: true
+  replicas: 1
+
+  # Resources
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+  # Environment variables for external services
+  env:
+    # PostgreSQL connection
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      value: "authentik-postgresql"
+    - name: AUTHENTIK_POSTGRESQL__PORT
+      value: "5432"
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      value: "authentik"
+    - name: AUTHENTIK_POSTGRESQL__USER
+      valueFrom:
+        secretKeyRef:
+          name: authentik-postgresql-credentials
+          key: username
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-postgresql-credentials
+          key: password
+    # Redis connection
+    - name: AUTHENTIK_REDIS__HOST
+      value: "authentik-redis"
+    - name: AUTHENTIK_REDIS__PORT
+      value: "6379"
+    # Secret key
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-credentials
+          key: secret_key
+    # Bootstrap configuration
+    - name: AUTHENTIK_BOOTSTRAP_EMAIL
+      value: "tkuipers123@gmail.com"
+    - name: AUTHENTIK_BOOTSTRAP_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-credentials
+          key: bootstrap_password
+    - name: AUTHENTIK_BOOTSTRAP_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: authentik-credentials
+          key: bootstrap_token
+    # External hostname
+    - name: AUTHENTIK_DISABLE_UPDATE_CHECK
+      value: "true"
+    - name: AUTHENTIK_DISABLE_STARTUP_ANALYTICS
+      value: "true"
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 9000
+
+# Worker configuration
+worker:
+  enabled: true
+  replicas: 1
+
+  # Resources
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  # Environment variables (same as server for external services)
+  env:
+    # PostgreSQL connection
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      value: "authentik-postgresql"
+    - name: AUTHENTIK_POSTGRESQL__PORT
+      value: "5432"
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      value: "authentik"
+    - name: AUTHENTIK_POSTGRESQL__USER
+      valueFrom:
+        secretKeyRef:
+          name: authentik-postgresql-credentials
+          key: username
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-postgresql-credentials
+          key: password
+    # Redis connection
+    - name: AUTHENTIK_REDIS__HOST
+      value: "authentik-redis"
+    - name: AUTHENTIK_REDIS__PORT
+      value: "6379"
+    # Secret key
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-credentials
+          key: secret_key
+    # Disable analytics
+    - name: AUTHENTIK_DISABLE_UPDATE_CHECK
+      value: "true"
+    - name: AUTHENTIK_DISABLE_STARTUP_ANALYTICS
+      value: "true"
+
+# Web configuration
+web:
+  enabled: true
+  path: /
+
+# Email configuration (optional, can be configured later)
+email:
+  host: ""
+  port: 587
+  username: ""
+  password: ""
+  use_tls: false
+  use_ssl: false
+  from: ""
+
+# Ingress will be created separately via ingress.yaml
+

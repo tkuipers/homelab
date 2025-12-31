@@ -9,4 +9,6 @@ resources:
   - postgresql-service.yaml
   - redis-deployment.yaml
   - redis-service.yaml
+  - authentik-credentials-external-secret.yaml
+  - ingress.yaml
 
