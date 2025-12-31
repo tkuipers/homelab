@@ -161,8 +161,8 @@ install_argocd_cli() {
 deploy_projects() {
     log_info "Deploying AppProjects..."
     
-    kubectl --kubeconfig="$KUBECONFIG" apply \
-        -f "$REPO_ROOT/clusters/homelab/base/projects/"
+    # Use kustomize to apply the projects directory
+    kubectl --kubeconfig="$KUBECONFIG" apply -k "$REPO_ROOT/clusters/homelab/base/projects/"
     
     log_success "AppProjects deployed"
 }
@@ -175,6 +175,13 @@ deploy_root_application() {
         -f "$REPO_ROOT/clusters/homelab/base/root/argocd-application-root.yaml"
     
     log_success "Root Application deployed"
+    
+    # Wait for root app to be created
+    log_info "Waiting for root Application to sync..."
+    sleep 5
+    
+    # Show initial status
+    kubectl --kubeconfig="$KUBECONFIG" get applications -n "$ARGOCD_NAMESPACE" 2>/dev/null || true
 }
 
 # Get initial admin password
