@@ -67,24 +67,7 @@ spec:
                     "aggregator": "last"
                   }
                 ],
-                "precision": 0,
-                "conditional_formats": [
-                  {
-                    "comparator": ">",
-                    "value": 5,
-                    "palette": "white_on_red"
-                  },
-                  {
-                    "comparator": ">",
-                    "value": 1,
-                    "palette": "white_on_yellow"
-                  },
-                  {
-                    "comparator": "<=",
-                    "value": 1,
-                    "palette": "white_on_green"
-                  }
-                ]
+                "precision": 0
               }
             }
           ]
@@ -153,24 +136,7 @@ spec:
                   }
                 ],
                 "precision": 2,
-                "custom_unit": "%",
-                "conditional_formats": [
-                  {
-                    "comparator": ">",
-                    "value": 95,
-                    "palette": "white_on_green"
-                  },
-                  {
-                    "comparator": ">",
-                    "value": 90,
-                    "palette": "white_on_yellow"
-                  },
-                  {
-                    "comparator": "<=",
-                    "value": 90,
-                    "palette": "white_on_red"
-                  }
-                ]
+                "custom_unit": "%"
               }
             },
             {
@@ -359,24 +325,7 @@ spec:
                   }
                 ],
                 "precision": 2,
-                "custom_unit": "%",
-                "conditional_formats": [
-                  {
-                    "comparator": "<",
-                    "value": 1,
-                    "palette": "white_on_green"
-                  },
-                  {
-                    "comparator": "<",
-                    "value": 5,
-                    "palette": "white_on_yellow"
-                  },
-                  {
-                    "comparator": ">=",
-                    "value": 5,
-                    "palette": "white_on_red"
-                  }
-                ]
+                "custom_unit": "%"
               }
             }
           ]
