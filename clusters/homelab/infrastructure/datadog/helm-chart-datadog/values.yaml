@@ -107,7 +107,10 @@ datadog:
       enabled: true
 
   # Datadog Operator settings
-  operators:
+  operator:
+    apiKeyExistingSecret: datadog-api-keys
+    appKeyExistingSecret: datadog-api-keys
+    site: us5.datadoghq.com
     datadogMonitor:
       enabled: true
     datadogSLO:
