@@ -108,6 +108,16 @@ EOF
     log_success "ArgoCD configured for insecure mode"
 }
 
+# Deploy ArgoCD ingress
+deploy_ingress() {
+    log_info "Deploying ArgoCD ingress..."
+    
+    kubectl --kubeconfig="$KUBECONFIG" apply \
+        -f "$REPO_ROOT/clusters/homelab/base/argocd/argocd-ingress.yaml"
+    
+    log_success "ArgoCD ingress deployed (argo.tkuipers.ca)"
+}
+
 # Install ArgoCD CLI
 install_argocd_cli() {
     if command_exists argocd; then
@@ -310,6 +320,7 @@ main() {
     install_argocd
     install_argocd_cli
     configure_argocd
+    deploy_ingress
     
     # Deploy GitOps configuration
     deploy_projects
