@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infrastructure-csi-driver-smb
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: infrastructure
+  sources:
+    # Helm chart for CSI Driver SMB
+    - repoURL: ssh://git@github.com/tkuipers/homelab.git
+      targetRevision: main
+      path: clusters/homelab/infrastructure/csi-driver-smb/helm-chart-csi-driver-smb
+      helm:
+        valueFiles:
+          - values.yaml
+    # Additional resources (samba servers, storage classes, secrets)
+    - repoURL: ssh://git@github.com/tkuipers/homelab.git
+      targetRevision: main
+      path: clusters/homelab/infrastructure/csi-driver-smb
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nfs-provisioner
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
