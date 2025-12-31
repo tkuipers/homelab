@@ -1,0 +1,245 @@
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogDashboard
+metadata:
+  name: storage-dashboard
+  namespace: datadog
+spec:
+  title: "💾 Storage & SMB Dashboard"
+  description: "CSI Driver, Samba Servers, PVC Usage"
+  layoutType: ordered
+  tags:
+    - "team:infrastructure"
+  widgets: |
+    [
+      {
+        "definition": {
+          "title": "🗄️ CSI SMB Driver",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Controller Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:nfs-provisioner,kube_deployment:csi-smb-controller}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Node Drivers",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:nfs-provisioner,kube_daemonset:csi-smb-node}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Controller CPU",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:nfs-provisioner,kube_deployment:csi-smb-controller}",
+                    "display_type": "area",
+                    "style": {
+                      "palette": "cool"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Controller Memory (MB)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:nfs-provisioner,kube_deployment:csi-smb-controller}/1048576",
+                    "display_type": "area",
+                    "style": {
+                      "palette": "purple"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🖥️ Samba Servers",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Dell R620 Samba",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:nfs-provisioner,kube_deployment:samba-server-dell-r620}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Omen Worker1 Samba",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:nfs-provisioner,kube_deployment:samba-server-omen-worker1}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Samba Network I/O (MB/s)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "rate(avg:kubernetes.network.rx_bytes{kube_namespace:nfs-provisioner,kube_deployment:samba-server-dell-r620})/1048576",
+                    "display_type": "line",
+                    "style": {
+                      "palette": "cool"
+                    }
+                  },
+                  {
+                    "q": "rate(avg:kubernetes.network.tx_bytes{kube_namespace:nfs-provisioner,kube_deployment:samba-server-dell-r620})/1048576",
+                    "display_type": "line",
+                    "style": {
+                      "palette": "warm"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Samba CPU Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:nfs-provisioner,kube_app:samba-server} by {kube_deployment}",
+                    "display_type": "area"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📊 Storage by Namespace",
+          "type": "treemap",
+          "requests": [
+            {
+              "q": "sum:kubernetes.persistentvolumeclaim.requested_storage{*} by {kube_namespace}",
+              "style": {
+                "palette": "dog_classic"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📈 PVC Status Distribution",
+          "type": "sunburst",
+          "requests": [
+            {
+              "q": "count:kubernetes.persistentvolumeclaim.status{*} by {phase}",
+              "style": {
+                "palette": "semantic"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "💽 Local Path Provisioner",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:local-path-storage}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "CPU Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:local-path-storage}",
+                    "display_type": "area"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Memory (MB)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:local-path-storage}/1048576",
+                    "display_type": "area"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Restarts",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.containers.restarts{kube_namespace:local-path-storage}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📝 Storage Events",
+          "type": "log_stream",
+          "query": "kube_namespace:(nfs-provisioner OR local-path-storage) OR source:csi",
+          "columns": ["timestamp", "kube_namespace", "message"],
+          "message_display": "expanded-md"
+        }
+      }
+    ]
+

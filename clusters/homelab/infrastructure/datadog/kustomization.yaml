@@ -5,4 +5,9 @@ resources:
   - datadog-namespace.yaml
   - datadog-externalsecret-api-keys.yaml
   - datadog-monitors.yaml
+  # Dashboards
+  - master-dashboard.yaml
+  - argocd-dashboard.yaml
+  - infrastructure-dashboard.yaml
+  - storage-dashboard.yaml
   - mediacenter-dashboard.yaml

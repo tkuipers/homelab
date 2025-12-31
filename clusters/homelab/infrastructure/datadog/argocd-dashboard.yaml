@@ -1,0 +1,258 @@
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogDashboard
+metadata:
+  name: argocd-dashboard
+  namespace: datadog
+spec:
+  title: "🔄 ArgoCD GitOps Dashboard"
+  description: "Application deployment and sync status"
+  layoutType: ordered
+  tags:
+    - "team:infrastructure"
+  widgets: |
+    [
+      {
+        "definition": {
+          "title": "📊 Application Sync Status",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Apps by Sync Status",
+                "type": "sunburst",
+                "requests": [
+                  {
+                    "q": "sum:argocd.app.info{*} by {sync_status}",
+                    "style": {
+                      "palette": "semantic"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Apps by Health Status",
+                "type": "sunburst",
+                "requests": [
+                  {
+                    "q": "sum:argocd.app.info{*} by {health_status}",
+                    "style": {
+                      "palette": "semantic"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Total Applications",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:argocd.app.info{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Synced Apps",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:argocd.app.info{sync_status:synced}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "⚡ Sync Operations",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "sum:argocd.app.sync.total{*} by {phase}.as_count()",
+              "display_type": "bars",
+              "style": {
+                "palette": "semantic"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "Syncs"
+          }
+        }
+      },
+      {
+        "definition": {
+          "title": "⏱️ Reconciliation Time (p95)",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "p95:argocd.app.reconcile.bucket{*}",
+              "display_type": "line",
+              "style": {
+                "palette": "cool"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "Seconds"
+          }
+        }
+      },
+      {
+        "definition": {
+          "title": "🔌 Cluster Connection",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Cluster Status",
+                "type": "check_status",
+                "check": "argocd.cluster.connection_status",
+                "grouping": "cluster",
+                "group_by": [],
+                "tags": []
+              }
+            },
+            {
+              "definition": {
+                "title": "K8s API Resources Cached",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:argocd.cluster.api.resources{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "K8s Resource Objects",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:argocd.cluster.api.resource.objects{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Cache Age (s)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:argocd.cluster.cache.age.seconds{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📈 K8s Events Processed",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "sum:argocd.cluster.events.total{*}.as_count()",
+              "display_type": "bars",
+              "style": {
+                "palette": "dog_classic"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🏥 ArgoCD Components",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Server CPU",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_deployment:argocd-server}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Server Memory (MB)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_deployment:argocd-server}/1048576",
+                    "display_type": "area"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Repo Server CPU",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_deployment:argocd-repo-server}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Repo Server Memory (MB)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_deployment:argocd-repo-server}/1048576",
+                    "display_type": "area"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📋 Application List",
+          "type": "toplist",
+          "requests": [
+            {
+              "q": "sum:argocd.app.info{*} by {name,sync_status,health_status}",
+              "style": {
+                "palette": "semantic"
+              }
+            }
+          ]
+        }
+      }
+    ]
+

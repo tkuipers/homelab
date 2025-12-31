@@ -4,8 +4,8 @@ metadata:
   name: mediacenter-overview
   namespace: datadog
 spec:
-  title: "🎬 Media Center Overview"
-  description: "Jellyfin, Sonarr, and Radarr monitoring dashboard"
+  title: "🎬 Media Center Command Center"
+  description: "Jellyfin, Sonarr, Radarr, and download clients"
   layoutType: ordered
   tags:
     - "team:apps"
@@ -13,31 +13,368 @@ spec:
     [
       {
         "definition": {
-          "title": "📺 TV Shows Overview",
+          "title": "📊 Library Overview",
           "type": "group",
           "layout_type": "ordered",
+          "background_color": "vivid_purple",
           "widgets": [
             {
               "definition": {
-                "title": "Series Monitored",
+                "title": "Content Distribution",
+                "type": "sunburst",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_episode_total{*}, avg:radarr.radarr_movie_total{*}",
+                    "style": {
+                      "palette": "purple"
+                    }
+                  }
+                ],
+                "hide_total": false
+              }
+            },
+            {
+              "definition": {
+                "title": "📺 TV Shows",
                 "type": "query_value",
                 "requests": [
                   {
                     "q": "avg:sonarr.sonarr_series_monitored_total{*}",
-                    "aggregator": "last"
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 20, "palette": "white_on_green"},
+                      {"comparator": ">", "value": 10, "palette": "white_on_yellow"},
+                      {"comparator": "<=", "value": 10, "palette": "white_on_red"}
+                    ]
                   }
                 ],
-                "precision": 0
+                "precision": 0,
+                "autoscale": true
               }
             },
             {
               "definition": {
-                "title": "Episodes Downloaded",
+                "title": "🎥 Movies",
                 "type": "query_value",
                 "requests": [
                   {
-                    "q": "avg:sonarr.sonarr_episode_downloaded_total{*}",
+                    "q": "avg:radarr.radarr_movie_monitored_total{*}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 15, "palette": "white_on_green"},
+                      {"comparator": ">", "value": 5, "palette": "white_on_yellow"},
+                      {"comparator": "<=", "value": 5, "palette": "white_on_red"}
+                    ]
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            },
+            {
+              "definition": {
+                "title": "📼 Total Episodes",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_episode_total{*}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 1000, "palette": "white_on_green"}
+                    ]
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📈 Episode Completion",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "avg:sonarr.sonarr_episode_downloaded_total{*}",
+              "display_type": "bars",
+              "style": {
+                "palette": "green",
+                "line_type": "solid",
+                "line_width": "thick"
+              }
+            },
+            {
+              "q": "avg:sonarr.sonarr_episode_missing_total{*}",
+              "display_type": "bars",
+              "style": {
+                "palette": "orange",
+                "line_type": "solid",
+                "line_width": "thick"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "Episodes",
+            "include_zero": true
+          },
+          "markers": []
+        }
+      },
+      {
+        "definition": {
+          "title": "🎬 Movie Quality Breakdown",
+          "type": "sunburst",
+          "requests": [
+            {
+              "q": "avg:radarr.radarr_movie_quality_total{*} by {quality}",
+              "style": {
+                "palette": "cool"
+              }
+            }
+          ],
+          "hide_total": false
+        }
+      },
+      {
+        "definition": {
+          "title": "💾 Storage Dashboard",
+          "type": "group",
+          "layout_type": "ordered",
+          "background_color": "vivid_blue",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Library Size Comparison",
+                "type": "treemap",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_series_filesize_bytes{*}/1073741824, avg:radarr.radarr_movie_filesize_total{*}/1073741824",
+                    "style": {
+                      "palette": "dog_classic_area"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "📺 TV Library (GB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_series_filesize_bytes{*}/1073741824",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 500, "palette": "white_on_red"},
+                      {"comparator": ">", "value": 200, "palette": "white_on_yellow"},
+                      {"comparator": "<=", "value": 200, "palette": "white_on_green"}
+                    ]
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            },
+            {
+              "definition": {
+                "title": "🎥 Movie Library (GB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_movie_filesize_total{*}/1073741824",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 200, "palette": "white_on_red"},
+                      {"comparator": ">", "value": 100, "palette": "white_on_yellow"},
+                      {"comparator": "<=", "value": 100, "palette": "white_on_green"}
+                    ]
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            },
+            {
+              "definition": {
+                "title": "💿 Free Space (GB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_rootfolder_freespace_bytes{*}/1073741824",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": "<", "value": 100, "palette": "white_on_red"},
+                      {"comparator": "<", "value": 300, "palette": "white_on_yellow"},
+                      {"comparator": ">=", "value": 300, "palette": "white_on_green"}
+                    ]
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📉 Storage Trend",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "avg:sonarr.sonarr_rootfolder_freespace_bytes{*}/1073741824",
+              "display_type": "area",
+              "style": {
+                "palette": "cool",
+                "line_type": "solid",
+                "line_width": "normal"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "GB Free",
+            "include_zero": false
+          },
+          "markers": [
+            {
+              "value": "y = 100",
+              "display_type": "error dashed",
+              "label": "Critical Low"
+            },
+            {
+              "value": "y = 300",
+              "display_type": "warning dashed", 
+              "label": "Warning"
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📡 Jellyfin Streaming Hub",
+          "type": "group",
+          "layout_type": "ordered",
+          "background_color": "vivid_green",
+          "widgets": [
+            {
+              "definition": {
+                "title": "🔴 Active Streams",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:jellyfin.http_requests_in_progress{*}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 3, "palette": "white_on_red"},
+                      {"comparator": ">", "value": 1, "palette": "white_on_yellow"},
+                      {"comparator": "<=", "value": 1, "palette": "white_on_green"}
+                    ]
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            },
+            {
+              "definition": {
+                "title": "🔌 Connections",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:jellyfin.dotnet_sockets_connections_established_incoming_total{*}",
                     "aggregator": "last"
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            },
+            {
+              "definition": {
+                "title": "🧠 Memory (MB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:jellyfin.process_working_set_bytes{*}/1048576",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 2000, "palette": "white_on_red"},
+                      {"comparator": ">", "value": 1000, "palette": "white_on_yellow"},
+                      {"comparator": "<=", "value": 1000, "palette": "white_on_green"}
+                    ]
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            },
+            {
+              "definition": {
+                "title": "⚡ Thread Pool",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:jellyfin.dotnet_threadpool_num_threads{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📊 Jellyfin Bandwidth (MB/s)",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "rate(avg:jellyfin.dotnet_sockets_bytes_sent_total{*})/1048576",
+              "display_type": "area",
+              "style": {
+                "palette": "orange",
+                "line_type": "solid",
+                "line_width": "normal"
+              }
+            },
+            {
+              "q": "rate(avg:jellyfin.dotnet_sockets_bytes_received_total{*})/1048576",
+              "display_type": "area",
+              "style": {
+                "palette": "purple",
+                "line_type": "solid",
+                "line_width": "normal"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "MB/s",
+            "include_zero": true
+          }
+        }
+      },
+      {
+        "definition": {
+          "title": "🏥 Service Health Grid",
+          "type": "group",
+          "layout_type": "ordered",
+          "background_color": "gray",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Jellyfin",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:jellyfin}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">=", "value": 1, "palette": "white_on_green"},
+                      {"comparator": "<", "value": 1, "palette": "white_on_red"}
+                    ]
                   }
                 ],
                 "precision": 0
@@ -45,15 +382,222 @@ spec:
             },
             {
               "definition": {
-                "title": "Episodes Missing",
+                "title": "Sonarr",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_system_status{*}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">=", "value": 1, "palette": "white_on_green"},
+                      {"comparator": "<", "value": 1, "palette": "white_on_red"}
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Radarr",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_system_status{*}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">=", "value": 1, "palette": "white_on_green"},
+                      {"comparator": "<", "value": 1, "palette": "white_on_red"}
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Prowlarr",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:prowlarr}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">=", "value": 1, "palette": "white_on_green"},
+                      {"comparator": "<", "value": 1, "palette": "white_on_red"}
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Bazarr",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:bazarr}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">=", "value": 1, "palette": "white_on_green"},
+                      {"comparator": "<", "value": 1, "palette": "white_on_red"}
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Transmission",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:transmission}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">=", "value": 1, "palette": "white_on_green"},
+                      {"comparator": "<", "value": 1, "palette": "white_on_red"}
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "SABnzbd",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:sabnzbd}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">=", "value": 1, "palette": "white_on_green"},
+                      {"comparator": "<", "value": 1, "palette": "white_on_red"}
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Health Issues",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_system_health_issues{*} + avg:radarr.radarr_system_health_issues{*}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 0, "palette": "white_on_red"},
+                      {"comparator": "<=", "value": 0, "palette": "white_on_green"}
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📈 Activity Timeline",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "diff(avg:sonarr.sonarr_history_total{*})",
+              "display_type": "bars",
+              "style": {
+                "palette": "cool"
+              }
+            },
+            {
+              "q": "diff(avg:radarr.radarr_history_total{*})",
+              "display_type": "bars",
+              "style": {
+                "palette": "warm"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "New Events"
+          }
+        }
+      },
+      {
+        "definition": {
+          "title": "🖥️ Resource Usage by Service",
+          "type": "treemap",
+          "requests": [
+            {
+              "q": "sum:kubernetes.memory.usage{kube_namespace:mediacenter}/1048576 by {kube_deployment}",
+              "style": {
+                "palette": "warm"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "⬇️ Missing Content",
+          "type": "group",
+          "layout_type": "ordered",
+          "background_color": "vivid_orange",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Missing Episodes",
                 "type": "query_value",
                 "requests": [
                   {
                     "q": "avg:sonarr.sonarr_episode_missing_total{*}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 500, "palette": "white_on_red"},
+                      {"comparator": ">", "value": 200, "palette": "white_on_yellow"},
+                      {"comparator": "<=", "value": 200, "palette": "white_on_green"}
+                    ]
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            },
+            {
+              "definition": {
+                "title": "Missing Movies",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_movie_missing_total{*}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">", "value": 10, "palette": "white_on_red"},
+                      {"comparator": ">", "value": 5, "palette": "white_on_yellow"},
+                      {"comparator": "<=", "value": 5, "palette": "white_on_green"}
+                    ]
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            },
+            {
+              "definition": {
+                "title": "Wanted Movies",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_movie_wanted_total{*}",
                     "aggregator": "last"
                   }
                 ],
-                "precision": 0
+                "precision": 0,
+                "autoscale": true
               }
             },
             {
@@ -66,7 +610,8 @@ spec:
                     "aggregator": "last"
                   }
                 ],
-                "precision": 0
+                "precision": 0,
+                "autoscale": true
               }
             }
           ]
@@ -74,366 +619,10 @@ spec:
       },
       {
         "definition": {
-          "title": "🎥 Movies Overview",
-          "type": "group",
-          "layout_type": "ordered",
-          "widgets": [
-            {
-              "definition": {
-                "title": "Movies Monitored",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:radarr.radarr_movie_monitored_total{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            },
-            {
-              "definition": {
-                "title": "Movies Downloaded",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:radarr.radarr_movie_downloaded_total{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            },
-            {
-              "definition": {
-                "title": "Movies Missing",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:radarr.radarr_movie_missing_total{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            },
-            {
-              "definition": {
-                "title": "Movies Wanted",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:radarr.radarr_movie_wanted_total{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            }
-          ]
-        }
-      },
-      {
-        "definition": {
-          "title": "💾 Storage",
-          "type": "group",
-          "layout_type": "ordered",
-          "widgets": [
-            {
-              "definition": {
-                "title": "TV Storage Free (GB)",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:sonarr.sonarr_rootfolder_freespace_bytes{*}/1073741824",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 1
-              }
-            },
-            {
-              "definition": {
-                "title": "Movie Storage Free (GB)",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:radarr.radarr_rootfolder_freespace_bytes{*}/1073741824",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 1
-              }
-            },
-            {
-              "definition": {
-                "title": "TV Library Size (GB)",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:sonarr.sonarr_series_filesize_bytes{*}/1073741824",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 1
-              }
-            },
-            {
-              "definition": {
-                "title": "Movie Library Size (GB)",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:radarr.radarr_movie_filesize_total{*}/1073741824",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 1
-              }
-            }
-          ]
-        }
-      },
-      {
-        "definition": {
-          "title": "📊 Storage Over Time",
-          "type": "timeseries",
-          "requests": [
-            {
-              "q": "avg:sonarr.sonarr_rootfolder_freespace_bytes{*}/1073741824",
-              "display_type": "line",
-              "style": {
-                "palette": "dog_classic",
-                "line_type": "solid",
-                "line_width": "normal"
-              }
-            },
-            {
-              "q": "avg:radarr.radarr_rootfolder_freespace_bytes{*}/1073741824",
-              "display_type": "line",
-              "style": {
-                "palette": "warm",
-                "line_type": "solid",
-                "line_width": "normal"
-              }
-            }
-          ],
-          "yaxis": {
-            "label": "GB Free"
-          }
-        }
-      },
-      {
-        "definition": {
-          "title": "🎬 Movie Quality Distribution",
-          "type": "toplist",
-          "requests": [
-            {
-              "q": "avg:radarr.radarr_movie_quality_total{*} by {quality}",
-              "style": {
-                "palette": "dog_classic"
-              }
-            }
-          ]
-        }
-      },
-      {
-        "definition": {
-          "title": "📈 History Events",
-          "type": "timeseries",
-          "requests": [
-            {
-              "q": "avg:sonarr.sonarr_history_total{*}",
-              "display_type": "line",
-              "style": {
-                "palette": "dog_classic"
-              }
-            },
-            {
-              "q": "avg:radarr.radarr_history_total{*}",
-              "display_type": "line",
-              "style": {
-                "palette": "warm"
-              }
-            }
-          ]
-        }
-      },
-      {
-        "definition": {
-          "title": "📡 Jellyfin Streaming",
-          "type": "group",
-          "layout_type": "ordered",
-          "widgets": [
-            {
-              "definition": {
-                "title": "Active HTTP Requests",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:jellyfin.http_requests_in_progress{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            },
-            {
-              "definition": {
-                "title": "Active Connections",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:jellyfin.dotnet_sockets_connections_established_incoming_total{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            },
-            {
-              "definition": {
-                "title": "CPU Usage (s)",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:jellyfin.process_cpu_seconds_total{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 1
-              }
-            },
-            {
-              "definition": {
-                "title": "Memory (MB)",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:jellyfin.process_working_set_bytes{*}/1048576",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            }
-          ]
-        }
-      },
-      {
-        "definition": {
-          "title": "📊 Jellyfin Bandwidth",
-          "type": "timeseries",
-          "requests": [
-            {
-              "q": "rate(avg:jellyfin.dotnet_sockets_bytes_sent_total{*})/1048576",
-              "display_type": "line",
-              "style": {
-                "palette": "cool",
-                "line_type": "solid",
-                "line_width": "normal"
-              }
-            },
-            {
-              "q": "rate(avg:jellyfin.dotnet_sockets_bytes_received_total{*})/1048576",
-              "display_type": "line",
-              "style": {
-                "palette": "warm",
-                "line_type": "solid",
-                "line_width": "normal"
-              }
-            }
-          ],
-          "yaxis": {
-            "label": "MB/s"
-          }
-        }
-      },
-      {
-        "definition": {
-          "title": "🏥 Service Health",
-          "type": "group",
-          "layout_type": "ordered",
-          "widgets": [
-            {
-              "definition": {
-                "title": "Sonarr Status",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:sonarr.sonarr_system_status{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            },
-            {
-              "definition": {
-                "title": "Radarr Status",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:radarr.radarr_system_status{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            },
-            {
-              "definition": {
-                "title": "Sonarr Health Issues",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:sonarr.sonarr_system_health_issues{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            },
-            {
-              "definition": {
-                "title": "Radarr Health Issues",
-                "type": "query_value",
-                "requests": [
-                  {
-                    "q": "avg:radarr.radarr_system_health_issues{*}",
-                    "aggregator": "last"
-                  }
-                ],
-                "precision": 0
-              }
-            }
-          ]
-        }
-      },
-      {
-        "definition": {
-          "title": "📝 Recent Sonarr Logs",
+          "title": "📝 Recent Activity Logs",
           "type": "log_stream",
-          "query": "source:sonarr",
-          "columns": ["timestamp", "message"],
-          "message_display": "expanded-md"
-        }
-      },
-      {
-        "definition": {
-          "title": "📝 Recent Radarr Logs",
-          "type": "log_stream",
-          "query": "source:radarr",
-          "columns": ["timestamp", "message"],
-          "message_display": "expanded-md"
-        }
-      },
-      {
-        "definition": {
-          "title": "🎬 Jellyfin Logs",
-          "type": "log_stream",
-          "query": "source:jellyfin",
-          "columns": ["timestamp", "message"],
+          "query": "source:(sonarr OR radarr OR jellyfin) status:(warn OR error)",
+          "columns": ["timestamp", "source", "message"],
           "message_display": "expanded-md"
         }
       }
