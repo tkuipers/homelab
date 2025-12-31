@@ -9,7 +9,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/tkuipers/homelab.git
+    repoURL: ssh://git@github.com/tkuipers/homelab.git
     targetRevision: main
     path: clusters/homelab/base/root/applications
 
