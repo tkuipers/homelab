@@ -12,7 +12,7 @@ data:
     - url: ssh://git@github.com/tkuipers/homelab.git
       sshPrivateKeySecret:
         name: argocd-git-ssh
-        key: identity
+        key: sshPrivateKey
       name: homelab
       type: git
 

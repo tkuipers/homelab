@@ -118,6 +118,43 @@ deploy_ingress() {
     log_success "ArgoCD ingress deployed (argo.tkuipers.ca)"
 }
 
+# Deploy git SSH ExternalSecret
+deploy_git_secret() {
+    log_info "Deploying git SSH ExternalSecret..."
+    
+    # Check if External Secrets Operator is available
+    if ! kubectl --kubeconfig="$KUBECONFIG" get crd externalsecrets.external-secrets.io &>/dev/null; then
+        log_warning "External Secrets Operator CRD not found - skipping git SSH secret"
+        log_info "You'll need to create the secret manually or install External Secrets Operator"
+        return 0
+    fi
+    
+    kubectl --kubeconfig="$KUBECONFIG" apply \
+        -f "$REPO_ROOT/clusters/homelab/base/argocd/argocd-externalsecret-git-ssh.yaml"
+    
+    # Wait a moment for the secret to sync
+    log_info "Waiting for ExternalSecret to sync..."
+    sleep 5
+    
+    # Check if secret was created
+    if kubectl --kubeconfig="$KUBECONFIG" get secret argocd-git-ssh -n "$ARGOCD_NAMESPACE" &>/dev/null; then
+        log_success "Git SSH secret created via ExternalSecret"
+    else
+        log_warning "Git SSH secret not yet synced - check ExternalSecret status"
+        kubectl --kubeconfig="$KUBECONFIG" get externalsecret argocd-git-ssh -n "$ARGOCD_NAMESPACE" 2>/dev/null || true
+    fi
+}
+
+# Apply ArgoCD repo configuration
+configure_repo() {
+    log_info "Configuring ArgoCD repository..."
+    
+    kubectl --kubeconfig="$KUBECONFIG" apply \
+        -f "$REPO_ROOT/clusters/homelab/base/argocd/argocd-configmap-argocd-cm.yaml"
+    
+    log_success "ArgoCD repository configured"
+}
+
 # Install ArgoCD CLI
 install_argocd_cli() {
     if command_exists argocd; then
@@ -321,6 +358,8 @@ main() {
     install_argocd_cli
     configure_argocd
     deploy_ingress
+    deploy_git_secret
+    configure_repo
     
     # Deploy GitOps configuration
     deploy_projects
