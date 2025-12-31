@@ -8,9 +8,9 @@ spec:
   description: "Authentication metrics, health, and performance monitoring"
   layoutType: ordered
   tags:
-    - "team:infrastructure"
-    - "service:authentik"
-    - "env:homelab"
+    - team:infrastructure
+    - service:authentik
+    - env:homelab
   widgets: |
     [
       {
