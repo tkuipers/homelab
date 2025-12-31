@@ -2,14 +2,13 @@ apiVersion: datadoghq.com/v1alpha1
 kind: DatadogDashboard
 metadata:
   name: mediacenter-overview
-  namespace: datadog
+  namespace: mediacenter
 spec:
   title: "🎬 Media Center Overview"
   description: "Jellyfin, Sonarr, and Radarr monitoring dashboard"
   layoutType: ordered
   tags:
-    - "team:homelab"
-    - "env:homelab"
+    - "team:apps"
   widgets: |
     [
       {
