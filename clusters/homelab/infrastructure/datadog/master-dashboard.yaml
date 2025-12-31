@@ -1,0 +1,407 @@
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogDashboard
+metadata:
+  name: homelab-master-dashboard
+  namespace: datadog
+spec:
+  title: "🏠 Homelab Master Dashboard"
+  description: "Cluster health overview and key metrics from all services"
+  layoutType: ordered
+  tags:
+    - "team:homelab"
+  widgets: |
+    [
+      {
+        "definition": {
+          "title": "🎯 Cluster Health Overview",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Total Pods Running",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0,
+                "autoscale": true
+              }
+            },
+            {
+              "definition": {
+                "title": "Nodes Ready",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.node.status.ready{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "ArgoCD Apps Synced",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:argocd.app.info{sync_status:synced}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Container Restarts (24h)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.containers.restarts{*}.rollup(sum, 86400)",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📊 Pods by Namespace",
+          "type": "sunburst",
+          "requests": [
+            {
+              "q": "sum:kubernetes.pods.running{*} by {kube_namespace}",
+              "style": {
+                "palette": "dog_classic"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🖥️ Node Resource Utilization",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "CPU by Node (%)",
+                "type": "toplist",
+                "requests": [
+                  {
+                    "q": "top(avg:system.cpu.user{*} by {host}, 10, 'mean', 'desc')",
+                    "style": {
+                      "palette": "dog_classic"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Memory by Node (%)",
+                "type": "toplist",
+                "requests": [
+                  {
+                    "q": "top(avg:system.mem.pct_usable{*} by {host}, 10, 'mean', 'asc')",
+                    "style": {
+                      "palette": "warm"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Disk by Node (%)",
+                "type": "toplist",
+                "requests": [
+                  {
+                    "q": "top(avg:system.disk.in_use{*} by {host}, 10, 'mean', 'desc')",
+                    "style": {
+                      "palette": "purple"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📈 Cluster CPU & Memory Over Time",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "avg:kubernetes.cpu.usage.total{*} by {host}",
+              "display_type": "line",
+              "style": {
+                "palette": "cool"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "CPU Cores"
+          }
+        }
+      },
+      {
+        "definition": {
+          "title": "💾 Cluster Memory Usage",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "avg:kubernetes.memory.usage{*}/1073741824 by {host}",
+              "display_type": "area",
+              "style": {
+                "palette": "warm"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "GB"
+          }
+        }
+      },
+      {
+        "definition": {
+          "title": "🎬 Media Center Quick Stats",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "TV Shows",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_series_monitored_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Movies",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:radarr.radarr_movie_monitored_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Storage Free (GB)",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_rootfolder_freespace_bytes{*}/1073741824",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Episodes Missing",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:sonarr.sonarr_episode_missing_total{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🔄 ArgoCD Sync Status",
+          "type": "sunburst",
+          "requests": [
+            {
+              "q": "sum:argocd.app.info{*} by {sync_status,health_status}",
+              "style": {
+                "palette": "semantic"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🌐 Network I/O by Namespace",
+          "type": "timeseries",
+          "requests": [
+            {
+              "q": "sum:kubernetes.network.tx_bytes{*} by {kube_namespace}.rollup(avg, 60)/1048576",
+              "display_type": "bars",
+              "style": {
+                "palette": "dog_classic"
+              }
+            }
+          ],
+          "yaxis": {
+            "label": "MB/min"
+          }
+        }
+      },
+      {
+        "definition": {
+          "title": "🏥 Service Health Matrix",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Ingress NGINX",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:infrastructure-ingress-nginx-controller}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Cert-Manager",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:infrastructure-cert-manager}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "MetalLB",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:infrastructure-metallb-controller}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "External DNS",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:external-dns}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Jellyfin",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:jellyfin}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Homepage",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_deployment:homepage}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Datadog Agent",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_daemonset:infrastructure-datadog-agent}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Samba Servers",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_app:samba-server}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "⚠️ Recent Alerts & Events",
+          "type": "event_stream",
+          "query": "priority:all status:(error OR warn)",
+          "tags_execution": "and",
+          "event_size": "s"
+        }
+      },
+      {
+        "definition": {
+          "title": "📋 Top Resource Consumers",
+          "type": "toplist",
+          "requests": [
+            {
+              "q": "top(sum:kubernetes.memory.usage{*} by {kube_deployment}/1048576, 10, 'mean', 'desc')",
+              "style": {
+                "palette": "warm"
+              }
+            }
+          ]
+        }
+      }
+    ]
+

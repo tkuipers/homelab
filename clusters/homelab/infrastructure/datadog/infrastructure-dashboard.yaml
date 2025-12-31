@@ -1,0 +1,307 @@
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogDashboard
+metadata:
+  name: infrastructure-dashboard
+  namespace: datadog
+spec:
+  title: "🏗️ Infrastructure Services Dashboard"
+  description: "Cert-Manager, Ingress-NGINX, MetalLB, External-DNS"
+  layoutType: ordered
+  tags:
+    - "team:infrastructure"
+  widgets: |
+    [
+      {
+        "definition": {
+          "title": "🔐 Cert-Manager",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Component Status",
+                "type": "hostmap",
+                "requests": {
+                  "fill": {
+                    "q": "avg:kubernetes.pods.running{kube_namespace:cert-manager} by {pod_name}"
+                  }
+                },
+                "style": {
+                  "palette": "green_to_orange",
+                  "palette_flip": false
+                },
+                "no_group_hosts": true,
+                "no_metric_hosts": false,
+                "group": ["pod_name"]
+              }
+            },
+            {
+              "definition": {
+                "title": "Cert-Manager Pods",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:cert-manager}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "CPU Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:cert-manager} by {kube_deployment}",
+                    "display_type": "area",
+                    "style": {
+                      "palette": "cool"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Memory Usage (MB)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:cert-manager}/1048576 by {kube_deployment}",
+                    "display_type": "area",
+                    "style": {
+                      "palette": "purple"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🌐 Ingress NGINX",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Controller Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:ingress-nginx,kube_deployment:infrastructure-ingress-nginx-controller}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Network In (MB/s)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "rate(avg:kubernetes.network.rx_bytes{kube_namespace:ingress-nginx})/1048576",
+                    "display_type": "area",
+                    "style": {
+                      "palette": "cool"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Network Out (MB/s)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "rate(avg:kubernetes.network.tx_bytes{kube_namespace:ingress-nginx})/1048576",
+                    "display_type": "area",
+                    "style": {
+                      "palette": "warm"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "CPU & Memory",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:ingress-nginx}",
+                    "display_type": "line",
+                    "style": {
+                      "palette": "dog_classic"
+                    }
+                  },
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:ingress-nginx}/1048576",
+                    "display_type": "line",
+                    "style": {
+                      "palette": "warm"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "⚖️ MetalLB Load Balancer",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Controller Running",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:metallb-system,kube_deployment:infrastructure-metallb-controller}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Speaker Pods",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:metallb-system,kube_app:infrastructure-metallb-speaker}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "LoadBalancer Services",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "count:kubernetes.service.count{service_type:loadbalancer}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "MetalLB Resource Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:metallb-system} by {kube_deployment}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🌍 External DNS",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.pods.running{kube_namespace:external-dns}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "CPU Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:external-dns}",
+                    "display_type": "area",
+                    "style": {
+                      "palette": "cool"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Memory (MB)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:external-dns}/1048576",
+                    "display_type": "area",
+                    "style": {
+                      "palette": "purple"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Container Restarts",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes.containers.restarts{kube_namespace:external-dns}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📊 Infrastructure Pod Distribution",
+          "type": "treemap",
+          "requests": [
+            {
+              "q": "sum:kubernetes.pods.running{kube_namespace:ingress-nginx OR kube_namespace:cert-manager OR kube_namespace:metallb-system OR kube_namespace:external-dns} by {kube_namespace}",
+              "style": {
+                "palette": "dog_classic"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📝 Infrastructure Events",
+          "type": "event_stream",
+          "query": "source:kubernetes kube_namespace:(ingress-nginx OR cert-manager OR metallb-system OR external-dns)",
+          "tags_execution": "and",
+          "event_size": "s"
+        }
+      }
+    ]
+
