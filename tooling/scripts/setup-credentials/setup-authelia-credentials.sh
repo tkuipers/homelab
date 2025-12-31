@@ -60,10 +60,10 @@ hash_password() {
     local password="$1"
     # Use authelia CLI to generate argon2id hash (or docker if not installed)
     if command -v authelia &> /dev/null; then
-        authelia crypto hash generate argon2 --salt-size 16 --password "$password"
+        authelia crypto hash generate argon2 --salt-size 16 --password "$password" | grep -oP '\$argon2id\$[^\s]+'
     else
         # Fallback: use docker
-        docker run --rm authelia/authelia:latest authelia crypto hash generate argon2 --salt-size 16 --password "$password"
+        docker run --rm authelia/authelia:latest authelia crypto hash generate argon2 --salt-size 16 --password "$password" | grep -oP '\$argon2id\$[^\s]+'
     fi
 }
 
@@ -71,9 +71,9 @@ hash_password() {
 hash_client_secret() {
     local secret="$1"
     if command -v authelia &> /dev/null; then
-        authelia crypto hash generate argon2 --salt-size 16 --password "$secret"
+        authelia crypto hash generate argon2 --salt-size 16 --password "$secret" | grep -oP '\$argon2id\$[^\s]+'
     else
-        docker run --rm authelia/authelia:latest authelia crypto hash generate argon2 --salt-size 16 --password "$secret"
+        docker run --rm authelia/authelia:latest authelia crypto hash generate argon2 --salt-size 16 --password "$secret" | grep -oP '\$argon2id\$[^\s]+'
     fi
 }
 
