@@ -6,43 +6,10 @@ metadata:
 data:
   index.html: |
     <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Authentik Forward Auth Test</title>
-      <style>
-        body {
-          font-family: system-ui, -apple-system, sans-serif;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 2rem;
-          background: #0a0a0b;
-          color: #e4e4e7;
-        }
-        h1 { color: #22d3ee; }
-        .info { background: #141416; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
-        .header { font-weight: bold; color: #22d3ee; }
-      </style>
-    </head>
+    <html>
+    <head><title>Hello World</title></head>
     <body>
-      <h1>🔒 Authentik Forward Auth Test</h1>
-      <p>If you can see this page, you've successfully authenticated via Authentik!</p>
-      <div class="info">
-        <p class="header">Request Headers:</p>
-        <pre id="headers">Loading...</pre>
-      </div>
-      <script>
-        // Display request headers if available
-        fetch('/headers')
-          .then(r => r.json())
-          .then(data => {
-            document.getElementById('headers').textContent = JSON.stringify(data, null, 2);
-          })
-          .catch(() => {
-            document.getElementById('headers').textContent = 'Headers not available';
-          });
-      </script>
+    <h1>Hello World</h1>
     </body>
     </html>
 

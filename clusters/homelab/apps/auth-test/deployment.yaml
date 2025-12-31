@@ -25,14 +25,10 @@ spec:
     spec:
       containers:
       - name: auth-test
-        image: nginx:alpine
+        image: nginxdemos/hello:latest
         ports:
         - containerPort: 80
           name: http
-        volumeMounts:
-        - name: content
-          mountPath: /usr/share/nginx/html
-          readOnly: true
         resources:
           requests:
             memory: "32Mi"
@@ -52,8 +48,4 @@ spec:
             port: 80
           initialDelaySeconds: 2
           periodSeconds: 5
-      volumes:
-      - name: content
-        configMap:
-          name: auth-test-content
 
