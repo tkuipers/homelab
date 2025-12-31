@@ -13,3 +13,4 @@ resources:
   - argocd-application-datadog.yaml
   # Apps
   - argocd-application-homepage.yaml
+  - argocd-application-mediacenter.yaml

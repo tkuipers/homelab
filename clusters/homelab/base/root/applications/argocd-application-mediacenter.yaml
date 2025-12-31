@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-mediacenter
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: apps
+  source:
+    repoURL: ssh://git@github.com/tkuipers/homelab.git
+    targetRevision: main
+    path: clusters/homelab/apps/mediacenter
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mediacenter
+  syncPolicy:
+    # SAFETY: Start with manual sync, no pruning
+    # Will enable automated after verification
+    automated:
+      prune: false      # DO NOT auto-delete resources
+      selfHeal: true    # Keep resources in sync with git
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - PruneLast=true  # If prune ever enabled, do it last
+      - RespectIgnoreDifferences=true
+
