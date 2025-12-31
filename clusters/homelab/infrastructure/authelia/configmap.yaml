@@ -85,6 +85,7 @@ data:
       cookies:
         - name: authelia_session
           domain: tkuipers.ca
+          authelia_url: https://auth.tkuipers.ca
           same_site: lax
           expiration: 1h
           inactivity: 5m
