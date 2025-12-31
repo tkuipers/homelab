@@ -1,5 +1,4 @@
-# Datadog Agent Configuration
-# Configured for Talos Linux per official docs
+# Datadog Agent Configuration for Talos Linux
 # https://docs.datadoghq.com/containers/kubernetes/installation/?tab=helm
 
 datadog:
@@ -10,42 +9,11 @@ datadog:
 
     # Cluster identification
     clusterName: homelab
-    site: datadoghq.com
+    site: us5.datadoghq.com
 
-    # Talos-specific: disable TLS verification for kubelet
+    # Talos-specific kubelet config
     kubelet:
       tlsVerify: false
-
-    # Ignore auto-config for components we'll configure manually
-    ignoreAutoConfig:
-      - etcd
-      - kube_scheduler
-      - kube_controller_manager
-
-    # Manual configuration for control plane components
-    confd:
-      etcd.yaml: |-
-        ad_identifiers:
-          - kube-scheduler
-        instances:
-          - prometheus_url: https://%%host%%:2379/metrics
-            tls_ca_cert: /host/etc/kubernetes/pki/etcd/ca.crt
-            tls_cert: /host/etc/kubernetes/pki/etcd/server.crt
-            tls_private_key: /host/etc/kubernetes/pki/etcd/server.key
-      kube_scheduler.yaml: |-
-        ad_identifiers:
-          - kube-scheduler
-        instances:
-          - prometheus_url: https://%%host%%:10259/metrics
-            ssl_verify: false
-            bearer_token_auth: true
-      kube_controller_manager.yaml: |-
-        ad_identifiers:
-          - kube-controller-manager
-        instances:
-          - prometheus_url: https://%%host%%:10257/metrics
-            ssl_verify: false
-            bearer_token_auth: true
 
     # Kubernetes integration
     kubeStateMetricsEnabled: true
@@ -80,21 +48,7 @@ datadog:
   # Agent DaemonSet configuration
   agents:
     tolerations:
-      - key: node-role.kubernetes.io/control-plane
-        operator: Exists
-        effect: NoSchedule
       - operator: Exists
-
-    # Talos: Mount etcd certs from Talos path
-    volumes:
-      - hostPath:
-          path: /system/secrets/etcd
-        name: etcd-certs
-
-    volumeMounts:
-      - name: etcd-certs
-        mountPath: /host/etc/kubernetes/pki/etcd
-        readOnly: true
 
   # Cluster Agent
   clusterAgent:
@@ -104,11 +58,7 @@ datadog:
       enabled: true
       useDatadogMetrics: true
 
-  # CRITICAL: Enable Talos provider
+  # Enable Talos provider
   providers:
     talos:
       enabled: true
-
-  # Disable cluster checks runner for simplicity
-  clusterChecksRunner:
-    enabled: false
