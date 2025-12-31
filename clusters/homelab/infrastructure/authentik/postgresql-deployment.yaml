@@ -33,19 +33,20 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
-            drop:
-            - ALL
-          runAsNonRoot: true
-          runAsUser: 999
+            add:
+            - CHOWN
+            - FOWNER
+          runAsUser: 0
           seccompProfile:
             type: RuntimeDefault
         command:
         - sh
         - -c
         - |
-          # Ensure the data directory exists
+          # Create directory and set proper ownership for postgres user (UID 999)
           mkdir -p /var/lib/postgresql/data
-          # fsGroup will handle ownership, we just ensure it exists
+          chown -R 999:999 /var/lib/postgresql/data
+          chmod 700 /var/lib/postgresql/data
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
