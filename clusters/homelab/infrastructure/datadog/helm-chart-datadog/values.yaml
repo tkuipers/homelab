@@ -1,6 +1,6 @@
 # Datadog Agent Configuration
 # Datadog Pro tier - all features enabled
-# Note: Values are nested under 'datadog' because that's the dependency name in Chart.yaml
+# Configured for Talos OS (read-only root filesystem)
 
 datadog:
   datadog:
@@ -35,9 +35,10 @@ datadog:
       enabled: true
       processCollection: true
 
-    # Network Performance Monitoring
+    # Network Performance Monitoring - DISABLED for Talos
+    # NPM requires kernel headers which Talos doesn't have
     networkMonitoring:
-      enabled: true
+      enabled: false
 
     # Orchestrator Explorer
     orchestratorExplorer:
@@ -48,11 +49,20 @@ datadog:
       - "env:homelab"
       - "cluster:homelab"
 
+    # Talos-specific: Container runtime socket
+    criSocketPath: /var/run/containerd/containerd.sock
+
   # Enable the agent DaemonSet
   agents:
     enabled: true
+    
+    # Talos-specific: Use containerd
     containers:
       agent:
+        # Talos-specific: Need to disable some features
+        env:
+          - name: DD_CONTAINER_EXCLUDE
+            value: "name:pause name:POD"
         resources:
           requests:
             cpu: 200m
@@ -60,9 +70,53 @@ datadog:
           limits:
             cpu: 500m
             memory: 512Mi
+        # Talos: Disable security context that causes issues
+        securityContext:
+          readOnlyRootFilesystem: false
+      
+      traceAgent:
+        securityContext:
+          readOnlyRootFilesystem: false
+      
+      processAgent:
+        securityContext:
+          readOnlyRootFilesystem: false
+    
+    # Run on all nodes
     tolerations:
       - operator: Exists
-    useHostNetwork: true
+    
+    # Don't use host network - can cause issues
+    useHostNetwork: false
+    
+    # Talos: Mount containerd socket
+    volumes:
+      - name: containerdsocket
+        hostPath:
+          path: /var/run/containerd/containerd.sock
+      - name: proc
+        hostPath:
+          path: /proc
+      - name: cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+      - name: var-log
+        hostPath:
+          path: /var/log
+          
+    volumeMounts:
+      - name: containerdsocket
+        mountPath: /var/run/containerd/containerd.sock
+        readOnly: true
+      - name: proc
+        mountPath: /host/proc
+        readOnly: true
+      - name: cgroup
+        mountPath: /host/sys/fs/cgroup
+        readOnly: true
+      - name: var-log
+        mountPath: /var/log/pods
+        readOnly: true
 
   # Cluster Agent for Kubernetes metrics
   clusterAgent:
@@ -72,9 +126,8 @@ datadog:
       enabled: true
       useDatadogMetrics: true
     admissionController:
-      enabled: true
-      mutateUnlabelled: false
+      enabled: false  # Disable - can cause issues with Talos
 
-  # Cluster checks runner
+  # Cluster checks runner - disable for simplicity
   clusterChecksRunner:
     enabled: false
