@@ -135,20 +135,21 @@ spec:
     noDataTimeframe: 10
     renotifyInterval: 30
 ---
-# Monitor: Certificate expiration
+# Monitor: cert-manager health
 apiVersion: datadoghq.com/v1alpha1
 kind: DatadogMonitor
 metadata:
-  name: cert-expiration
+  name: cert-manager-health
   namespace: datadog
 spec:
-  name: "[Homelab] TLS Certificate Expiring Soon"
+  name: "[Homelab] cert-manager Not Running"
   type: query alert
-  query: "min(last_1h):min:cert_manager.certificate.expiration_timestamp_seconds{cluster:homelab} - now() < 604800"
+  query: "min(last_5m):sum:kubernetes.pods.running{kube_namespace:cert-manager,kube_deployment:infrastructure-cert-manager} < 1"
   message: |
-    A TLS certificate is expiring within 7 days!
+    cert-manager is down!
     
-    Check cert-manager certificates and ensure renewal is working.
+    Certificate issuance and renewal will fail.
+    This affects TLS for all services.
     
     @slack-homelab-alerts
   tags:
@@ -157,7 +158,8 @@ spec:
     - team:infrastructure
   options:
     thresholds:
-      critical: "604800"
-      warning: "1209600"
-    notifyNoData: false
+      critical: "1"
+    notifyNoData: true
+    noDataTimeframe: 10
+    renotifyInterval: 60
 
