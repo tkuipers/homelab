@@ -7,4 +7,6 @@ resources:
   - postgresql-credentials-external-secret.yaml
   - postgresql-deployment.yaml
   - postgresql-service.yaml
+  - redis-deployment.yaml
+  - redis-service.yaml
 
