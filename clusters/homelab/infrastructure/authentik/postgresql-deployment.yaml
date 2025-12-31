@@ -24,11 +24,32 @@ spec:
         ad.datadoghq.com/postgres.logs: '[{"source":"postgresql","service":"authentik-postgres"}]'
     spec:
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 999
         fsGroup: 999
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+      - name: init-db
+        image: busybox:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 999
+          seccompProfile:
+            type: RuntimeDefault
+        command:
+        - sh
+        - -c
+        - |
+          # Ensure the data directory exists and has correct permissions
+          mkdir -p /var/lib/postgresql/data/pgdata
+          chown -R 999:999 /var/lib/postgresql/data
+          chmod 700 /var/lib/postgresql/data/pgdata || true
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
       containers:
       - name: postgresql
         image: postgres:16-alpine
