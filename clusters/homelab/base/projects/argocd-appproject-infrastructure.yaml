@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: infrastructure
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Core cluster infrastructure components (metallb, cert-manager, ingress, dns)
+
+  # Allow deploying to any namespace
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+
+  # Allow any source repo (locked to homelab in practice via Applications)
+  sourceRepos:
+    - "*"
+
+  # Allow all cluster-scoped resources (CRDs, ClusterRoles, etc.)
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  # Allow all namespaced resources
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  # Orphaned resource monitoring
+  orphanedResources:
+    warn: true
+

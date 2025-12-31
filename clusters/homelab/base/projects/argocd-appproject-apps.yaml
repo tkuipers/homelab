@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: apps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: User-facing application workloads
+
+  # Allow deploying to any namespace
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+
+  sourceRepos:
+    - "*"
+
+  # Apps generally don't need cluster-scoped resources
+  # but we allow it for PV, ClusterRole bindings for host access
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  orphanedResources:
+    warn: true
+

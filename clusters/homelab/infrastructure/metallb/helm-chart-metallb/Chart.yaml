@@ -1,0 +1,12 @@
+apiVersion: v2
+name: metallb
+description: Umbrella chart for MetalLB load balancer
+type: application
+version: 1.0.0
+appVersion: "0.15.2"
+
+dependencies:
+  - name: metallb
+    version: "0.15.2"
+    repository: "https://metallb.github.io/metallb"
+
