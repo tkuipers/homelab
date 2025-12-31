@@ -34,7 +34,8 @@ spec:
         - sh
         - -c
         - |
-          # Set proper ownership for postgres user (UID 999)
+          # Ensure directory exists and set proper ownership for postgres user (UID 999)
+          mkdir -p /var/lib/postgresql/data
           chown -R 999:999 /var/lib/postgresql/data
           chmod 700 /var/lib/postgresql/data
         volumeMounts:
@@ -59,8 +60,6 @@ spec:
               key: password
         - name: POSTGRES_DB
           value: "authentik"
-        - name: PGDATA
-          value: /var/lib/postgresql/data
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
