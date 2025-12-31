@@ -12,7 +12,7 @@ spec:
 
   sources:
     # Helm chart for Datadog agent
-    - repoURL: ssh://git@github.com/tkuipers/homelab.git
+    - repoURL: https://github.com/tkuipers/homelab.git
       targetRevision: main
       path: clusters/homelab/infrastructure/datadog/helm-chart-datadog
       helm:
@@ -20,7 +20,7 @@ spec:
           - values.yaml
 
     # Kustomize for namespace and ExternalSecret
-    - repoURL: ssh://git@github.com/tkuipers/homelab.git
+    - repoURL: https://github.com/tkuipers/homelab.git
       targetRevision: main
       path: clusters/homelab/infrastructure/datadog
 
