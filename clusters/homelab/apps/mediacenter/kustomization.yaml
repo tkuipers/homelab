@@ -28,5 +28,4 @@ resources:
   - sabnzbd-service.yaml
   - sabnzbd-ingress.yaml
   - arr-integration-job.yaml
-  - datadog-dashboard.yaml
 
