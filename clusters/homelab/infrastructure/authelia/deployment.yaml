@@ -27,9 +27,14 @@ spec:
             "openmetrics": {
               "init_config": {},
               "instances": [{
-                "prometheus_url": "http://%%host%%:9959/metrics",
+                "openmetrics_endpoint": "http://%%host%%:9959/metrics",
                 "namespace": "authelia",
-                "metrics": ["*"]
+                "metrics": [
+                  {"authelia_authn": {"type": "counter"}},
+                  {"authelia_authn_duration": {"type": "histogram"}},
+                  {"authelia_request": {"type": "counter"}},
+                  {"authelia_request_duration": {"type": "histogram"}}
+                ]
               }]
             }
           }

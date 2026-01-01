@@ -103,25 +103,10 @@ spec:
                     ],
                     "queries": [
                       {
-                        "data_source": "logs",
+                        "data_source": "metrics",
                         "name": "query1",
-                        "search": {
-                          "query": "source:authelia (1FA OR 2FA) authentication"
-                        },
-                        "indexes": ["*"],
-                        "group_by": [
-                          {
-                            "facet": "status",
-                            "limit": 10,
-                            "sort": {
-                              "order": "desc",
-                              "aggregation": "count"
-                            }
-                          }
-                        ],
-                        "compute": {
-                          "aggregation": "count"
-                        }
+                        "query": "sum:authelia.authn{*} by {success}",
+                        "aggregator": "sum"
                       }
                     ]
                   }
@@ -139,50 +124,30 @@ spec:
                 "type": "timeseries",
                 "requests": [
                   {
-                    "response_format": "timeseries",
-                    "queries": [
+                    "q": "sum:authelia.authn{success:true}",
+                    "display_type": "bars",
+                    "style": {
+                      "palette": "green"
+                    },
+                    "metadata": [
                       {
-                        "data_source": "logs",
-                        "name": "success",
-                        "search": {
-                          "query": "source:authelia (\"Successful 1FA authentication\" OR \"Successful 2FA authentication\")"
-                        },
-                        "indexes": ["*"],
-                        "group_by": [],
-                        "compute": {
-                          "aggregation": "count"
-                        }
-                      },
-                      {
-                        "data_source": "logs",
-                        "name": "failure",
-                        "search": {
-                          "query": "source:authelia (\"Unsuccessful 1FA authentication\" OR \"Unsuccessful 2FA authentication\")"
-                        },
-                        "indexes": ["*"],
-                        "group_by": [],
-                        "compute": {
-                          "aggregation": "count"
-                        }
+                        "expression": "sum:authelia.authn{success:true}",
+                        "alias_name": "Success"
                       }
-                    ],
-                    "formulas": [
+                    ]
+                  },
+                  {
+                    "q": "sum:authelia.authn{success:false}",
+                    "display_type": "bars",
+                    "style": {
+                      "palette": "warm"
+                    },
+                    "metadata": [
                       {
-                        "formula": "success",
-                        "alias": "Success",
-                        "style": {
-                          "palette": "green"
-                        }
-                      },
-                      {
-                        "formula": "failure",
-                        "alias": "Failure",
-                        "style": {
-                          "palette": "warm"
-                        }
+                        "expression": "sum:authelia.authn{success:false}",
+                        "alias_name": "Failure"
                       }
-                    ],
-                    "display_type": "bars"
+                    ]
                   }
                 ]
               }
