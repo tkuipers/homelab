@@ -105,8 +105,8 @@ spec:
                       {
                         "data_source": "metrics",
                         "name": "query1",
-                        "query": "sum:authelia.authelia_authn_duration.count{*} by {success}.as_count()",
-                        "aggregator": "sum"
+                        "query": "max:authelia.authelia_authn_duration.count{*} by {success}",
+                        "aggregator": "last"
                       }
                     ]
                   }
@@ -124,7 +124,7 @@ spec:
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "sum:authelia.authelia_authn_duration.count{success:true}.as_count()",
+                    "q": "diff(sum:authelia.authelia_authn_duration.count{success:true})",
                     "display_type": "bars",
                     "style": {
                       "palette": "green",
@@ -133,13 +133,13 @@ spec:
                     },
                     "metadata": [
                       {
-                        "expression": "sum:authelia.authelia_authn_duration.count{success:true}.as_count()",
+                        "expression": "diff(sum:authelia.authelia_authn_duration.count{success:true})",
                         "alias_name": "Success"
                       }
                     ]
                   },
                   {
-                    "q": "sum:authelia.authelia_authn_duration.count{success:false}.as_count()",
+                    "q": "diff(sum:authelia.authelia_authn_duration.count{success:false})",
                     "display_type": "bars",
                     "style": {
                       "palette": "warm",
@@ -148,7 +148,7 @@ spec:
                     },
                     "metadata": [
                       {
-                        "expression": "sum:authelia.authelia_authn_duration.count{success:false}.as_count()",
+                        "expression": "diff(sum:authelia.authelia_authn_duration.count{success:false})",
                         "alias_name": "Failure"
                       }
                     ]
