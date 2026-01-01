@@ -29,7 +29,14 @@ spec:
               "instances": [{
                 "prometheus_url": "http://%%host%%:9959/metrics",
                 "namespace": "authelia",
-                "metrics": ["authelia_*"]
+                "metrics": [
+                  {"authelia_authn": "authn"},
+                  {"authelia_authn_duration": "authn_duration"},
+                  {"authelia_authz": "authz"},
+                  {"authelia_request": "request"},
+                  {"authelia_request_duration": "request_duration"}
+                ],
+                "send_monotonic_counter": true
               }]
             }
           }
