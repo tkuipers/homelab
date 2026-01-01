@@ -77,6 +77,11 @@ hash_client_secret() {
     fi
 }
 
+# Generate ArgoCD OIDC client secret
+generate_argocd_client_secret() {
+    openssl rand -hex 32
+}
+
 # Collect input
 collect_input() {
     echo
@@ -87,10 +92,22 @@ collect_input() {
     STORAGE_ENCRYPTION_KEY=$(generate_storage_encryption_key)
     SESSION_SECRET=$(generate_session_secret)
     JWT_SECRET=$(generate_jwt_secret)
+    OIDC_HMAC_SECRET=$(generate_oidc_hmac_secret)
     
     log_success "Generated storage encryption key"
     log_success "Generated session secret"
     log_success "Generated JWT secret"
+    log_success "Generated OIDC HMAC secret"
+    
+    echo
+    log_info "Generating OIDC issuer private key (RSA 4096)..."
+    OIDC_ISSUER_PRIVATE_KEY=$(generate_oidc_issuer_private_key)
+    log_success "Generated OIDC issuer private key"
+    
+    echo
+    log_info "Generating ArgoCD OIDC client secret..."
+    ARGOCD_CLIENT_SECRET=$(generate_argocd_client_secret)
+    log_info "ArgoCD client secret: $ARGOCD_CLIENT_SECRET"
     
     echo
     log_info "Generating user password..."
@@ -107,6 +124,10 @@ collect_input() {
     log_info "Hashing user password with argon2id..."
     USER_PASSWORD_HASH=$(hash_password "$USER_PASSWORD")
     log_success "Generated password hash"
+    
+    log_info "Hashing ArgoCD client secret..."
+    ARGOCD_CLIENT_SECRET_HASH=$(hash_client_secret "$ARGOCD_CLIENT_SECRET")
+    log_success "Generated ArgoCD client secret hash"
 }
 
 # Create or update item
@@ -116,6 +137,9 @@ create_or_update_item() {
     echo "  Storage Encryption Key: **** (generated)"
     echo "  Session Secret: **** (generated)"
     echo "  JWT Secret: **** (generated)"
+    echo "  OIDC HMAC Secret: **** (generated)"
+    echo "  OIDC Issuer Private Key: **** (RSA 4096)"
+    echo "  ArgoCD Client Secret: $ARGOCD_CLIENT_SECRET"
     echo "  User Password: $USER_PASSWORD"
     echo
     
@@ -136,6 +160,10 @@ create_or_update_item() {
             "storage_encryption_key[password]=$STORAGE_ENCRYPTION_KEY" \
             "session_secret[password]=$SESSION_SECRET" \
             "jwt_secret[password]=$JWT_SECRET" \
+            "oidc_hmac_secret[password]=$OIDC_HMAC_SECRET" \
+            "oidc_issuer_private_key[password]=$OIDC_ISSUER_PRIVATE_KEY" \
+            "argocd_client_secret[password]=$ARGOCD_CLIENT_SECRET" \
+            "argocd_client_secret_hash[password]=$ARGOCD_CLIENT_SECRET_HASH" \
             "user_password_hash[password]=$USER_PASSWORD_HASH"
         
         log_success "Item '$ITEM_NAME' updated successfully"
@@ -151,6 +179,10 @@ create_or_update_item() {
             "storage_encryption_key[password]=$STORAGE_ENCRYPTION_KEY" \
             "session_secret[password]=$SESSION_SECRET" \
             "jwt_secret[password]=$JWT_SECRET" \
+            "oidc_hmac_secret[password]=$OIDC_HMAC_SECRET" \
+            "oidc_issuer_private_key[password]=$OIDC_ISSUER_PRIVATE_KEY" \
+            "argocd_client_secret[password]=$ARGOCD_CLIENT_SECRET" \
+            "argocd_client_secret_hash[password]=$ARGOCD_CLIENT_SECRET_HASH" \
             "user_password_hash[password]=$USER_PASSWORD_HASH"
         
         log_success "Item '$ITEM_NAME' created successfully"
@@ -165,6 +197,7 @@ show_next_steps() {
     log_info "IMPORTANT - Save these credentials:"
     echo "  User: tkuipers"
     echo "  Password: $USER_PASSWORD"
+    echo "  ArgoCD Client Secret: $ARGOCD_CLIENT_SECRET"
     echo
     log_info "Next steps:"
     echo "1. External Secrets Operator will automatically sync credentials to Kubernetes"
@@ -172,6 +205,7 @@ show_next_steps() {
     echo "3. Access Authelia at: https://auth.tkuipers.ca"
     echo "4. Login with username 'tkuipers' and the password above"
     echo "5. Test protected site: https://protected.tkuipers.ca"
+    echo "6. ArgoCD OIDC will use the client secret stored in 1Password"
     echo
     log_info "To verify secrets are synced:"
     echo "  kubectl get secret authelia-secrets -n authelia"

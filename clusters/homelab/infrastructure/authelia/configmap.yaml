@@ -132,4 +132,64 @@ data:
       disable_startup_check: true
       filesystem:
         filename: /config/notification.txt
+    
+    identity_providers:
+      oidc:
+        hmac_secret:
+          path: /secrets/oidc-hmac-secret
+        jwks:
+          - key:
+              path: /secrets/oidc-issuer-private-key
+        cors:
+          endpoints:
+            - authorization
+            - token
+            - revocation
+            - introspection
+            - userinfo
+          allowed_origins_from_client_redirect_uris: true
+        clients:
+          - client_id: 'argocd'
+            client_name: 'Argo CD'
+            client_secret:
+              path: /secrets/argocd-client-secret-hash
+            public: false
+            authorization_policy: 'one_factor'
+            require_pkce: false
+            redirect_uris:
+              - 'https://argo.tkuipers.ca/auth/callback'
+            scopes:
+              - 'openid'
+              - 'groups'
+              - 'email'
+              - 'profile'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'client_secret_basic'
+          - client_id: 'argocd-cli'
+            client_name: 'Argo CD (CLI)'
+            public: true
+            authorization_policy: 'one_factor'
+            require_pkce: true
+            pkce_challenge_method: 'S256'
+            redirect_uris:
+              - 'http://localhost:8085/auth/callback'
+            scopes:
+              - 'openid'
+              - 'offline_access'
+              - 'groups'
+              - 'email'
+              - 'profile'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+              - 'refresh_token'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'none'
 

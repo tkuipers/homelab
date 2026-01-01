@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Map Authelia 'admins' group to ArgoCD admin role
+  policy.csv: |
+    g, admins, role:admin
+  
+  # Default policy for users not in admins group (read-only)
+  policy.default: role:readonly
+  
+  # Enable OIDC groups for RBAC
+  scopes: '[groups, email]'
+
