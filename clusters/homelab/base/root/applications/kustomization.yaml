@@ -15,4 +15,3 @@ resources:
   # Apps
   - argocd-application-homepage.yaml
   - argocd-application-mediacenter.yaml
-  - argocd-application-auth-test.yaml
