@@ -6,6 +6,12 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/auth-url: http://authelia.authelia.svc.cluster.local/api/verify
+    nginx.ingress.kubernetes.io/auth-signin: https://auth.tkuipers.ca/?rd=https://$host$escaped_request_uri
+    nginx.ingress.kubernetes.io/auth-snippet: |
+      if ($remote_addr ~ "^10\.(244|9[6-9]|10[0-9]|11[0-1])\.") {
+        return 200;
+      }
 spec:
   ingressClassName: nginx
   tls:
