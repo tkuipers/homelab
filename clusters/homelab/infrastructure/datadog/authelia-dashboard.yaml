@@ -106,7 +106,7 @@ spec:
                         "data_source": "logs",
                         "name": "query1",
                         "search": {
-                          "query": "source:authelia 1FA authentication"
+                          "query": "source:authelia (1FA OR 2FA) authentication"
                         },
                         "indexes": ["*"],
                         "group_by": [
@@ -145,7 +145,7 @@ spec:
                         "data_source": "logs",
                         "name": "success",
                         "search": {
-                          "query": "source:authelia \"Successful 1FA authentication\""
+                          "query": "source:authelia (\"Successful 1FA authentication\" OR \"Successful 2FA authentication\")"
                         },
                         "indexes": ["*"],
                         "group_by": [],
@@ -157,7 +157,7 @@ spec:
                         "data_source": "logs",
                         "name": "failure",
                         "search": {
-                          "query": "source:authelia \"Unsuccessful 1FA authentication\""
+                          "query": "source:authelia (\"Unsuccessful 1FA authentication\" OR \"Unsuccessful 2FA authentication\")"
                         },
                         "indexes": ["*"],
                         "group_by": [],
