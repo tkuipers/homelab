@@ -8,6 +8,8 @@ resources:
   - https://raw.githubusercontent.com/argoproj/argo-cd/v2.13.2/manifests/install.yaml
   - argocd-configmap-argocd-cm.yaml
   - argocd-configmap-argocd-cmd-params-cm.yaml
+  - argocd-configmap-argocd-rbac-cm.yaml
   - argocd-ingress.yaml
   - argocd-externalsecret-git-ssh.yaml
+  - argocd-externalsecret-oidc.yaml
 

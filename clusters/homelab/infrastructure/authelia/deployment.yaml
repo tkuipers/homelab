@@ -79,6 +79,9 @@ spec:
         - name: branding
           mountPath: /assets
           readOnly: true
+        - name: oidc-secrets
+          mountPath: /secrets
+          readOnly: true
         - name: data
           mountPath: /config
         resources:
@@ -115,6 +118,16 @@ spec:
       - name: branding
         configMap:
           name: authelia-branding
+      - name: oidc-secrets
+        secret:
+          secretName: authelia-secrets
+          items:
+            - key: oidc-hmac-secret
+              path: oidc-hmac-secret
+            - key: oidc-issuer-private-key
+              path: oidc-issuer-private-key
+            - key: argocd-client-secret-hash
+              path: argocd-client-secret-hash
       - name: data
         emptyDir: {}
 
