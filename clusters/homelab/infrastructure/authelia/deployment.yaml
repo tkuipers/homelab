@@ -29,16 +29,7 @@ spec:
               "instances": [{
                 "prometheus_url": "http://%%host%%:9959/metrics",
                 "namespace": "authelia",
-                "metrics": [
-                  "authelia_authn.*",
-                  "authelia_authz.*",
-                  "authelia_request.*"
-                ],
-                "type_overrides": {
-                  "authelia_authn": "gauge",
-                  "authelia_authz": "gauge",
-                  "authelia_request": "gauge"
-                }
+                "metrics": ["*"]
               }]
             }
           }
