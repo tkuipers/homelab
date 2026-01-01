@@ -124,11 +124,34 @@ spec:
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "sum:authelia.authelia_authn_duration.count{*} by {success}.as_count()",
+                    "q": "sum:authelia.authelia_authn_duration.count{success:true}.as_count()",
                     "display_type": "bars",
                     "style": {
-                      "palette": "semantic"
-                    }
+                      "palette": "green",
+                      "line_type": "solid",
+                      "line_width": "normal"
+                    },
+                    "metadata": [
+                      {
+                        "expression": "sum:authelia.authelia_authn_duration.count{success:true}.as_count()",
+                        "alias_name": "Success"
+                      }
+                    ]
+                  },
+                  {
+                    "q": "sum:authelia.authelia_authn_duration.count{success:false}.as_count()",
+                    "display_type": "bars",
+                    "style": {
+                      "palette": "warm",
+                      "line_type": "solid",
+                      "line_width": "normal"
+                    },
+                    "metadata": [
+                      {
+                        "expression": "sum:authelia.authelia_authn_duration.count{success:false}.as_count()",
+                        "alias_name": "Failure"
+                      }
+                    ]
                   }
                 ]
               }
