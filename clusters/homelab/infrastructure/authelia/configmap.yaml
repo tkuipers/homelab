@@ -92,9 +92,9 @@ data:
             - cluster_pods
             - cluster_services
           policy: bypass
-        # Allow all authenticated users to access protected services
+        # Require 2FA for all protected services
         - domain: "*.tkuipers.ca"
-          policy: one_factor
+          policy: two_factor
     
     session:
       cookies:
