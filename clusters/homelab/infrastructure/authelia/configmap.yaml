@@ -135,11 +135,6 @@ data:
     
     identity_providers:
       oidc:
-        hmac_secret:
-          path: /secrets/oidc-hmac-secret
-        jwks:
-          - key:
-              path: /secrets/oidc-issuer-private-key
         cors:
           endpoints:
             - authorization
@@ -151,8 +146,6 @@ data:
         clients:
           - client_id: 'argocd'
             client_name: 'Argo CD'
-            client_secret:
-              path: /secrets/argocd-client-secret-hash
             public: false
             authorization_policy: 'one_factor'
             require_pkce: false
