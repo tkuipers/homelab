@@ -9,7 +9,6 @@ spec:
   layoutType: ordered
   tags:
     - "team:infrastructure"
-    - "service:authelia"
   widgets: |
     [
       {
