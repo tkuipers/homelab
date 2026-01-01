@@ -66,51 +66,39 @@ spec:
                 ],
                 "precision": 0
               }
+            },
+            {
+              "definition": {
+                "title": "Active Goroutines",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "avg:authelia.go_goroutines{*}",
+                    "aggregator": "last"
+                  }
+                ],
+                "precision": 0
+              }
             }
           ]
         }
       },
       {
         "definition": {
-          "title": "🔑 Authentication Metrics",
+          "title": "🔑 Request Metrics",
           "type": "group",
           "layout_type": "ordered",
           "widgets": [
             {
               "definition": {
-                "title": "Authentication Attempts",
+                "title": "HTTP Requests by Status Code",
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "sum:authelia.authn{*} by {success}.as_count()",
+                    "q": "sum:authelia.authelia_request_duration.count{*} by {code}.as_count()",
                     "display_type": "bars",
                     "style": {
-                      "palette": "dog_classic",
-                      "line_type": "solid",
-                      "line_width": "normal"
-                    }
-                  }
-                ],
-                "yaxis": {
-                  "scale": "linear",
-                  "include_zero": true,
-                  "min": "auto",
-                  "max": "auto"
-                }
-              }
-            },
-            {
-              "definition": {
-                "title": "HTTP Requests by Status",
-                "type": "timeseries",
-                "requests": [
-                  {
-                    "q": "sum:authelia.request{*} by {code}.as_count()",
-                    "display_type": "bars",
-                    "style": {
-                      "palette": "semantic",
-                      "line_type": "solid",
-                      "line_width": "normal"
+                      "palette": "semantic"
                     }
                   }
                 ]
@@ -118,16 +106,14 @@ spec:
             },
             {
               "definition": {
-                "title": "Request Duration (p95)",
+                "title": "Avg Request Duration (seconds)",
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "avg:authelia.request_duration.95percentile{*}",
+                    "q": "avg:authelia.authelia_request_duration.sum{*}/avg:authelia.authelia_request_duration.count{*}",
                     "display_type": "line",
                     "style": {
-                      "palette": "cool",
-                      "line_type": "solid",
-                      "line_width": "normal"
+                      "palette": "cool"
                     }
                   }
                 ],
@@ -167,6 +153,18 @@ spec:
                 "requests": [
                   {
                     "q": "avg:kubernetes.memory.usage{kube_namespace:authelia,kube_deployment:authelia}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Heap Memory (Go)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:authelia.go_memstats_heap_inuse_bytes{*}",
                     "display_type": "line"
                   }
                 ]
