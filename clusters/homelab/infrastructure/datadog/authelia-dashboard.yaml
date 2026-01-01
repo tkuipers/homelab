@@ -124,7 +124,7 @@ spec:
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "diff(sum:authelia.authelia_authn_duration.count{success:true})",
+                    "q": "sum:authelia.authelia_authn_duration.count{success:true}.as_rate().rollup(sum, 60)",
                     "display_type": "bars",
                     "style": {
                       "palette": "green",
@@ -133,13 +133,13 @@ spec:
                     },
                     "metadata": [
                       {
-                        "expression": "diff(sum:authelia.authelia_authn_duration.count{success:true})",
+                        "expression": "sum:authelia.authelia_authn_duration.count{success:true}.as_rate().rollup(sum, 60)",
                         "alias_name": "Success"
                       }
                     ]
                   },
                   {
-                    "q": "diff(sum:authelia.authelia_authn_duration.count{success:false})",
+                    "q": "sum:authelia.authelia_authn_duration.count{success:false}.as_rate().rollup(sum, 60)",
                     "display_type": "bars",
                     "style": {
                       "palette": "warm",
@@ -148,7 +148,7 @@ spec:
                     },
                     "metadata": [
                       {
-                        "expression": "diff(sum:authelia.authelia_authn_duration.count{success:false})",
+                        "expression": "sum:authelia.authelia_authn_duration.count{success:false}.as_rate().rollup(sum, 60)",
                         "alias_name": "Failure"
                       }
                     ]
