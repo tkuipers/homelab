@@ -19,11 +19,11 @@ spec:
           "widgets": [
             {
               "definition": {
-                "title": "Pod Status",
+                "title": "Authelia Pod Status",
                 "type": "query_value",
                 "requests": [
                   {
-                    "q": "sum:kubernetes.pods.running{kube_namespace:authelia,app:authelia}",
+                    "q": "sum:kubernetes_state.pod.status_phase{kube_namespace:authelia,kube_deployment:authelia,pod_phase:running}",
                     "aggregator": "last",
                     "conditional_formats": [
                       {
@@ -44,11 +44,11 @@ spec:
             },
             {
               "definition": {
-                "title": "Redis Status",
+                "title": "Redis Pod Status",
                 "type": "query_value",
                 "requests": [
                   {
-                    "q": "sum:kubernetes.pods.running{kube_namespace:authelia,app:authelia-redis}",
+                    "q": "sum:kubernetes_state.pod.status_phase{kube_namespace:authelia,kube_deployment:authelia-redis,pod_phase:running}",
                     "aggregator": "last",
                     "conditional_formats": [
                       {
@@ -154,7 +154,7 @@ spec:
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:authelia,app:authelia}",
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:authelia,kube_deployment:authelia}",
                     "display_type": "line"
                   }
                 ]
@@ -166,7 +166,7 @@ spec:
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "avg:kubernetes.memory.usage{kube_namespace:authelia,app:authelia}",
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:authelia,kube_deployment:authelia}",
                     "display_type": "line"
                   }
                 ]
@@ -187,4 +187,3 @@ spec:
         }
       }
     ]
-
