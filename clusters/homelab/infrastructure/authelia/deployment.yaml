@@ -67,22 +67,11 @@ spec:
             secretKeyRef:
               name: authelia-secrets
               key: jwt-secret
-        # OIDC secrets
-        - name: AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: authelia-secrets
-              key: oidc-hmac-secret
-        - name: AUTHELIA_IDENTITY_PROVIDERS_OIDC_JWKS_0_KEY
-          valueFrom:
-            secretKeyRef:
-              name: authelia-secrets
-              key: oidc-issuer-private-key
-        - name: AUTHELIA_IDENTITY_PROVIDERS_OIDC_CLIENTS_0_CLIENT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: authelia-secrets
-              key: argocd-client-secret-hash
+        # OIDC secrets (using _FILE suffix pointing to mounted secret files)
+        - name: AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET_FILE
+          value: /app/secrets/oidc-hmac-secret
+        - name: AUTHELIA_IDENTITY_PROVIDERS_OIDC_ISSUER_PRIVATE_KEY_FILE
+          value: /app/secrets/oidc-issuer-private-key
         volumeMounts:
         - name: config
           mountPath: /config/configuration.yml
@@ -94,6 +83,9 @@ spec:
           readOnly: true
         - name: branding
           mountPath: /assets
+          readOnly: true
+        - name: oidc-secrets
+          mountPath: /app/secrets
           readOnly: true
         - name: data
           mountPath: /config
@@ -131,6 +123,14 @@ spec:
       - name: branding
         configMap:
           name: authelia-branding
+      - name: oidc-secrets
+        secret:
+          secretName: authelia-secrets
+          items:
+            - key: oidc-hmac-secret
+              path: oidc-hmac-secret
+            - key: oidc-issuer-private-key
+              path: oidc-issuer-private-key
       - name: data
         emptyDir: {}
 
