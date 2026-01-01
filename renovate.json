@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "kubernetes": {
+    "fileMatch": ["\\.yaml$"]
+  },
+  "packageRules": [
+    {
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["^ghcr.io/tkuipers/"],
+      "automerge": false,
+      "versioning": "regex:^(?<major>\\w+)$"
+    }
+  ],
+  "hostRules": [
+    {
+      "matchHost": "ghcr.io",
+      "hostType": "docker"
+    }
+  ]
+}
