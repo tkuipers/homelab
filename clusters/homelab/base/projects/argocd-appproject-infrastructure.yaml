@@ -55,6 +55,11 @@ spec:
         name: infrastructure-ingress-nginx-admission
       - kind: Secret
         name: k8s-tkuipers-ca-tls
+      # Authelia runtime resources (created by ExternalSecret/cert-manager)
+      - kind: Secret
+        name: authelia-secrets
+      - kind: Secret
+        name: authelia-tls
       # csi-driver-smb / nfs-provisioner runtime resources
       - kind: Secret
         name: ghcr-secret
