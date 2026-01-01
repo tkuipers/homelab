@@ -78,12 +78,12 @@ spec:
           "widgets": [
             {
               "definition": {
-                "title": "Authentication Attempts (Rate)",
+                "title": "Authentication Attempts",
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "sum:authelia_authentication_1fa_attempts_total{*}.as_rate()",
-                    "display_type": "line",
+                    "q": "sum:authelia.authn{*} by {success}.as_count()",
+                    "display_type": "bars",
                     "style": {
                       "palette": "dog_classic",
                       "line_type": "solid",
@@ -101,11 +101,28 @@ spec:
             },
             {
               "definition": {
-                "title": "Request Latency (p95)",
+                "title": "HTTP Requests by Status",
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "p95:authelia_request_duration_seconds.quantile{*}",
+                    "q": "sum:authelia.request{*} by {code}.as_count()",
+                    "display_type": "bars",
+                    "style": {
+                      "palette": "semantic",
+                      "line_type": "solid",
+                      "line_width": "normal"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Request Duration (p95)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:authelia.request_duration.95percentile{*}",
                     "display_type": "line",
                     "style": {
                       "palette": "cool",
