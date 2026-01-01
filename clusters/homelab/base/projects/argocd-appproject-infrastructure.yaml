@@ -60,6 +60,13 @@ spec:
         name: authelia-secrets
       - kind: Secret
         name: authelia-tls
+      - group: cert-manager.io
+        kind: Certificate
+        name: authelia-tls
+      - group: acme.cert-manager.io
+        kind: Order
+      - group: cert-manager.io
+        kind: CertificateRequest
       # csi-driver-smb / nfs-provisioner runtime resources
       - kind: Secret
         name: ghcr-secret
