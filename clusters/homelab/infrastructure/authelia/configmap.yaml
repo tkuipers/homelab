@@ -12,6 +12,10 @@ data:
     server:
       address: tcp://0.0.0.0:9091
       asset_path: /assets
+      endpoints:
+        authz:
+          auth-request:
+            implementation: AuthRequest
       headers:
         csp_template: ""
       buffers:
@@ -92,7 +96,12 @@ data:
             - cluster_pods
             - cluster_services
           policy: bypass
-        # Require 2FA for all protected services
+        # Jellyfin and ArgoCD - 1FA only (for client compatibility)
+        - domain: "jellyfin.tkuipers.ca"
+          policy: one_factor
+        - domain: "argo.tkuipers.ca"
+          policy: one_factor
+        # Require 2FA for all other protected services
         - domain: "*.tkuipers.ca"
           policy: two_factor
     
