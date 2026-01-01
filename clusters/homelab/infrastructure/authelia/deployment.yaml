@@ -30,13 +30,17 @@ spec:
                 "prometheus_url": "http://%%host%%:9959/metrics",
                 "namespace": "authelia",
                 "metrics": [
-                  {"authelia_authn": "authn"},
-                  {"authelia_authn_duration": "authn_duration"},
-                  {"authelia_authz": "authz"},
-                  {"authelia_request": "request"},
-                  {"authelia_request_duration": "request_duration"}
+                  "authelia_authn",
+                  "authelia_authn_duration",
+                  "authelia_authz",
+                  "authelia_request",
+                  "authelia_request_duration"
                 ],
-                "send_monotonic_counter": true
+                "type_overrides": {
+                  "authelia_authn": "counter",
+                  "authelia_authz": "counter",
+                  "authelia_request": "counter"
+                }
               }]
             }
           }
