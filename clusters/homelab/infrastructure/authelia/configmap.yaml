@@ -76,7 +76,22 @@ data:
     
     access_control:
       default_policy: deny
+      networks:
+        - name: cluster_pods
+          networks:
+            - 10.244.0.0/16
+        - name: cluster_services
+          networks:
+            - 10.96.0.0/12
       rules:
+        # Bypass auth for API paths from cluster networks (inter-service communication)
+        - domain: "*.tkuipers.ca"
+          resources:
+            - "^/api.*"
+          networks:
+            - cluster_pods
+            - cluster_services
+          policy: bypass
         # Allow all authenticated users to access protected services
         - domain: "*.tkuipers.ca"
           policy: one_factor

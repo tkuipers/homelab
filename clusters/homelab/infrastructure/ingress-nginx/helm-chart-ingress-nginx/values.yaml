@@ -26,8 +26,6 @@ ingress-nginx:
     # Controller config
     config:
       strict-validate-path-type: "false"
-      # Enable snippet annotations for auth bypass
-      allow-snippet-annotations: "true"
 
     # Resources
     resources:
