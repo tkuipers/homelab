@@ -146,6 +146,7 @@ data:
         clients:
           - client_id: 'argocd'
             client_name: 'Argo CD'
+            client_secret: '$argon2id$v=19$m=65536,t=3,p=4$i7GRBax3wAnDtJOoMQJLSw$AjTHdZXP5ULCHuLvFzKEK4Ct9o7oa34nNrSBirlY3+g'
             public: false
             authorization_policy: 'one_factor'
             require_pkce: false
