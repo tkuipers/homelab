@@ -13,6 +13,14 @@ spec:
     repoURL: ssh://git@github.com/tkuipers/homelab.git
     targetRevision: main
     path: clusters/homelab/infrastructure/authelia
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: authelia-secrets
+      jsonPointers:
+        - /data
+        - /metadata/labels
+        - /metadata/annotations
   destination:
     server: https://kubernetes.default.svc
     namespace: authelia
