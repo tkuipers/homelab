@@ -103,7 +103,7 @@ data:
           policy: one_factor
         # Require 2FA for all other protected services
         - domain: "*.tkuipers.ca"
-          policy: one_factor
+          policy: two_factor
     
     session:
       cookies:
