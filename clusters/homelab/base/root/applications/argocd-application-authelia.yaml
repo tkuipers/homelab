@@ -21,6 +21,12 @@ spec:
         - /data
         - /metadata/labels
         - /metadata/annotations
+    - group: external-secrets.io
+      kind: ExternalSecret
+      jqPathExpressions:
+        - .spec.data[].remoteRef.conversionStrategy
+        - .spec.data[].remoteRef.decodingStrategy
+        - .spec.data[].remoteRef.metadataPolicy
   destination:
     server: https://kubernetes.default.svc
     namespace: authelia
