@@ -85,7 +85,46 @@ spec:
       },
       {
         "definition": {
-          "title": "🔑 Request Metrics",
+          "title": "🔑 Authentication Metrics",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Login Attempts (Success vs Failure)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "sum:authelia.authelia_authn_duration.count{*} by {success}.as_count()",
+                    "display_type": "bars",
+                    "style": {
+                      "palette": "semantic"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Avg Auth Duration (seconds)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:authelia.authelia_authn_duration.sum{*}/avg:authelia.authelia_authn_duration.count{*}",
+                    "display_type": "line",
+                    "style": {
+                      "palette": "cool"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📊 Request Metrics",
           "type": "group",
           "layout_type": "ordered",
           "widgets": [
