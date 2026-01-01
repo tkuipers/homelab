@@ -76,6 +76,9 @@ spec:
           mountPath: /config/users_database.yml
           subPath: users_database.yml
           readOnly: true
+        - name: branding
+          mountPath: /assets
+          readOnly: true
         - name: data
           mountPath: /config
         resources:
@@ -109,6 +112,9 @@ spec:
           items:
             - key: users_database.yml
               path: users_database.yml
+      - name: branding
+        configMap:
+          name: authelia-branding
       - name: data
         emptyDir: {}
 

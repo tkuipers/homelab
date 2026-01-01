@@ -94,16 +94,6 @@ spec:
           value: "1000"
         - name: TZ
           value: "America/Los_Angeles"
-        - name: USER
-          valueFrom:
-            secretKeyRef:
-              name: transmission-credentials
-              key: username
-        - name: PASS
-          valueFrom:
-            secretKeyRef:
-              name: transmission-credentials
-              key: password
         - name: PEERPORT
           valueFrom:
             secretKeyRef:
