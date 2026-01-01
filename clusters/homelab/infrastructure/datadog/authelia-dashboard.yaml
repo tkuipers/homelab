@@ -103,10 +103,25 @@ spec:
                     ],
                     "queries": [
                       {
-                        "data_source": "metrics",
+                        "data_source": "logs",
                         "name": "query1",
-                        "query": "max:authelia.authelia_authn_duration.count{*} by {success}",
-                        "aggregator": "last"
+                        "search": {
+                          "query": "source:authelia @method:1FA"
+                        },
+                        "indexes": ["*"],
+                        "group_by": [
+                          {
+                            "facet": "@authenticationResult",
+                            "limit": 10,
+                            "sort": {
+                              "order": "desc",
+                              "aggregation": "count"
+                            }
+                          }
+                        ],
+                        "compute": {
+                          "aggregation": "count"
+                        }
                       }
                     ]
                   }
@@ -124,49 +139,50 @@ spec:
                 "type": "timeseries",
                 "requests": [
                   {
-                    "q": "sum:authelia.authelia_authn_duration.count{success:true}.as_rate().rollup(sum, 60)",
-                    "display_type": "bars",
-                    "style": {
-                      "palette": "green",
-                      "line_type": "solid",
-                      "line_width": "normal"
-                    },
-                    "metadata": [
+                    "response_format": "timeseries",
+                    "queries": [
                       {
-                        "expression": "sum:authelia.authelia_authn_duration.count{success:true}.as_rate().rollup(sum, 60)",
-                        "alias_name": "Success"
-                      }
-                    ]
-                  },
-                  {
-                    "q": "sum:authelia.authelia_authn_duration.count{success:false}.as_rate().rollup(sum, 60)",
-                    "display_type": "bars",
-                    "style": {
-                      "palette": "warm",
-                      "line_type": "solid",
-                      "line_width": "normal"
-                    },
-                    "metadata": [
+                        "data_source": "logs",
+                        "name": "success",
+                        "search": {
+                          "query": "source:authelia @method:1FA @authenticationResult:successful"
+                        },
+                        "indexes": ["*"],
+                        "group_by": [],
+                        "compute": {
+                          "aggregation": "count"
+                        }
+                      },
                       {
-                        "expression": "sum:authelia.authelia_authn_duration.count{success:false}.as_rate().rollup(sum, 60)",
-                        "alias_name": "Failure"
+                        "data_source": "logs",
+                        "name": "failure",
+                        "search": {
+                          "query": "source:authelia @method:1FA @authenticationResult:failure"
+                        },
+                        "indexes": ["*"],
+                        "group_by": [],
+                        "compute": {
+                          "aggregation": "count"
+                        }
                       }
-                    ]
-                  }
-                ]
-              }
-            },
-            {
-              "definition": {
-                "title": "Avg Auth Duration (seconds)",
-                "type": "timeseries",
-                "requests": [
-                  {
-                    "q": "avg:authelia.authelia_authn_duration.sum{*}/avg:authelia.authelia_authn_duration.count{*}",
-                    "display_type": "line",
-                    "style": {
-                      "palette": "cool"
-                    }
+                    ],
+                    "formulas": [
+                      {
+                        "formula": "success",
+                        "alias": "Success",
+                        "style": {
+                          "palette": "green"
+                        }
+                      },
+                      {
+                        "formula": "failure",
+                        "alias": "Failure",
+                        "style": {
+                          "palette": "warm"
+                        }
+                      }
+                    ],
+                    "display_type": "bars"
                   }
                 ]
               }
