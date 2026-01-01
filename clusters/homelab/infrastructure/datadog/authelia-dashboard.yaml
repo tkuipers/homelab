@@ -91,7 +91,36 @@ spec:
           "widgets": [
             {
               "definition": {
-                "title": "Login Attempts (Success vs Failure)",
+                "title": "Login Success Rate",
+                "type": "sunburst",
+                "requests": [
+                  {
+                    "response_format": "scalar",
+                    "formulas": [
+                      {
+                        "formula": "query1"
+                      }
+                    ],
+                    "queries": [
+                      {
+                        "data_source": "metrics",
+                        "name": "query1",
+                        "query": "sum:authelia.authelia_authn_duration.count{*} by {success}.as_count()",
+                        "aggregator": "sum"
+                      }
+                    ]
+                  }
+                ],
+                "custom_links": [],
+                "legend": {
+                  "type": "inline"
+                },
+                "hide_total": false
+              }
+            },
+            {
+              "definition": {
+                "title": "Login Attempts Over Time",
                 "type": "timeseries",
                 "requests": [
                   {
