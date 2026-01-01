@@ -106,12 +106,12 @@ spec:
                         "data_source": "logs",
                         "name": "query1",
                         "search": {
-                          "query": "source:authelia @method:1FA"
+                          "query": "source:authelia 1FA authentication"
                         },
                         "indexes": ["*"],
                         "group_by": [
                           {
-                            "facet": "@authenticationResult",
+                            "facet": "status",
                             "limit": 10,
                             "sort": {
                               "order": "desc",
@@ -145,7 +145,7 @@ spec:
                         "data_source": "logs",
                         "name": "success",
                         "search": {
-                          "query": "source:authelia @method:1FA @authenticationResult:successful"
+                          "query": "source:authelia \"Successful 1FA authentication\""
                         },
                         "indexes": ["*"],
                         "group_by": [],
@@ -157,7 +157,7 @@ spec:
                         "data_source": "logs",
                         "name": "failure",
                         "search": {
-                          "query": "source:authelia @method:1FA @authenticationResult:failure"
+                          "query": "source:authelia \"Unsuccessful 1FA authentication\""
                         },
                         "indexes": ["*"],
                         "group_by": [],
