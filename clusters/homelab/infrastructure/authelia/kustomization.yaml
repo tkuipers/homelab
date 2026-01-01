@@ -6,6 +6,7 @@ resources:
   - redis.yaml
   - external-secret.yaml
   - configmap.yaml
+  - branding-configmap.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml

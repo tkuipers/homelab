@@ -11,7 +11,7 @@ data:
     
     server:
       address: tcp://0.0.0.0:9091
-      asset_path: ""
+      asset_path: /assets
       headers:
         csp_template: ""
       buffers:
@@ -51,7 +51,7 @@ data:
     
     webauthn:
       disable: false
-      display_name: Authelia
+      display_name: T. Kuipers Auth
       attestation_conveyance_preference: indirect
       timeout: 60s
       selection_criteria:

@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authelia-branding
+  namespace: authelia
+data:
+  # Custom CSS to match tkuipers.ca branding
+  dark.css: |
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap');
+    
+    :root {
+      /* Override Authelia's dark theme colors to match homepage */
+      --color-primary: #22d3ee !important;
+      --color-primary-light: #67e8f9 !important;
+      --color-primary-dark: #06b6d4 !important;
+      --color-background: #0a0a0b !important;
+      --color-surface: #141416 !important;
+    }
+    
+    body {
+      background: #0a0a0b !important;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34, 211, 238, 0.15), transparent),
+        radial-gradient(circle at 20% 80%, rgba(34, 211, 238, 0.05), transparent) !important;
+    }
+    
+    /* Main card styling */
+    .MuiPaper-root {
+      background: #141416 !important;
+      border: 1px solid #2a2a2e !important;
+      border-radius: 12px !important;
+    }
+    
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Syne', sans-serif !important;
+    }
+    
+    /* Monospace elements */
+    input, code, .MuiInputBase-input {
+      font-family: 'JetBrains Mono', monospace !important;
+    }
+    
+    /* Buttons */
+    .MuiButton-containedPrimary {
+      background: #22d3ee !important;
+      color: #0a0a0b !important;
+      font-family: 'JetBrains Mono', monospace !important;
+      text-transform: lowercase !important;
+      border-radius: 6px !important;
+    }
+    
+    .MuiButton-containedPrimary:hover {
+      background: #67e8f9 !important;
+    }
+    
+    /* Input fields */
+    .MuiOutlinedInput-root {
+      border-radius: 6px !important;
+    }
+    
+    .MuiOutlinedInput-notchedOutline {
+      border-color: #2a2a2e !important;
+    }
+    
+    .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+      border-color: #22d3ee !important;
+    }
+    
+    .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+      border-color: #22d3ee !important;
+    }
+    
+    /* Links */
+    a {
+      color: #22d3ee !important;
+    }
+    
+    a:hover {
+      color: #67e8f9 !important;
+    }
+    
+    /* Header/title area */
+    .MuiTypography-h5, .MuiTypography-h6 {
+      letter-spacing: -0.02em !important;
+    }
+
