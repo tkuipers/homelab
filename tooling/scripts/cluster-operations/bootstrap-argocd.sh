@@ -285,6 +285,35 @@ configure_repo() {
     log_success "ArgoCD repository configured"
 }
 
+# Deploy OIDC configuration for Authelia SSO
+deploy_oidc_config() {
+    log_info "Deploying ArgoCD OIDC configuration..."
+    
+    # Apply RBAC config
+    kubectl --kubeconfig="$KUBECONFIG" apply \
+        -f "$REPO_ROOT/clusters/homelab/base/argocd/argocd-configmap-argocd-rbac-cm.yaml"
+    
+    # Apply OIDC ExternalSecret (pulls client secret from 1Password)
+    kubectl --kubeconfig="$KUBECONFIG" apply \
+        -f "$REPO_ROOT/clusters/homelab/base/argocd/argocd-externalsecret-oidc.yaml"
+    
+    # Wait for the OIDC secret to sync
+    log_info "Waiting for OIDC ExternalSecret to sync..."
+    local timeout=30
+    while ! kubectl --kubeconfig="$KUBECONFIG" get secret argocd-secret -n "$ARGOCD_NAMESPACE" \
+        -o jsonpath='{.data.oidc\.authelia\.clientSecret}' 2>/dev/null | grep -q .; do
+        if [ $timeout -le 0 ]; then
+            log_warning "OIDC secret not yet synced - check ExternalSecret status"
+            kubectl --kubeconfig="$KUBECONFIG" get externalsecret argocd-oidc-secret -n "$ARGOCD_NAMESPACE" 2>/dev/null || true
+            break
+        fi
+        sleep 2
+        timeout=$((timeout - 2))
+    done
+    
+    log_success "ArgoCD OIDC configuration deployed"
+}
+
 # Install ArgoCD CLI
 install_argocd_cli() {
     if command_exists argocd; then
@@ -494,6 +523,7 @@ main() {
     deploy_ingress
     deploy_git_secret
     configure_repo
+    deploy_oidc_config
     
     # Deploy GitOps configuration
     deploy_projects
