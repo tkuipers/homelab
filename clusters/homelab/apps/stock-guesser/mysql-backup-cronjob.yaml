@@ -23,15 +23,18 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: backup
-              image: alpine:3.19
+              image: mysql:8.0
               command:
-                - /bin/sh
+                - /bin/bash
                 - -c
                 - |
-                  set -eu
+                  set -euo pipefail
                   
-                  # Install mysql-client and aws-cli
-                  apk add --no-cache mysql-client aws-cli > /dev/null
+                  # Install aws-cli (Oracle Linux 9)
+                  microdnf install -y unzip > /dev/null
+                  curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+                  unzip -q /tmp/awscliv2.zip -d /tmp
+                  /tmp/aws/install > /dev/null
                   
                   # Configure AWS
                   export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
