@@ -23,6 +23,7 @@ spec:
           nodeSelector:
             kubernetes.io/hostname: omen-worker1
           restartPolicy: Never
+          runtimeClassName: nvidia
           imagePullSecrets:
             - name: ghcr-secret
           containers:
@@ -71,6 +72,7 @@ spec:
                 limits:
                   memory: "8Gi"
                   cpu: "4000m"
+                  nvidia.com/gpu: 1
           volumes:
             - name: config
               configMap:
