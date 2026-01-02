@@ -26,7 +26,7 @@ spec:
           containers:
             - name: data-builder
               # renovate: datasource=docker
-              image: ghcr.io/tkuipers/stock-info:b49d3d5
+              image: ghcr.io/tkuipers/stock-info:834116b
               command:
                 - python
                 - TrainingDataBuilder.py
