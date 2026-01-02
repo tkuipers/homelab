@@ -29,7 +29,7 @@ spec:
           containers:
             - name: training
               # renovate: datasource=docker
-              image: ghcr.io/tkuipers/stock-info:4c96cd4
+              image: ghcr.io/tkuipers/stock-info:2b7a981
               command:
                 - python
                 - NetworkTrainer.py
@@ -60,6 +60,17 @@ spec:
                   value: /models/stock-guesser.keras
                 - name: TF_CPP_MIN_LOG_LEVEL
                   value: "2"
+                # Datadog APM
+                - name: DATADOG_ENABLED
+                  value: "true"
+                - name: DD_AGENT_HOST
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: status.hostIP
+                - name: DD_SERVICE
+                  value: "stock-guesser-training"
+                - name: DD_ENV
+                  value: "production"
               volumeMounts:
                 - name: config
                   mountPath: /config

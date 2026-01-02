@@ -12,3 +12,5 @@ resources:
   - storage-dashboard.yaml
   - mediacenter-dashboard.yaml
   - authelia-dashboard.yaml
+  - stock-guesser-monitors.yaml
+  - stock-guesser-dashboard.yaml
