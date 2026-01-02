@@ -10,6 +10,7 @@ resources:
   - mysql-backup-cronjob.yaml
   - training-config.yaml
   - training-cronjob.yaml
+  - data-builder-cronjob.yaml
   - app-deployment.yaml
   - app-service.yaml
   - ingress.yaml
