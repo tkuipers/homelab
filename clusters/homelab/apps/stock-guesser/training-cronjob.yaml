@@ -29,7 +29,7 @@ spec:
           containers:
             - name: training
               # renovate: datasource=docker
-              image: ghcr.io/tkuipers/stock-info:latest
+              image: ghcr.io/tkuipers/stock-info:4bf3c19
               command:
                 - python
                 - NetworkTrainer.py
