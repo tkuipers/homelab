@@ -9,11 +9,11 @@ data:
     logLevel: INFO
 
     training:
-      pop_size: 4
-      num_generations: 3
-      test_runs: 2
+      pop_size: 16
+      num_generations: 150
+      test_runs: 5
       max_layers: 100
-      max_batch: 32
+      max_batch: 64
 
     model:
       path: /models/stock-guesser.keras
