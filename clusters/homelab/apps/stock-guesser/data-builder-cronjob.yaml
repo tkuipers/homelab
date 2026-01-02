@@ -1,0 +1,73 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: stock-guesser-data-builder
+  namespace: stock-guesser
+  labels:
+    app: stock-guesser-data-builder
+spec:
+  schedule: "0 6 * * *"  # Daily at 6am UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: stock-guesser-data-builder
+          annotations:
+            ad.datadoghq.com/data-builder.logs: '[{"source":"python","service":"stock-guesser-data-builder"}]'
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: ghcr-secret
+          containers:
+            - name: data-builder
+              # renovate: datasource=docker
+              image: ghcr.io/tkuipers/stock-info:4bf3c19
+              command:
+                - python
+                - TrainingDataBuilder.py
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: database-url
+                - name: WATSON_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: watson-url
+                - name: WATSON_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: watson-key
+                - name: NEWSAPI_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: newsapi-key
+                - name: STOCKER_CONFIG_PATH
+                  value: /config/config.yaml
+                - name: TF_CPP_MIN_LOG_LEVEL
+                  value: "2"
+                - name: CUDA_VISIBLE_DEVICES
+                  value: ""
+              volumeMounts:
+                - name: config
+                  mountPath: /config
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "500m"
+          volumes:
+            - name: config
+              configMap:
+                name: stock-guesser-config
