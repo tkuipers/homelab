@@ -10,7 +10,7 @@ spec:
     app: stock-guesser-app
   ports:
     - port: 80
-      targetPort: 5000
+      targetPort: 8000
       protocol: TCP
       name: http
   type: ClusterIP
