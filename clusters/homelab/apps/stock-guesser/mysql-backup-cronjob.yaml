@@ -23,17 +23,15 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: backup
-              image: mysql:8.0
+              image: alpine:3.19
               command:
-                - /bin/bash
+                - /bin/sh
                 - -c
                 - |
-                  set -euo pipefail
+                  set -eu
                   
-                  # Install AWS CLI
-                  apt-get update -qq && apt-get install -qq -y curl unzip > /dev/null
-                  curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-                  unzip -qq awscliv2.zip && ./aws/install > /dev/null
+                  # Install mysql-client and aws-cli
+                  apk add --no-cache mysql-client aws-cli > /dev/null
                   
                   # Configure AWS
                   export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
@@ -46,9 +44,9 @@ spec:
                   
                   echo "Starting backup: ${BACKUP_FILE}"
                   
-                  # Create backup
+                  # Create backup (--no-tablespaces to avoid PROCESS privilege requirement)
                   mysqldump -h mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" \
-                    --single-transaction --routines --triggers \
+                    --single-transaction --routines --triggers --no-tablespaces \
                     "$MYSQL_DATABASE" | gzip > "/tmp/${BACKUP_FILE}"
                   
                   BACKUP_SIZE=$(du -h "/tmp/${BACKUP_FILE}" | cut -f1)
