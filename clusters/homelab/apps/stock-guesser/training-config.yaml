@@ -10,7 +10,7 @@ data:
 
     training:
       pop_size: 16
-      num_generations: 150
+      num_generations: 50
       test_runs: 5
       max_layers: 100
       max_batch: 64
