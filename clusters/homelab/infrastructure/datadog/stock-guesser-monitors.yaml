@@ -1,0 +1,134 @@
+# Monitor: Stock Guesser API pod health
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: stock-guesser-pod-health
+  namespace: datadog
+spec:
+  name: "[Homelab] Stock Guesser API Not Running"
+  type: query alert
+  query: "min(last_5m):sum:kubernetes.pods.running{kube_deployment:stock-guesser-app,kube_namespace:stock-guesser} < 1"
+  message: |
+    Stock Guesser API pod is down!
+    
+    The prediction service at stock-guesser.tkuipers.ca may be unreachable.
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:stock-guesser
+    - team:apps
+  options:
+    thresholds:
+      critical: "1"
+    notifyNoData: true
+    noDataTimeframe: 10
+    renotifyInterval: 60
+---
+# Monitor: Stock Guesser MySQL pod health
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: stock-guesser-mysql-health
+  namespace: datadog
+spec:
+  name: "[Homelab] Stock Guesser MySQL Not Running"
+  type: query alert
+  query: "min(last_5m):sum:kubernetes.pods.running{kube_deployment:mysql,kube_namespace:stock-guesser} < 1"
+  message: |
+    Stock Guesser MySQL database is down!
+    
+    The API and training jobs will fail without the database.
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:stock-guesser
+    - team:apps
+  options:
+    thresholds:
+      critical: "1"
+    notifyNoData: true
+    noDataTimeframe: 10
+    renotifyInterval: 60
+---
+# Monitor: Stock Guesser API high latency
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: stock-guesser-latency
+  namespace: datadog
+spec:
+  name: "[Homelab] Stock Guesser High Latency"
+  type: query alert
+  query: "avg(last_5m):avg:trace.fastapi.request.duration{service:stock-guesser,env:production} > 10"
+  message: |
+    Stock Guesser API response times are elevated!
+    
+    Average latency is above 10 seconds in the last 5 minutes.
+    This may indicate issues with Watson API, NewsAPI, or model inference.
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:stock-guesser
+    - team:apps
+  options:
+    thresholds:
+      critical: "10"
+      warning: "5"
+    notifyNoData: false
+---
+# Monitor: Stock Guesser API errors
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: stock-guesser-errors
+  namespace: datadog
+spec:
+  name: "[Homelab] Stock Guesser High Error Rate"
+  type: query alert
+  query: "sum(last_5m):sum:trace.fastapi.request.errors{service:stock-guesser,env:production}.as_count() / sum:trace.fastapi.request.hits{service:stock-guesser,env:production}.as_count() * 100 > 20"
+  message: |
+    Stock Guesser API is returning elevated errors!
+    
+    Error rate is above 20% in the last 5 minutes.
+    Check logs for details: https://app.datadoghq.com/logs?query=service%3Astock-guesser
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:stock-guesser
+    - team:apps
+  options:
+    thresholds:
+      critical: "20"
+      warning: "10"
+    notifyNoData: false
+---
+# Monitor: Training job failures
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogMonitor
+metadata:
+  name: stock-guesser-training-failures
+  namespace: datadog
+spec:
+  name: "[Homelab] Stock Guesser Training Job Failed"
+  type: query alert
+  query: "sum(last_1d):sum:kubernetes_state.job.failed{kube_namespace:stock-guesser,kube_cronjob:stock-guesser-training} > 0"
+  message: |
+    Stock Guesser training job has failed!
+    
+    The model may not be updated with latest data.
+    Check job logs: kubectl logs -n stock-guesser -l job-name=stock-guesser-training --tail=100
+    
+    @slack-homelab-alerts
+  tags:
+    - env:homelab
+    - service:stock-guesser
+    - team:apps
+  options:
+    thresholds:
+      critical: "0"
+    notifyNoData: false
+    renotifyInterval: 1440

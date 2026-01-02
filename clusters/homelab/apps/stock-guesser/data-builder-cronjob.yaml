@@ -26,7 +26,7 @@ spec:
           containers:
             - name: data-builder
               # renovate: datasource=docker
-              image: ghcr.io/tkuipers/stock-info:4c96cd4
+              image: ghcr.io/tkuipers/stock-info:2b7a981
               command:
                 - python
                 - TrainingDataBuilder.py
@@ -57,6 +57,17 @@ spec:
                   value: "2"
                 - name: CUDA_VISIBLE_DEVICES
                   value: ""
+                # Datadog APM
+                - name: DATADOG_ENABLED
+                  value: "true"
+                - name: DD_AGENT_HOST
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: status.hostIP
+                - name: DD_SERVICE
+                  value: "stock-guesser-data-builder"
+                - name: DD_ENV
+                  value: "production"
               volumeMounts:
                 - name: config
                   mountPath: /config

@@ -1,0 +1,290 @@
+apiVersion: datadoghq.com/v1alpha1
+kind: DatadogDashboard
+metadata:
+  name: stock-guesser-dashboard
+  namespace: datadog
+spec:
+  title: "📈 Stock Guesser Dashboard"
+  description: "Stock prediction service monitoring"
+  layoutType: ordered
+  tags:
+    - "team:apps"
+  widgets: |
+    [
+      {
+        "definition": {
+          "title": "🏥 Service Health",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "API Pod Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes_state.pod.status_phase{kube_namespace:stock-guesser,kube_deployment:stock-guesser-app,pod_phase:running}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">=", "value": 1, "palette": "white_on_green"},
+                      {"comparator": "<", "value": 1, "palette": "white_on_red"}
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "MySQL Pod Status",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:kubernetes_state.pod.status_phase{kube_namespace:stock-guesser,kube_deployment:mysql,pod_phase:running}",
+                    "aggregator": "last",
+                    "conditional_formats": [
+                      {"comparator": ">=", "value": 1, "palette": "white_on_green"},
+                      {"comparator": "<", "value": 1, "palette": "white_on_red"}
+                    ]
+                  }
+                ],
+                "precision": 0
+              }
+            },
+            {
+              "definition": {
+                "title": "Uptime",
+                "type": "uptime",
+                "monitor_ids": [],
+                "group": "",
+                "slo_id": "",
+                "show_error_budget": false
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📊 API Metrics",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Request Rate",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "sum:trace.fastapi.request.hits{service:stock-guesser,env:production}.as_rate()",
+                    "display_type": "bars",
+                    "style": {"palette": "dog_classic"}
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Response Time (p50, p95, p99)",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:trace.fastapi.request.duration.by.resource_service{service:stock-guesser,env:production}",
+                    "display_type": "line",
+                    "style": {"palette": "cool"},
+                    "metadata": [{"expression": "avg:trace.fastapi.request.duration.by.resource_service{service:stock-guesser,env:production}", "alias_name": "p50"}]
+                  },
+                  {
+                    "q": "p95:trace.fastapi.request.duration.by.resource_service{service:stock-guesser,env:production}",
+                    "display_type": "line",
+                    "style": {"palette": "warm"},
+                    "metadata": [{"expression": "p95:trace.fastapi.request.duration.by.resource_service{service:stock-guesser,env:production}", "alias_name": "p95"}]
+                  },
+                  {
+                    "q": "p99:trace.fastapi.request.duration.by.resource_service{service:stock-guesser,env:production}",
+                    "display_type": "line",
+                    "style": {"palette": "orange"},
+                    "metadata": [{"expression": "p99:trace.fastapi.request.duration.by.resource_service{service:stock-guesser,env:production}", "alias_name": "p99"}]
+                  }
+                ],
+                "markers": [
+                  {"value": "y = 5", "display_type": "warning dashed"},
+                  {"value": "y = 10", "display_type": "error dashed"}
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Error Rate",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "sum:trace.fastapi.request.errors{service:stock-guesser,env:production}.as_count()",
+                    "display_type": "bars",
+                    "style": {"palette": "warm"}
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Requests by Endpoint",
+                "type": "toplist",
+                "requests": [
+                  {
+                    "q": "sum:trace.fastapi.request.hits{service:stock-guesser,env:production} by {resource_name}.as_count()"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🔗 External Dependencies",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Watson API Latency",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:trace.requests.request.duration{service:stock-guesser,env:production,http.url:*watson*}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "NewsAPI Latency",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:trace.requests.request.duration{service:stock-guesser,env:production,http.url:*newsapi*}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "MySQL Query Time",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:trace.sqlalchemy.query.duration{service:stock-guesser,env:production}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "💻 Resource Usage",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "API CPU Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:stock-guesser,kube_deployment:stock-guesser-app}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "API Memory Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:stock-guesser,kube_deployment:stock-guesser-app}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "MySQL CPU Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.cpu.usage.total{kube_namespace:stock-guesser,kube_deployment:mysql}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "MySQL Memory Usage",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:kubernetes.memory.usage{kube_namespace:stock-guesser,kube_deployment:mysql}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "🤖 ML Model Inference",
+          "type": "group",
+          "layout_type": "ordered",
+          "widgets": [
+            {
+              "definition": {
+                "title": "Model Prediction Time",
+                "type": "timeseries",
+                "requests": [
+                  {
+                    "q": "avg:trace.tensorflow.predict.duration{service:stock-guesser,env:production}",
+                    "display_type": "line"
+                  }
+                ]
+              }
+            },
+            {
+              "definition": {
+                "title": "Predictions Made",
+                "type": "query_value",
+                "requests": [
+                  {
+                    "q": "sum:trace.fastapi.request.hits{service:stock-guesser,env:production,resource_name:get_/stocks/{ticker}}.as_count()",
+                    "aggregator": "sum"
+                  }
+                ],
+                "precision": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "definition": {
+          "title": "📝 Recent Logs",
+          "type": "log_stream",
+          "query": "service:stock-guesser-app OR service:stock-guesser",
+          "columns": ["host", "service", "level", "message"],
+          "show_date_column": true,
+          "show_message_column": true,
+          "message_display": "expanded-md"
+        }
+      }
+    ]
