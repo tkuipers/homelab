@@ -71,3 +71,192 @@ data:
             - Tesla
           ticker: TSLA
           market: NASDAQ
+        # Tech
+        - name: Apple Inc.
+          alias:
+            - Apple
+          ticker: AAPL
+          market: NASDAQ
+        - name: Microsoft Corporation
+          alias:
+            - Microsoft
+          ticker: MSFT
+          market: NASDAQ
+        - name: Amazon.com, Inc.
+          alias:
+            - Amazon
+          ticker: AMZN
+          market: NASDAQ
+        - name: Meta Platforms, Inc.
+          alias:
+            - Meta
+            - Facebook
+          ticker: META
+          market: NASDAQ
+        - name: Advanced Micro Devices, Inc.
+          alias:
+            - AMD
+          ticker: AMD
+          market: NASDAQ
+        - name: Intel Corporation
+          alias:
+            - Intel
+          ticker: INTC
+          market: NASDAQ
+        - name: Palantir Technologies Inc.
+          alias:
+            - Palantir
+          ticker: PLTR
+          market: NYSE
+        - name: CrowdStrike Holdings, Inc.
+          alias:
+            - CrowdStrike
+          ticker: CRWD
+          market: NASDAQ
+        - name: Cloudflare, Inc.
+          alias:
+            - Cloudflare
+          ticker: NET
+          market: NYSE
+        - name: Snowflake Inc.
+          alias:
+            - Snowflake
+          ticker: SNOW
+          market: NYSE
+        # Finance
+        - name: JPMorgan Chase & Co.
+          alias:
+            - JPMorgan
+            - Chase
+          ticker: JPM
+          market: NYSE
+        - name: Goldman Sachs Group, Inc.
+          alias:
+            - Goldman Sachs
+            - Goldman
+          ticker: GS
+          market: NYSE
+        - name: Visa Inc.
+          alias:
+            - Visa
+          ticker: V
+          market: NYSE
+        - name: Mastercard Incorporated
+          alias:
+            - Mastercard
+          ticker: MA
+          market: NYSE
+        - name: PayPal Holdings, Inc.
+          alias:
+            - PayPal
+          ticker: PYPL
+          market: NASDAQ
+        - name: Coinbase Global, Inc.
+          alias:
+            - Coinbase
+          ticker: COIN
+          market: NASDAQ
+        - name: Block, Inc.
+          alias:
+            - Block
+            - Square
+          ticker: XYZ
+          market: NYSE
+        # Energy
+        - name: Exxon Mobil Corporation
+          alias:
+            - Exxon
+            - ExxonMobil
+          ticker: XOM
+          market: NYSE
+        - name: Chevron Corporation
+          alias:
+            - Chevron
+          ticker: CVX
+          market: NYSE
+        # Healthcare
+        - name: Pfizer Inc.
+          alias:
+            - Pfizer
+          ticker: PFE
+          market: NYSE
+        - name: Johnson & Johnson
+          alias:
+            - Johnson & Johnson
+            - J&J
+          ticker: JNJ
+          market: NYSE
+        - name: UnitedHealth Group Incorporated
+          alias:
+            - UnitedHealth
+          ticker: UNH
+          market: NYSE
+        # Retail
+        - name: Walmart Inc.
+          alias:
+            - Walmart
+          ticker: WMT
+          market: NYSE
+        - name: Costco Wholesale Corporation
+          alias:
+            - Costco
+          ticker: COST
+          market: NASDAQ
+        - name: The Home Depot, Inc.
+          alias:
+            - Home Depot
+          ticker: HD
+          market: NYSE
+        # Entertainment
+        - name: The Walt Disney Company
+          alias:
+            - Disney
+          ticker: DIS
+          market: NYSE
+        - name: Netflix, Inc.
+          alias:
+            - Netflix
+          ticker: NFLX
+          market: NASDAQ
+        # Defense
+        - name: Lockheed Martin Corporation
+          alias:
+            - Lockheed Martin
+            - Lockheed
+          ticker: LMT
+          market: NYSE
+        - name: RTX Corporation
+          alias:
+            - RTX
+            - Raytheon
+          ticker: RTX
+          market: NYSE
+        # Consumer
+        - name: The Coca-Cola Company
+          alias:
+            - Coca-Cola
+            - Coke
+          ticker: KO
+          market: NYSE
+        - name: McDonald's Corporation
+          alias:
+            - McDonald's
+            - McDonalds
+          ticker: MCD
+          market: NYSE
+        - name: Starbucks Corporation
+          alias:
+            - Starbucks
+          ticker: SBUX
+          market: NASDAQ
+        - name: NIKE, Inc.
+          alias:
+            - Nike
+          ticker: NKE
+          market: NYSE
+        # Travel
+        - name: Airbnb, Inc.
+          alias:
+            - Airbnb
+          ticker: ABNB
+          market: NASDAQ
