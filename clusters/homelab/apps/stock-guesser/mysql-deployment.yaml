@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: stock-guesser
+  labels:
+    app: stock-guesser-mysql
+    tags.datadoghq.com/env: homelab
+    tags.datadoghq.com/service: stock-guesser-mysql
+    tags.datadoghq.com/version: "8.0"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: stock-guesser-mysql
+  template:
+    metadata:
+      labels:
+        app: stock-guesser-mysql
+        tags.datadoghq.com/env: homelab
+        tags.datadoghq.com/service: stock-guesser-mysql
+        tags.datadoghq.com/version: "8.0"
+      annotations:
+        ad.datadoghq.com/mysql.logs: '[{"source":"mysql","service":"stock-guesser-mysql"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stock-guesser-secret
+                  key: mysql-root-password
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: stock-guesser-secret
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stock-guesser-secret
+                  key: mysql-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: stock-guesser-secret
+                  key: mysql-database
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - -h
+                - localhost
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - -h
+                - localhost
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+      volumes:
+        - name: mysql-data
+          hostPath:
+            path: /var/persist/stock-guesser-mysql
+            type: DirectoryOrCreate
