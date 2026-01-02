@@ -12,6 +12,7 @@ resources:
   - argocd-application-aws-ip-updater.yaml
   - argocd-application-datadog.yaml
   - argocd-application-authelia.yaml
+  - argocd-application-nvidia-device-plugin.yaml
   # Apps
   - argocd-application-homepage.yaml
   - argocd-application-mediacenter.yaml
