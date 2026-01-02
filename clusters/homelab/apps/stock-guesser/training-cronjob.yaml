@@ -58,8 +58,19 @@ spec:
                   value: /config/config.yaml
                 - name: MODEL_PATH
                   value: /models/stock-guesser.keras
+                # TensorFlow/CUDA logging suppression
                 - name: TF_CPP_MIN_LOG_LEVEL
-                  value: "2"
+                  value: "3"
+                - name: ABSL_MIN_LOG_LEVEL
+                  value: "3"
+                - name: TF_FORCE_GPU_ALLOW_GROWTH
+                  value: "true"
+                - name: TF_ENABLE_ONEDNN_OPTS
+                  value: "0"
+                - name: TF_AUTOGRAPH_VERBOSITY
+                  value: "0"
+                - name: CUDA_MODULE_LOADING
+                  value: "LAZY"
                 # Datadog APM
                 - name: DATADOG_ENABLED
                   value: "true"
