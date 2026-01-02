@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stock-guesser
+  namespace: stock-guesser
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - stock-guesser.tkuipers.ca
+      secretName: stock-guesser-tls
+  rules:
+    - host: stock-guesser.tkuipers.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: stock-guesser-app
+                port:
+                  number: 80
