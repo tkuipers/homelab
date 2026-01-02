@@ -24,16 +24,27 @@ spec:
       containers:
         - name: nvidia-device-plugin
           image: nvcr.io/nvidia/k8s-device-plugin:v0.17.0
+          args:
+            - --device-discovery-strategy=nvml
+            - --fail-on-init-error=false
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
+            privileged: true
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: all
           volumeMounts:
             - name: device-plugin
               mountPath: /var/lib/kubelet/device-plugins
+            - name: nvidia-dev
+              mountPath: /dev
       volumes:
         - name: device-plugin
           hostPath:
             path: /var/lib/kubelet/device-plugins
+        - name: nvidia-dev
+          hostPath:
+            path: /dev
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
