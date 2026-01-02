@@ -6,3 +6,4 @@ resources:
   - mysql-credentials-external-secret.yaml
   - mysql-deployment.yaml
   - mysql-service.yaml
+  - mysql-backup-cronjob.yaml

@@ -1,0 +1,133 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mysql-backup
+  namespace: stock-guesser
+  labels:
+    app: stock-guesser-backup
+spec:
+  schedule: "0 3 * * *"  # Daily at 3 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: stock-guesser-backup
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: omen-worker1
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: mysql:8.0
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  
+                  # Install AWS CLI
+                  apt-get update -qq && apt-get install -qq -y curl unzip > /dev/null
+                  curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                  unzip -qq awscliv2.zip && ./aws/install > /dev/null
+                  
+                  # Configure AWS
+                  export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
+                  export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+                  export AWS_DEFAULT_REGION="$S3_REGION"
+                  
+                  # Generate backup filename
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                  BACKUP_FILE="stock-guesser-${TIMESTAMP}.sql.gz"
+                  
+                  echo "Starting backup: ${BACKUP_FILE}"
+                  
+                  # Create backup
+                  mysqldump -h mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" \
+                    --single-transaction --routines --triggers \
+                    "$MYSQL_DATABASE" | gzip > "/tmp/${BACKUP_FILE}"
+                  
+                  BACKUP_SIZE=$(du -h "/tmp/${BACKUP_FILE}" | cut -f1)
+                  echo "Backup created: ${BACKUP_SIZE}"
+                  
+                  # Determine which rotation buckets to use (GFS scheme)
+                  DAY_OF_WEEK=$(date +%u)    # 1=Monday, 7=Sunday
+                  DAY_OF_MONTH=$(date +%d)   # 01-31
+                  MONTH=$(date +%m)          # 01-12
+                  DAY_OF_YEAR=$(date +%j)    # 001-366
+                  
+                  S3_BASE="s3://${S3_BUCKET}/stock-guesser-mysql"
+                  
+                  # Always upload as daily
+                  echo "Uploading daily backup..."
+                  aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_BASE}/daily/${BACKUP_FILE}"
+                  
+                  # Sunday = weekly backup
+                  if [ "$DAY_OF_WEEK" -eq 7 ]; then
+                    echo "Uploading weekly backup (Sunday)..."
+                    aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_BASE}/weekly/${BACKUP_FILE}"
+                  fi
+                  
+                  # 1st of month = monthly backup
+                  if [ "$DAY_OF_MONTH" -eq "01" ]; then
+                    echo "Uploading monthly backup (1st of month)..."
+                    aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_BASE}/monthly/${BACKUP_FILE}"
+                  fi
+                  
+                  # Jan 1st = yearly backup
+                  if [ "$DAY_OF_YEAR" -eq "001" ]; then
+                    echo "Uploading yearly backup (Jan 1st)..."
+                    aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_BASE}/yearly/${BACKUP_FILE}"
+                  fi
+                  
+                  # Cleanup
+                  rm -f "/tmp/${BACKUP_FILE}"
+                  
+                  echo "Backup complete!"
+              env:
+                - name: MYSQL_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: mysql-user
+                - name: MYSQL_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: mysql-password
+                - name: MYSQL_DATABASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: mysql-database
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: aws-access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: aws-secret-access-key
+                - name: S3_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: s3-bucket
+                - name: S3_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: s3-region
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "500m"
