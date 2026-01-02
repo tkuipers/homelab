@@ -57,6 +57,8 @@ spec:
           volumeMounts:
             - name: mysql-data
               mountPath: /var/lib/mysql
+            - name: mysql-config
+              mountPath: /etc/mysql/conf.d
           resources:
             requests:
               memory: "256Mi"
@@ -89,3 +91,6 @@ spec:
           hostPath:
             path: /var/persist/stock-guesser-mysql
             type: DirectoryOrCreate
+        - name: mysql-config
+          configMap:
+            name: mysql-config
