@@ -149,6 +149,8 @@ data:
             client_secret: '$argon2id$v=19$m=65536,t=3,p=4$i7GRBax3wAnDtJOoMQJLSw$AjTHdZXP5ULCHuLvFzKEK4Ct9o7oa34nNrSBirlY3+g'
             public: false
             authorization_policy: 'one_factor'
+            consent_mode: 'pre-configured'
+            pre_configured_consent_duration: '30d'
             require_pkce: false
             redirect_uris:
               - 'https://argo.tkuipers.ca/auth/callback'
@@ -168,6 +170,8 @@ data:
             client_name: 'Argo CD (CLI)'
             public: true
             authorization_policy: 'one_factor'
+            consent_mode: 'pre-configured'
+            pre_configured_consent_duration: '30d'
             require_pkce: true
             pkce_challenge_method: 'S256'
             redirect_uris:
