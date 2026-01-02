@@ -4,6 +4,7 @@ resources:
   - namespace.yaml
   - ghcr-credentials-external-secret.yaml
   - mysql-credentials-external-secret.yaml
+  - mysql-config.yaml
   - mysql-deployment.yaml
   - mysql-service.yaml
   - mysql-backup-cronjob.yaml
