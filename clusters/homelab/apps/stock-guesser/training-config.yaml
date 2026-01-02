@@ -33,6 +33,10 @@ data:
             - bloomberg
             - reuters
             - the-wall-street-journal
+            - fortune
+            - the-verge
+            - ars-technica
+            - wired
 
     stocks:
       watch:
@@ -41,3 +45,30 @@ data:
             - Uber
           ticker: UBER
           market: NYSE
+        - name: Google
+          alias:
+            - Google
+            - Alphabet
+          ticker: GOOG
+          market: NASDAQ
+        - name: Ford Motor Co.
+          alias:
+            - Ford
+          ticker: F
+          market: NYSE
+        - name: Boeing
+          alias:
+            - Boeing
+          ticker: BA
+          market: NYSE
+        - name: NVIDIA
+          alias:
+            - NVIDIA
+            - Nvidia
+          ticker: NVDA
+          market: NASDAQ
+        - name: Tesla
+          alias:
+            - Tesla
+          ticker: TSLA
+          market: NASDAQ
