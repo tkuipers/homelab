@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stock-guesser-config
+  namespace: stock-guesser
+data:
+  config.yaml: |
+    appName: Stocker
+    logLevel: INFO
+
+    training:
+      pop_size: 4
+      num_generations: 3
+      test_runs: 2
+      max_layers: 100
+      max_batch: 32
+
+    model:
+      path: /models/stock-guesser.keras
+
+    tone:
+      ibm:
+        watson:
+          endpoint: /v1/analyze
+          params:
+            version: 2022-04-07
+
+    news:
+      source:
+        newsapi:
+          sources:
+            - business-insider
+            - bloomberg
+            - reuters
+            - the-wall-street-journal
+
+    stocks:
+      watch:
+        - name: Uber
+          alias:
+            - Uber
+          ticker: UBER
+          market: NYSE

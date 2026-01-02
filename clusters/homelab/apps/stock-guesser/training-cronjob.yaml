@@ -1,0 +1,93 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: stock-guesser-training
+  namespace: stock-guesser
+  labels:
+    app: stock-guesser-training
+spec:
+  schedule: "0 0 * * *"  # Daily at midnight
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: stock-guesser-training
+          annotations:
+            ad.datadoghq.com/training.logs: '[{"source":"python","service":"stock-guesser-training"}]'
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: omen-worker1
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: ghcr-secret
+          containers:
+            - name: training
+              # renovate: datasource=docker
+              image: ghcr.io/tkuipers/stock-info:latest
+              command:
+                - python
+                - NetworkTrainer.py
+              env:
+                - name: DATABASE_URL
+                  value: "mysql+mysqldb://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/$(MYSQL_DATABASE)"
+                - name: MYSQL_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: mysql-user
+                - name: MYSQL_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: mysql-password
+                - name: MYSQL_DATABASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: mysql-database
+                - name: WATSON_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: watson-url
+                - name: WATSON_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: watson-key
+                - name: NEWSAPI_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: stock-guesser-secret
+                      key: newsapi-key
+                - name: STOCKER_CONFIG_PATH
+                  value: /config/config.yaml
+                - name: MODEL_PATH
+                  value: /models/stock-guesser.keras
+                - name: TF_CPP_MIN_LOG_LEVEL
+                  value: "2"
+              volumeMounts:
+                - name: config
+                  mountPath: /config
+                - name: models
+                  mountPath: /models
+              resources:
+                requests:
+                  memory: "2Gi"
+                  cpu: "1000m"
+                limits:
+                  memory: "8Gi"
+                  cpu: "4000m"
+          volumes:
+            - name: config
+              configMap:
+                name: stock-guesser-config
+            - name: models
+              hostPath:
+                path: /var/persist/stock-guesser-models
+                type: DirectoryOrCreate

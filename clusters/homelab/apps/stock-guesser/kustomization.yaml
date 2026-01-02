@@ -8,3 +8,5 @@ resources:
   - mysql-deployment.yaml
   - mysql-service.yaml
   - mysql-backup-cronjob.yaml
+  - training-config.yaml
+  - training-cronjob.yaml
