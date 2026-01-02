@@ -78,10 +78,10 @@ spec:
                   mountPath: /models
               resources:
                 requests:
-                  memory: "2Gi"
+                  memory: "4Gi"
                   cpu: "1000m"
                 limits:
-                  memory: "8Gi"
+                  memory: "64Gi"
                   cpu: "4000m"
                   nvidia.com/gpu: 1
           volumes:
