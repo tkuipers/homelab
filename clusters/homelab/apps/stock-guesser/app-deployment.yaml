@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stock-guesser-app
+  namespace: stock-guesser
+  labels:
+    app: stock-guesser-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stock-guesser-app
+  template:
+    metadata:
+      labels:
+        app: stock-guesser-app
+      annotations:
+        ad.datadoghq.com/app.logs: '[{"source":"python","service":"stock-guesser-app"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: app
+          # renovate: datasource=docker
+          image: ghcr.io/tkuipers/stock-info:4bf3c19
+          command:
+            - python
+            - app.py
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stock-guesser-secret
+                  key: database-url
+            - name: WATSON_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stock-guesser-secret
+                  key: watson-url
+            - name: WATSON_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stock-guesser-secret
+                  key: watson-key
+            - name: NEWSAPI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stock-guesser-secret
+                  key: newsapi-key
+            - name: STOCKER_CONFIG_PATH
+              value: /config/config.yaml
+            - name: MODEL_PATH
+              value: /models/stock-guesser.keras
+            - name: TF_CPP_MIN_LOG_LEVEL
+              value: "2"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: models
+              mountPath: /models
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: config
+          configMap:
+            name: stock-guesser-config
+        - name: models
+          hostPath:
+            path: /var/persist/stock-guesser-models
+            type: DirectoryOrCreate
