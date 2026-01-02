@@ -29,6 +29,11 @@ get_current_item() {
         # Watson
         CURRENT_WATSON_URL=$(op_get_field "$ITEM_NAME" "watson-url")
         CURRENT_WATSON_KEY=$(op_get_field "$ITEM_NAME" "watson-key")
+        # AWS S3 Backup
+        CURRENT_AWS_ACCESS_KEY_ID=$(op_get_field "$ITEM_NAME" "aws-access-key-id")
+        CURRENT_AWS_SECRET_ACCESS_KEY=$(op_get_field "$ITEM_NAME" "aws-secret-access-key")
+        CURRENT_S3_BUCKET=$(op_get_field "$ITEM_NAME" "s3-bucket")
+        CURRENT_S3_REGION=$(op_get_field "$ITEM_NAME" "s3-region")
     else
         log_info "Item '$ITEM_NAME' does not exist - will create new item"
         ITEM_EXISTS=false
@@ -39,6 +44,10 @@ get_current_item() {
         CURRENT_NEWSAPI_KEY=""
         CURRENT_WATSON_URL=""
         CURRENT_WATSON_KEY=""
+        CURRENT_AWS_ACCESS_KEY_ID=""
+        CURRENT_AWS_SECRET_ACCESS_KEY=""
+        CURRENT_S3_BUCKET=""
+        CURRENT_S3_REGION=""
     fi
 }
 
@@ -99,6 +108,35 @@ collect_input() {
         log_error "Watson Key is required"
         exit 1
     fi
+    
+    echo
+    log_info "=== AWS S3 Backup Credentials ==="
+    log_info "Create an IAM user with S3 access for backup storage"
+    echo
+    
+    prompt_for_input "AWS Access Key ID" AWS_ACCESS_KEY_ID "$CURRENT_AWS_ACCESS_KEY_ID" true
+    if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+        log_error "AWS Access Key ID is required"
+        exit 1
+    fi
+    
+    prompt_for_input "AWS Secret Access Key" AWS_SECRET_ACCESS_KEY "$CURRENT_AWS_SECRET_ACCESS_KEY" true
+    if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+        log_error "AWS Secret Access Key is required"
+        exit 1
+    fi
+    
+    prompt_for_input "S3 Bucket Name" S3_BUCKET "$CURRENT_S3_BUCKET"
+    if [ -z "$S3_BUCKET" ]; then
+        log_error "S3 Bucket Name is required"
+        exit 1
+    fi
+    
+    prompt_for_input "S3 Region" S3_REGION "$CURRENT_S3_REGION"
+    if [ -z "$S3_REGION" ]; then
+        S3_REGION="us-east-1"
+        log_info "Using default region: us-east-1"
+    fi
 }
 
 # Create or update item
@@ -112,6 +150,10 @@ create_or_update_item() {
     echo "  NewsAPI Key: ****${NEWSAPI_KEY: -4}"
     echo "  Watson URL: $WATSON_URL"
     echo "  Watson Key: ****${WATSON_KEY: -4}"
+    echo "  AWS Access Key ID: ****${AWS_ACCESS_KEY_ID: -4}"
+    echo "  AWS Secret Access Key: ****${AWS_SECRET_ACCESS_KEY: -4}"
+    echo "  S3 Bucket: $S3_BUCKET"
+    echo "  S3 Region: $S3_REGION"
     echo
     
     if ! confirm_action "Proceed with credentials $([ "$ITEM_EXISTS" = "true" ] && echo "update" || echo "creation")?"; then
@@ -128,7 +170,11 @@ create_or_update_item() {
             "mysql-database[text]=$MYSQL_DATABASE" \
             "newsapi-key[password]=$NEWSAPI_KEY" \
             "watson-url[text]=$WATSON_URL" \
-            "watson-key[password]=$WATSON_KEY"
+            "watson-key[password]=$WATSON_KEY" \
+            "aws-access-key-id[password]=$AWS_ACCESS_KEY_ID" \
+            "aws-secret-access-key[password]=$AWS_SECRET_ACCESS_KEY" \
+            "s3-bucket[text]=$S3_BUCKET" \
+            "s3-region[text]=$S3_REGION"
         log_success "Item '$ITEM_NAME' updated successfully"
     else
         log_info "Creating new item..."
@@ -139,7 +185,11 @@ create_or_update_item() {
             "mysql-database[text]=$MYSQL_DATABASE" \
             "newsapi-key[password]=$NEWSAPI_KEY" \
             "watson-url[text]=$WATSON_URL" \
-            "watson-key[password]=$WATSON_KEY"
+            "watson-key[password]=$WATSON_KEY" \
+            "aws-access-key-id[password]=$AWS_ACCESS_KEY_ID" \
+            "aws-secret-access-key[password]=$AWS_SECRET_ACCESS_KEY" \
+            "s3-bucket[text]=$S3_BUCKET" \
+            "s3-region[text]=$S3_REGION"
         log_success "Item '$ITEM_NAME' created successfully"
     fi
 }
@@ -153,7 +203,13 @@ show_next_steps() {
     echo "1. Commit and push your changes to trigger ArgoCD deployment"
     echo "2. External Secrets Operator will automatically sync credentials"
     echo "3. MySQL will start with the configured credentials"
-    echo "4. The app will connect using DATABASE_URL"
+    echo "4. Daily backups will run at 3 AM to S3"
+    echo
+    log_info "S3 Lifecycle Policy (apply to bucket):"
+    echo "  - daily/*   -> Expire after 7 days"
+    echo "  - weekly/*  -> Expire after 30 days"
+    echo "  - monthly/* -> Expire after 365 days"
+    echo "  - yearly/*  -> No expiration"
     echo
     log_info "Service will be available at:"
     echo "  https://stock-guesser.tkuipers.ca"
