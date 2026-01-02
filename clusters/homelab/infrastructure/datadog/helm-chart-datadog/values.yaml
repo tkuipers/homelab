@@ -61,6 +61,13 @@ datadog:
     logs:
       enabled: true
       containerCollectAll: true
+      # Exclude noisy/irrelevant container logs
+      containerExcludeLogs: "name:kube-state-metrics name:kube-controller-manager name:agent"
+      # Exclude specific log patterns misclassified as errors
+      processingRules:
+        - type: exclude_at_match
+          name: exclude_connect_sync_heartbeats
+          pattern: "GET /heartbeat.*completed.*200"
 
     # Processes
     processAgent:

@@ -14,6 +14,17 @@ spec:
     metadata:
       labels:
         app: external-dns
+      annotations:
+        ad.datadoghq.com/external-dns.logs: |
+          [{
+            "source": "go",
+            "service": "external-dns",
+            "log_processing_rules": [{
+              "type": "attribute_extract",
+              "name": "extract_level",
+              "pattern": "level=(?P<level>\\w+)"
+            }]
+          }]
     spec:
       serviceAccountName: external-dns
       containers:

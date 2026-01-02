@@ -29,7 +29,7 @@ spec:
           containers:
             - name: training
               # renovate: datasource=docker
-              image: ghcr.io/tkuipers/stock-info:181bbd9
+              image: ghcr.io/tkuipers/stock-info:b49d3d5
               command:
                 - python
                 - NetworkTrainer.py
@@ -81,7 +81,7 @@ spec:
                   memory: "4Gi"
                   cpu: "1000m"
                 limits:
-                  memory: "64Gi"
+                  memory: "16Gi"
                   cpu: "4000m"
                   nvidia.com/gpu: 1
           volumes:
