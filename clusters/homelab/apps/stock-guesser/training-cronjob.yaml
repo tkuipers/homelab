@@ -34,22 +34,10 @@ spec:
                 - NetworkTrainer.py
               env:
                 - name: DATABASE_URL
-                  value: "mysql+mysqldb://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:3306/$(MYSQL_DATABASE)"
-                - name: MYSQL_USER
                   valueFrom:
                     secretKeyRef:
                       name: stock-guesser-secret
-                      key: mysql-user
-                - name: MYSQL_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: stock-guesser-secret
-                      key: mysql-password
-                - name: MYSQL_DATABASE
-                  valueFrom:
-                    secretKeyRef:
-                      name: stock-guesser-secret
-                      key: mysql-database
+                      key: database-url
                 - name: WATSON_URL
                   valueFrom:
                     secretKeyRef:
