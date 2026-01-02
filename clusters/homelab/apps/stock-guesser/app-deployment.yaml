@@ -24,7 +24,7 @@ spec:
       containers:
         - name: app
           # renovate: datasource=docker
-          image: ghcr.io/tkuipers/stock-info:4bf3c19
+          image: ghcr.io/tkuipers/stock-info:4c96cd4
           command:
             - uvicorn
             - stocker.rest:app
@@ -76,6 +76,18 @@ spec:
             limits:
               memory: "2Gi"
               cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
       volumes:
         - name: config
           configMap:
