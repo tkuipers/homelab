@@ -30,7 +30,6 @@ data:
         newsapi:
           sources:
             - business-insider
-            - bloomberg
             - reuters
             - the-wall-street-journal
             - the-verge
