@@ -540,7 +540,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: setup
-        image: python:3.11-slim
+        image: python:3.14-slim
         command:
         - python3
         - -u
