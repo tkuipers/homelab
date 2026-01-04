@@ -15,7 +15,9 @@
   "hostRules": [
     {
       "matchHost": "ghcr.io",
-      "hostType": "docker"
+      "hostType": "docker",
+      "username": "tkuipers",
+      "password": "{{ secrets.GHCR_TOKEN }}"
     }
   ]
 }
