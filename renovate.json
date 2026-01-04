@@ -19,5 +19,13 @@
         "/^ghcr.io/tkuipers//"
       ]
     }
+  ],
+  "hostRules": [
+    {
+      "matchHost": "ghcr.io",
+      "hostType": "docker",
+      "username": "tkuipers",
+      "password": "{{ secrets.GHCR_TOKEN }}"
+    }
   ]
 }
