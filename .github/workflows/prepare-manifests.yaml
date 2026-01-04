@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install yq
         run: |
@@ -40,7 +40,7 @@ jobs:
           echo "✅ Manifests prepared."
           
       - name: Upload Sidero Manifests Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: prepared-sidero-manifests
           path: ./.artifacts/sidero/ 
