@@ -38,8 +38,6 @@ spec:
         - name: data
           mountPath: /data
         env:
-        - name: DEBUG
-          value: "actual:*"
         - name: ACTUAL_OPENID_DISCOVERY_URL
           valueFrom:
             secretKeyRef:
