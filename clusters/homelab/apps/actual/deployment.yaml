@@ -30,10 +30,10 @@ spec:
       initContainers:
       - name: setup-config
         image: busybox
-        command: ['sh', '-c', 'cp /config-source/config.json /data/config.json']
+        command: ['sh', '-c', 'cp /config-source/config.json /app-config/config.json']
         volumeMounts:
-        - name: data
-          mountPath: /data
+        - name: app-config
+          mountPath: /app-config
         - name: config
           mountPath: /config-source
       containers:
@@ -45,6 +45,9 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
+        - name: app-config
+          mountPath: /app/config.json
+          subPath: config.json
         env:
         - name: ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB
           value: "20"
@@ -76,6 +79,8 @@ spec:
         hostPath:
           path: /var/persist/actual-data
           type: DirectoryOrCreate
+      - name: app-config
+        emptyDir: {}
       - name: config
         secret:
           secretName: actual-oidc-secret
