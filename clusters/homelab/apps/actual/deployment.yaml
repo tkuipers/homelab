@@ -36,6 +36,9 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
+        - name: config
+          mountPath: /data/config.json
+          subPath: config.json
         env:
         - name: ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB
           value: "20"
@@ -67,3 +70,6 @@ spec:
         hostPath:
           path: /var/persist/actual-data
           type: DirectoryOrCreate
+      - name: config
+        secret:
+          secretName: actual-oidc-secret
