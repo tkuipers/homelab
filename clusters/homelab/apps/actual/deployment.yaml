@@ -27,15 +27,6 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
-      initContainers:
-      - name: setup-config
-        image: busybox
-        command: ['sh', '-c', 'cp /config-source/config.json /app-config/config.json']
-        volumeMounts:
-        - name: app-config
-          mountPath: /app-config
-        - name: config
-          mountPath: /config-source
       containers:
       - name: actual
         image: ghcr.io/actualbudget/actual-server:latest
@@ -45,12 +36,29 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-        - name: app-config
-          mountPath: /app/config.json
-          subPath: config.json
         env:
         - name: DEBUG
           value: "actual:*"
+        - name: ACTUAL_OPENID_DISCOVERY_URL
+          valueFrom:
+            secretKeyRef:
+              name: actual-oidc-secret
+              key: discovery_url
+        - name: ACTUAL_OPENID_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: actual-oidc-secret
+              key: client_id
+        - name: ACTUAL_OPENID_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: actual-oidc-secret
+              key: client_secret
+        - name: ACTUAL_OPENID_SERVER_HOSTNAME
+          valueFrom:
+            secretKeyRef:
+              name: actual-oidc-secret
+              key: server_hostname
         - name: ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB
           value: "20"
         - name: ACTUAL_UPLOAD_SYNC_ENCRYPTED_FILE_SYNC_SIZE_LIMIT_MB
@@ -81,8 +89,6 @@ spec:
         hostPath:
           path: /var/persist/actual-data
           type: DirectoryOrCreate
-      - name: app-config
-        emptyDir: {}
       - name: config
         secret:
           secretName: actual-oidc-secret
