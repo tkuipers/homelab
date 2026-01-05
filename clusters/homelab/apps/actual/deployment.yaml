@@ -37,6 +37,8 @@ spec:
         - name: data
           mountPath: /data
         env:
+        - name: ACTUAL_PORT
+          value: "5006"
         - name: DEBUG
           value: "actual:*"
         - name: ACTUAL_OPENID_DISCOVERY_URL
