@@ -38,7 +38,7 @@ spec:
           mountPath: /config-source
       containers:
       - name: actual
-        image: ghcr.io/actualbudget/actual-server:24.12.0
+        image: ghcr.io/actualbudget/actual-server:latest
         ports:
         - containerPort: 5006
           name: http
@@ -49,6 +49,8 @@ spec:
           mountPath: /app/config.json
           subPath: config.json
         env:
+        - name: DEBUG
+          value: "actual:*"
         - name: ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB
           value: "20"
         - name: ACTUAL_UPLOAD_SYNC_ENCRYPTED_FILE_SYNC_SIZE_LIMIT_MB
