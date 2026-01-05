@@ -25,6 +25,7 @@ spec:
       annotations:
         ad.datadoghq.com/actual.logs: '[{"source":"actual","service":"actual"}]'
     spec:
+      enableServiceLinks: false
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
       containers:
@@ -37,8 +38,6 @@ spec:
         - name: data
           mountPath: /data
         env:
-        - name: ACTUAL_PORT
-          value: "5006"
         - name: DEBUG
           value: "actual:*"
         - name: ACTUAL_OPENID_DISCOVERY_URL
