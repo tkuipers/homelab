@@ -25,6 +25,8 @@ spec:
       annotations:
         ad.datadoghq.com/actual.logs: '[{"source":"actual","service":"actual"}]'
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
       containers:
       - name: actual
         image: ghcr.io/actualbudget/actual-server:24.12.0
@@ -62,5 +64,6 @@ spec:
           periodSeconds: 10
       volumes:
       - name: data
-        persistentVolumeClaim:
-          claimName: actual-data
+        hostPath:
+          path: /var/persist/actual-data
+          type: DirectoryOrCreate
