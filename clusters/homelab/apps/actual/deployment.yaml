@@ -27,22 +27,6 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
-      initContainers:
-      - name: setup-config
-        image: busybox
-        command: 
-        - sh
-        - -c
-        - |
-          cat > /data/config.json <<'EOF'
-          {
-            "loginMethod": "openid",
-            "allowedLoginMethods": ["openid"]
-          }
-          EOF
-        volumeMounts:
-        - name: data
-          mountPath: /data
       containers:
       - name: actual
         image: ghcr.io/actualbudget/actual-server:latest
