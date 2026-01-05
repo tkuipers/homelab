@@ -27,6 +27,15 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
+      initContainers:
+      - name: setup-config
+        image: busybox
+        command: ['sh', '-c', 'cp /config-source/config.json /data/config.json']
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: config
+          mountPath: /config-source
       containers:
       - name: actual
         image: ghcr.io/actualbudget/actual-server:24.12.0
@@ -36,9 +45,6 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-        - name: config
-          mountPath: /data/config.json
-          subPath: config.json
         env:
         - name: ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB
           value: "20"
