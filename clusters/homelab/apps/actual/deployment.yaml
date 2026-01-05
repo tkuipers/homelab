@@ -34,12 +34,10 @@ spec:
         - sh
         - -c
         - |
-          cat > /data/config.json <<EOF
+          cat > /data/config.json <<'EOF'
           {
-            "port": 5006,
-            "login": {
-              "method": "openid"
-            }
+            "loginMethod": "openid",
+            "allowedLoginMethods": ["openid"]
           }
           EOF
         volumeMounts:
