@@ -14,6 +14,7 @@ resources:
   - argocd-application-authelia.yaml
   - argocd-application-nvidia-device-plugin.yaml
   # Apps
+  - argocd-application-actual.yaml
   - argocd-application-homepage.yaml
   - argocd-application-mediacenter.yaml
   - argocd-application-stock-guesser.yaml
