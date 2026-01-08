@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: umami
+  namespace: umami
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/hostname: umami.tkuipers.ca
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - umami.tkuipers.ca
+    secretName: umami-tls
+  rules:
+  - host: umami.tkuipers.ca
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: umami
+            port:
+              number: 3000
+
