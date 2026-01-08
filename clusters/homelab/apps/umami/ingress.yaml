@@ -1,11 +1,45 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: umami
+  name: umami-public-api
+  namespace: umami
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - umami.tkuipers.ca
+    secretName: umami-tls
+  rules:
+  - host: umami.tkuipers.ca
+    http:
+      paths:
+      - path: /api/send
+        pathType: Prefix
+        backend:
+          service:
+            name: umami
+            port:
+              number: 3000
+      - path: /api/collect
+        pathType: Prefix
+        backend:
+          service:
+            name: umami
+            port:
+              number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: umami-admin
   namespace: umami
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     external-dns.alpha.kubernetes.io/hostname: umami.tkuipers.ca
+    nginx.ingress.kubernetes.io/auth-url: http://authelia.authelia.svc.cluster.local/api/authz/auth-request
+    nginx.ingress.kubernetes.io/auth-signin: https://auth.tkuipers.ca/?rd=https://$host$escaped_request_uri
 spec:
   ingressClassName: nginx
   tls:

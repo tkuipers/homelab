@@ -43,6 +43,8 @@ spec:
               key: app_secret
         - name: DISABLE_TELEMETRY
           value: "1"
+        - name: DISABLE_LOGIN
+          value: "1"
         resources:
           requests:
             memory: "128Mi"
