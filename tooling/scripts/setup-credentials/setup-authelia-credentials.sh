@@ -110,9 +110,9 @@ collect_input() {
     log_info "ArgoCD client secret: $ARGOCD_CLIENT_SECRET"
     
     echo
-    log_info "Generating Actual Budget OIDC client secret..."
-    ACTUAL_BUDGET_CLIENT_SECRET=$(generate_argocd_client_secret)
-    log_info "Actual Budget client secret: $ACTUAL_BUDGET_CLIENT_SECRET"
+    log_info "Generating Jellyseerr OIDC client secret..."
+    JELLYSEERR_CLIENT_SECRET=$(generate_argocd_client_secret)
+    log_info "Jellyseerr client secret: $JELLYSEERR_CLIENT_SECRET"
     
     echo
     log_info "Generating user password..."
@@ -134,9 +134,9 @@ collect_input() {
     ARGOCD_CLIENT_SECRET_HASH=$(hash_client_secret "$ARGOCD_CLIENT_SECRET")
     log_success "Generated ArgoCD client secret hash"
     
-    log_info "Hashing Actual Budget client secret..."
-    ACTUAL_BUDGET_CLIENT_SECRET_HASH=$(hash_client_secret "$ACTUAL_BUDGET_CLIENT_SECRET")
-    log_success "Generated Actual Budget client secret hash"
+    log_info "Hashing Jellyseerr client secret..."
+    JELLYSEERR_CLIENT_SECRET_HASH=$(hash_client_secret "$JELLYSEERR_CLIENT_SECRET")
+    log_success "Generated Jellyseerr client secret hash"
 }
 
 # Create or update item
@@ -149,7 +149,7 @@ create_or_update_item() {
     echo "  OIDC HMAC Secret: **** (generated)"
     echo "  OIDC Issuer Private Key: **** (RSA 4096)"
     echo "  ArgoCD Client Secret: $ARGOCD_CLIENT_SECRET"
-    echo "  Actual Budget Client Secret: $ACTUAL_BUDGET_CLIENT_SECRET"
+    echo "  Jellyseerr Client Secret: $JELLYSEERR_CLIENT_SECRET"
     echo "  User Password: $USER_PASSWORD"
     echo
     
@@ -174,8 +174,8 @@ create_or_update_item() {
             "oidc_issuer_private_key[password]=$OIDC_ISSUER_PRIVATE_KEY" \
             "argocd_client_secret[password]=$ARGOCD_CLIENT_SECRET" \
             "argocd_client_secret_hash[password]=$ARGOCD_CLIENT_SECRET_HASH" \
-            "actual_budget_client_secret[password]=$ACTUAL_BUDGET_CLIENT_SECRET" \
-            "actual_budget_client_secret_hash[password]=$ACTUAL_BUDGET_CLIENT_SECRET_HASH" \
+            "jellyseerr_client_secret[password]=$JELLYSEERR_CLIENT_SECRET" \
+            "jellyseerr_client_secret_hash[password]=$JELLYSEERR_CLIENT_SECRET_HASH" \
             "user_password_hash[password]=$USER_PASSWORD_HASH"
         
         log_success "Item '$ITEM_NAME' updated successfully"
@@ -195,8 +195,8 @@ create_or_update_item() {
             "oidc_issuer_private_key[password]=$OIDC_ISSUER_PRIVATE_KEY" \
             "argocd_client_secret[password]=$ARGOCD_CLIENT_SECRET" \
             "argocd_client_secret_hash[password]=$ARGOCD_CLIENT_SECRET_HASH" \
-            "actual_budget_client_secret[password]=$ACTUAL_BUDGET_CLIENT_SECRET" \
-            "actual_budget_client_secret_hash[password]=$ACTUAL_BUDGET_CLIENT_SECRET_HASH" \
+            "jellyseerr_client_secret[password]=$JELLYSEERR_CLIENT_SECRET" \
+            "jellyseerr_client_secret_hash[password]=$JELLYSEERR_CLIENT_SECRET_HASH" \
             "user_password_hash[password]=$USER_PASSWORD_HASH"
         
         log_success "Item '$ITEM_NAME' created successfully"
@@ -212,31 +212,36 @@ show_next_steps() {
     echo "  User: tkuipers"
     echo "  Password: $USER_PASSWORD"
     echo "  ArgoCD Client Secret: $ARGOCD_CLIENT_SECRET"
-    echo "  Actual Budget Client Secret: $ACTUAL_BUDGET_CLIENT_SECRET"
+    echo "  Jellyseerr Client Secret: $JELLYSEERR_CLIENT_SECRET"
     echo
     log_info "CRITICAL: Update Authelia ConfigMap with hashed secrets:"
     echo
     echo "1. ArgoCD client_secret hash (should already be set):"
     echo "   $ARGOCD_CLIENT_SECRET_HASH"
     echo
-    echo "2. Actual Budget client_secret hash (NEW - must be added):"
-    echo "   $ACTUAL_BUDGET_CLIENT_SECRET_HASH"
+    echo "2. Jellyseerr client_secret hash:"
+    echo "   $JELLYSEERR_CLIENT_SECRET_HASH"
     echo
     log_info "Next steps:"
     echo "1. Update clusters/homelab/infrastructure/authelia/configmap.yaml"
-    echo "   - Find 'actual-budget' client"
-    echo "   - Replace placeholder with: $ACTUAL_BUDGET_CLIENT_SECRET_HASH"
-    echo "2. Commit and push the Authelia configmap"
-    echo "3. External Secrets Operator will automatically sync credentials to Kubernetes"
-    echo "4. Deploy/Sync Authelia via ArgoCD"
-    echo "5. Deploy Actual Budget via ArgoCD"
-    echo "6. Access Authelia at: https://auth.tkuipers.ca"
-    echo "7. Login with username 'tkuipers' and the password above"
-    echo "8. Access Actual Budget at: https://budget.tkuipers.ca"
+    echo "   - Replace PLACEHOLDER_GENERATE_NEW_SECRET with the Jellyseerr hash above"
+    echo "2. Commit and push changes"
+    echo "3. External Secrets Operator will sync credentials to Kubernetes"
+    echo "4. Deploy/Sync Authelia and mediacenter apps via ArgoCD"
+    echo
+    log_info "Jellyseerr OIDC setup (after deployment):"
+    echo "1. Access https://mediarequests.tkuipers.ca"
+    echo "2. Complete initial Jellyfin connection setup"
+    echo "3. Go to Settings -> Users -> Enable 'OpenID Connect Sign-In'"
+    echo "4. Add provider:"
+    echo "   - Name: Authelia"
+    echo "   - Issuer URL: https://auth.tkuipers.ca"
+    echo "   - Client ID: jellyseerr"
+    echo "   - Client Secret: $JELLYSEERR_CLIENT_SECRET"
     echo
     log_info "To verify secrets are synced:"
     echo "  kubectl get secret authelia-secrets -n authelia"
-    echo "  kubectl get externalsecret authelia-secrets -n authelia"
+    echo "  kubectl get secret jellyseerr-credentials -n mediacenter"
     echo
 }
 
