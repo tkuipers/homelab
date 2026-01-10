@@ -28,4 +28,8 @@ resources:
   - sabnzbd-service.yaml
   - sabnzbd-ingress.yaml
   - arr-integration-job.yaml
+  - jellyseerr-credentials-external-secret.yaml
+  - jellyseerr-deployment.yaml
+  - jellyseerr-service.yaml
+  - jellyseerr-ingress.yaml
 

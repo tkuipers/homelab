@@ -190,25 +190,26 @@ data:
             access_token_signed_response_alg: 'none'
             userinfo_signed_response_alg: 'none'
             token_endpoint_auth_method: 'none'
-          - client_id: 'actual-budget'
-            client_name: 'Actual Budget'
-            client_secret: '$argon2id$v=19$m=65536,t=3,p=4$TKHVx+bdC1REMNsR1pYPog$mIWvI+M4BwkE1HscOtZ0UigVKFJg3/ui98nlM7TUie8'
+          - client_id: 'jellyseerr'
+            client_name: 'Jellyseerr'
+            client_secret: '$argon2id$v=19$m=65536,t=3,p=4$sApHXE46WQlyfjSlymLnuw$GgmHpnDuCmRCwgerH5iGca2BO3zsHRRsr26RZ4EYwGg'
             public: false
             authorization_policy: 'one_factor'
             consent_mode: 'pre-configured'
             pre_configured_consent_duration: '365d'
             require_pkce: false
             redirect_uris:
-              - 'https://budget.tkuipers.ca/openid/callback'
+              - 'https://mediarequests.tkuipers.ca/api/v1/auth/oidc-callback'
             scopes:
               - 'openid'
               - 'email'
               - 'profile'
+              - 'groups'
             response_types:
               - 'code'
             grant_types:
               - 'authorization_code'
             access_token_signed_response_alg: 'none'
             userinfo_signed_response_alg: 'none'
-            token_endpoint_auth_method: 'client_secret_basic'
+            token_endpoint_auth_method: 'client_secret_post'
 

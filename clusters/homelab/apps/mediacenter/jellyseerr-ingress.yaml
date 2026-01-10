@@ -1,25 +1,24 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: actual
-  namespace: actual
+  name: jellyseerr
+  namespace: mediacenter
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    external-dns.alpha.kubernetes.io/hostname: budget.tkuipers.ca
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - budget.tkuipers.ca
-    secretName: actual-tls
+    - mediarequests.tkuipers.ca
+    secretName: mediarequests-tkuipers-ca-tls
   rules:
-  - host: budget.tkuipers.ca
+  - host: mediarequests.tkuipers.ca
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: actual
+            name: jellyseerr
             port:
-              number: 5006
+              number: 5055
