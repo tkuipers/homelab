@@ -13,6 +13,7 @@ resources:
   - argocd-application-datadog.yaml
   - argocd-application-authelia.yaml
   - argocd-application-nvidia-device-plugin.yaml
+  - argocd-application-adguard-home.yaml
   # Apps
   - argocd-application-homepage.yaml
   - argocd-application-mediacenter.yaml
