@@ -38,6 +38,11 @@ spec:
       path: /machine/network/hostname
       value: omen-worker1
     - op: add
+      path: /machine/network/nameservers
+      value:
+        - 10.0.0.71
+        - 8.8.8.8
+    - op: add
       path: /machine/kernel
       value:
         modules:

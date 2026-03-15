@@ -113,11 +113,11 @@ spec:
             command:
             - sh
             - -c
-            - "wget -q --spider --timeout=5 http://1.1.1.1 > /dev/null 2>&1"
+            - "wget -q --timeout=10 -O /dev/null http://127.0.0.1:9999/ || exit 1"
           initialDelaySeconds: 60
-          periodSeconds: 10
-          timeoutSeconds: 5
-          successThreshold: 2
+          periodSeconds: 15
+          timeoutSeconds: 15
+          successThreshold: 1
         resources:
           requests:
             memory: "128Mi"
