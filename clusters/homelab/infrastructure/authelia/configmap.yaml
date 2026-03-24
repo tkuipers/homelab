@@ -212,4 +212,26 @@ data:
             access_token_signed_response_alg: 'none'
             userinfo_signed_response_alg: 'none'
             token_endpoint_auth_method: 'client_secret_post'
+          - client_id: 'stock-guesser'
+            client_name: 'Stock Guesser'
+            client_secret: '$argon2id$v=19$m=65536,t=3,p=4$jXha7bVsi5rwHililWApcA$sA1SE/2LUYrPQ0eFWzDWE3fsWjNJ2YM1rSs/SlgoX3U'
+            public: false
+            authorization_policy: 'one_factor'
+            consent_mode: 'pre-configured'
+            pre_configured_consent_duration: '30d'
+            require_pkce: false
+            redirect_uris:
+              - 'http://localhost:3000/auth/callback'
+            scopes:
+              - 'openid'
+              - 'email'
+              - 'profile'
+              - 'groups'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'client_secret_basic'
 
