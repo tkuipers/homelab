@@ -1,0 +1,119 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: stocks
+  labels:
+    app: stocks-backup
+spec:
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: stocks-backup
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: omen-worker1
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:16
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+
+                  apt-get update -qq && apt-get install -y -qq awscli > /dev/null
+
+                  export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
+                  export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+                  export AWS_DEFAULT_REGION="$S3_REGION"
+
+                  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+                  BACKUP_FILE="stocks-${TIMESTAMP}.sql.gz"
+
+                  echo "Starting backup: ${BACKUP_FILE}"
+
+                  PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
+                    -h postgres -U "$POSTGRES_USER" "$POSTGRES_DB" \
+                    --no-owner --no-acl | gzip > "/tmp/${BACKUP_FILE}"
+
+                  BACKUP_SIZE=$(du -h "/tmp/${BACKUP_FILE}" | cut -f1)
+                  echo "Backup created: ${BACKUP_SIZE}"
+
+                  DAY_OF_WEEK=$(date +%u)
+                  DAY_OF_MONTH=$(date +%d)
+                  DAY_OF_YEAR=$(date +%j)
+
+                  S3_BASE="s3://${S3_BUCKET}/stocks-postgres"
+
+                  echo "Uploading daily backup..."
+                  aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_BASE}/daily/${BACKUP_FILE}"
+
+                  if [ "$DAY_OF_WEEK" -eq 7 ]; then
+                    echo "Uploading weekly backup..."
+                    aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_BASE}/weekly/${BACKUP_FILE}"
+                  fi
+
+                  if [ "$DAY_OF_MONTH" -eq "01" ]; then
+                    echo "Uploading monthly backup..."
+                    aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_BASE}/monthly/${BACKUP_FILE}"
+                  fi
+
+                  if [ "$DAY_OF_YEAR" -eq "001" ]; then
+                    echo "Uploading yearly backup..."
+                    aws s3 cp "/tmp/${BACKUP_FILE}" "${S3_BASE}/yearly/${BACKUP_FILE}"
+                  fi
+
+                  rm -f "/tmp/${BACKUP_FILE}"
+                  echo "Backup complete!"
+              env:
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: stocks-secret
+                      key: postgres-user
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: stocks-secret
+                      key: postgres-password
+                - name: POSTGRES_DB
+                  valueFrom:
+                    secretKeyRef:
+                      name: stocks-secret
+                      key: postgres-database
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: stocks-secret
+                      key: aws-access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: stocks-secret
+                      key: aws-secret-access-key
+                - name: S3_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: stocks-secret
+                      key: s3-bucket
+                - name: S3_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      name: stocks-secret
+                      key: s3-region
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "500m"

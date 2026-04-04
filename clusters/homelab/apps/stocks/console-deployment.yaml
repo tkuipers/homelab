@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: console
+  namespace: stocks
+  labels:
+    app: stocks-console
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stocks-console
+  template:
+    metadata:
+      labels:
+        app: stocks-console
+      annotations:
+        ad.datadoghq.com/console.logs: '[{"source":"python","service":"stocks-console"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: console
+          # renovate: datasource=docker
+          image: ghcr.io/tkuipers/stock-guesser-console:latest
+          # Override dev CMD — no reload watcher in production
+          command: ["uvicorn", "stock_guesser_console.main:app",
+                    "--host", "0.0.0.0", "--port", "3000"]
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: NATS_URL
+              value: nats://nats:4222
+            - name: ENVIRONMENT
+              value: production
+            - name: OIDC_ISSUER
+              value: https://auth.tkuipers.ca
+            - name: OIDC_INTERNAL_ISSUER
+              value: http://authelia.authelia.svc.cluster.local:9091
+            - name: OIDC_TLS_VERIFY
+              value: "true"
+            - name: OIDC_CLIENT_ID
+              value: stocks
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: oidc-client-secret
+            - name: SESSION_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: session-secret-key
+            - name: CONSOLE_BASE_URL
+              value: https://stocks.tkuipers.ca
+            - name: API_BASE_URL
+              value: http://api:8000
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: stocks-console
+            - name: DD_ENV
+              value: production
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

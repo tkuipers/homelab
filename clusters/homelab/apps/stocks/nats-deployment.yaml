@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nats
+  namespace: stocks
+  labels:
+    app: stocks-nats
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: stocks-nats
+  template:
+    metadata:
+      labels:
+        app: stocks-nats
+      annotations:
+        ad.datadoghq.com/nats.logs: '[{"source":"nats","service":"stocks-nats"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      containers:
+        - name: nats
+          image: nats:2-alpine
+          command: ["-js", "-sd", "/data"]
+          ports:
+            - containerPort: 4222
+              name: client
+            - containerPort: 8222
+              name: monitor
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+      volumes:
+        - name: data
+          hostPath:
+            path: /var/persist/stocks-nats
+            type: DirectoryOrCreate

@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decision
+  namespace: stocks
+  labels:
+    app: stocks-decision
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stocks-decision
+  template:
+    metadata:
+      labels:
+        app: stocks-decision
+      annotations:
+        ad.datadoghq.com/decision.logs: '[{"source":"python","service":"stocks-decision"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: decision
+          # renovate: datasource=docker
+          image: ghcr.io/tkuipers/stock-guesser-decision:latest
+          ports:
+            - containerPort: 8083
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: database-url
+            - name: NATS_URL
+              value: nats://nats:4222
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: ENVIRONMENT
+              value: production
+            - name: MINIO_ENDPOINT_URL
+              value: http://minio:9000
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: minio-root-user
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: minio-root-password
+            - name: MINIO_MODELS_BUCKET
+              value: models
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: stocks-decision
+            - name: DD_ENV
+              value: production
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"

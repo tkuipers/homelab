@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-gateway
+  namespace: stocks
+  labels:
+    app: stocks-llm-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stocks-llm-gateway
+  template:
+    metadata:
+      labels:
+        app: stocks-llm-gateway
+      annotations:
+        ad.datadoghq.com/llm-gateway.logs: '[{"source":"python","service":"stocks-llm-gateway"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: llm-gateway
+          # renovate: datasource=docker
+          image: ghcr.io/tkuipers/stock-guesser-llm-gateway:latest
+          ports:
+            - containerPort: 8082
+              name: http
+          env:
+            - name: LLM_CONFIG_PATH
+              value: /config/llm_config.yaml
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: openai-api-key
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: anthropic-api-key
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: stocks-llm-gateway
+            - name: DD_ENV
+              value: production
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: config
+          configMap:
+            name: llm-gateway-config

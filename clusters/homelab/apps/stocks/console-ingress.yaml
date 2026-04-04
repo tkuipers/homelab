@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: console
+  namespace: stocks
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Console manages its own OIDC session — do not forward-auth via Authelia
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    # SSE streams for the event viewer
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - stocks.tkuipers.ca
+      secretName: stocks-console-tls
+  rules:
+    - host: stocks.tkuipers.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: console
+                port:
+                  number: 3000

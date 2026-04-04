@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: execution
+  namespace: stocks
+  labels:
+    app: stocks-execution
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8084
+      targetPort: 8084
+      protocol: TCP
+      name: http
+  selector:
+    app: stocks-execution

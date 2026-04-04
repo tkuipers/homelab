@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingestion
+  namespace: stocks
+  labels:
+    app: stocks-ingestion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stocks-ingestion
+  template:
+    metadata:
+      labels:
+        app: stocks-ingestion
+      annotations:
+        ad.datadoghq.com/ingestion.logs: '[{"source":"python","service":"stocks-ingestion"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: ingestion
+          # renovate: datasource=docker
+          image: ghcr.io/tkuipers/stock-guesser-ingestion:latest
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: database-url
+            - name: NATS_URL
+              value: nats://nats:4222
+            - name: LLM_GATEWAY_URL
+              value: http://llm-gateway:8082
+            - name: INGESTION_SCHEDULE_YAHOO_NEWS
+              value: "*/30 * * * *"
+            - name: INGESTION_SCHEDULE_LEADERSHIP
+              value: "0 8 * * 1"
+            - name: INGESTION_SCHEDULE_PRODUCT_DEMAND
+              value: "0 9 * * 1"
+            - name: NEWSAPI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: newsapi-key
+            - name: ADZUNA_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: adzuna-app-id
+            - name: ADZUNA_APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: adzuna-app-key
+            - name: AZURE_MAPS_SUBSCRIPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: azure-maps-key
+            - name: GOOGLE_PLACES_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: google-places-key
+            - name: ACLED_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: acled-email
+            - name: ACLED_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: acled-password
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: stocks-ingestion
+            - name: DD_ENV
+              value: production
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"

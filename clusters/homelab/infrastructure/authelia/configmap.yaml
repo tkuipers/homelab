@@ -190,6 +190,29 @@ data:
             access_token_signed_response_alg: 'none'
             userinfo_signed_response_alg: 'none'
             token_endpoint_auth_method: 'none'
+          - client_id: 'stocks'
+            client_name: 'Stocks (v2)'
+            # Hash populated by tooling/scripts/setup-credentials/setup-stocks-credentials.sh
+            client_secret: '$argon2id$v=19$m=65536,t=3,p=4$cv6Od3qzMvGsSS/ZtsaqAw$H8DPO1tCXWnk1k4unaE8WLRCZv+f+pvOFbIf45uWKCw'
+            public: false
+            authorization_policy: 'one_factor'
+            consent_mode: 'pre-configured'
+            pre_configured_consent_duration: '30d'
+            require_pkce: false
+            redirect_uris:
+              - 'https://stocks.tkuipers.ca/auth/callback'
+            scopes:
+              - 'openid'
+              - 'email'
+              - 'profile'
+              - 'groups'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'client_secret_basic'
           - client_id: 'jellyseerr'
             client_name: 'Jellyseerr'
             client_secret: '$argon2id$v=19$m=65536,t=3,p=4$sApHXE46WQlyfjSlymLnuw$GgmHpnDuCmRCwgerH5iGca2BO3zsHRRsr26RZ4EYwGg'

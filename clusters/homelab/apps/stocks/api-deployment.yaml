@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: stocks
+  labels:
+    app: stocks-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stocks-api
+  template:
+    metadata:
+      labels:
+        app: stocks-api
+      annotations:
+        ad.datadoghq.com/api.logs: '[{"source":"python","service":"stocks-api"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: api
+          # renovate: datasource=docker
+          image: ghcr.io/tkuipers/stock-guesser-api:latest
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: database-url
+            - name: NATS_URL
+              value: nats://nats:4222
+            - name: CREDENTIAL_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: credential-encryption-key
+            - name: ENVIRONMENT
+              value: production
+            - name: OIDC_ISSUER
+              value: https://auth.tkuipers.ca
+            - name: OIDC_INTERNAL_ISSUER
+              value: http://authelia.authelia.svc.cluster.local:9091
+            - name: OIDC_TLS_VERIFY
+              value: "true"
+            - name: OIDC_AUDIENCE
+              value: stocks
+            - name: OIDC_CLIENT_ID
+              value: stocks
+            - name: INGESTION_URL
+              value: http://ingestion:8081
+            - name: AZURE_MAPS_SUBSCRIPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: azure-maps-key
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: stocks-api
+            - name: DD_ENV
+              value: production
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"

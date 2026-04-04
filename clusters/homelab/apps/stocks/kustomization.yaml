@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - ghcr-credentials-external-secret.yaml
+  - stocks-credentials-external-secret.yaml
+  # Infrastructure
+  - postgres-deployment.yaml
+  - postgres-service.yaml
+  - postgres-backup-cronjob.yaml
+  - nats-deployment.yaml
+  - nats-service.yaml
+  - minio-deployment.yaml
+  - minio-service.yaml
+  - redis-deployment.yaml
+  - redis-service.yaml
+  # Application services
+  - api-deployment.yaml
+  - api-service.yaml
+  - api-ingress.yaml
+  - console-deployment.yaml
+  - console-service.yaml
+  - console-ingress.yaml
+  - audit-consumer-deployment.yaml
+  - audit-consumer-service.yaml
+  - ingestion-deployment.yaml
+  - ingestion-service.yaml
+  - llm-gateway-configmap.yaml
+  - llm-gateway-deployment.yaml
+  - llm-gateway-service.yaml
+  - decision-deployment.yaml
+  - decision-service.yaml
+  - execution-deployment.yaml
+  - execution-service.yaml
+  - training-cronjob.yaml
