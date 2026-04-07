@@ -18,4 +18,5 @@ resources:
   - argocd-application-homepage.yaml
   - argocd-application-mediacenter.yaml
   - argocd-application-stock-guesser.yaml
+  - argocd-application-anki.yaml
   - argocd-application-stocks.yaml

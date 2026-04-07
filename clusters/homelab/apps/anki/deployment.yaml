@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anki
+  namespace: anki
+  labels:
+    app: anki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: anki
+  template:
+    metadata:
+      labels:
+        app: anki
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      containers:
+        - name: anki
+          # renovate: datasource=docker
+          image: neilalcoseba/anki-sync:25.09
+          ports:
+            - containerPort: 8084
+              name: http
+          env:
+            - name: SYNC_USER1
+              valueFrom:
+                secretKeyRef:
+                  name: anki-credentials
+                  key: sync_user1
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "10m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            tcpSocket:
+              port: 8084
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 8084
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          hostPath:
+            path: /var/persist/anki-data
+            type: DirectoryOrCreate
