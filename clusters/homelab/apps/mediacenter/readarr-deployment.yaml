@@ -33,6 +33,24 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
+      initContainers:
+      - name: config-init
+        image: busybox
+        command:
+        - sh
+        - -c
+        - |
+          CONFIG=/config/config.xml
+          if [ ! -f "$CONFIG" ]; then
+            echo '<Config><AuthenticationMethod>External</AuthenticationMethod></Config>' > "$CONFIG"
+          elif grep -q '<AuthenticationMethod>' "$CONFIG"; then
+            sed -i 's|<AuthenticationMethod>.*</AuthenticationMethod>|<AuthenticationMethod>External</AuthenticationMethod>|' "$CONFIG"
+          else
+            sed -i 's|</Config>|  <AuthenticationMethod>External</AuthenticationMethod>\n</Config>|' "$CONFIG"
+          fi
+        volumeMounts:
+        - name: config
+          mountPath: /config
       containers:
       - name: readarr
         image: linuxserver/readarr:0.4.19-nightly
