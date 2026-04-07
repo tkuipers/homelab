@@ -185,17 +185,15 @@ data:
             self.log(f"Ensuring SABnzbd category '{category}' exists...")
             try:
                 url = f"{self.sabnzbd_url}/api?mode=get_cats&output=json&apikey={self.sabnzbd_api_key}"
-                req = urllib.request.Request(url)
-                response = urllib.request.urlopen(req)
-                data = json.loads(response.read().decode())
+                data = json.loads(urllib.request.urlopen(urllib.request.Request(url)).read().decode())
                 cats = data.get("categories", [])
                 if category in cats or category.lower() in [c.lower() for c in cats]:
                     self.log(f"SABnzbd category '{category}' already exists", "SUCCESS")
                     return
-                # Create the category
+                # keyword IS the category name for set_config categories
                 create_url = (
-                    f"{self.sabnzbd_url}/api?mode=set_config_default"
-                    f"&section=categories&keyword=name&value={category}"
+                    f"{self.sabnzbd_url}/api?mode=set_config"
+                    f"&section=categories&keyword={category}"
                     f"&apikey={self.sabnzbd_api_key}"
                 )
                 urllib.request.urlopen(urllib.request.Request(create_url))
@@ -307,10 +305,9 @@ data:
             app_profile_id = profiles[0]["id"] if status == 200 and profiles else 1
             self.log(f"Using App Profile ID: {app_profile_id}")
 
-            # Book indexers available in this Prowlarr version
-            self.add_torrent_indexer("BookTracker", "booktracker", app_profile_id)
-            self.add_torrent_indexer("EBookBay", "ebookbay", app_profile_id)
-            self.add_torrent_indexer("LearnFlakes", "learnflakes", app_profile_id)
+            # Book indexers: MyAnonamouse (best for textbooks, private) requires manual credentials in Prowlarr UI.
+            # BookTracker requires login, EBookBay has SSL issues on this network — add via Prowlarr UI.
+            self.log("Skipping auto-indexer add — add MyAnonamouse + others manually in Prowlarr UI", "INFO")
             print()
 
             self.add_download_client("Readarr", self.readarr_url, self.readarr_api_key, "readarr")
@@ -332,7 +329,7 @@ data:
             self.log("Readarr linked to Prowlarr", "SUCCESS")
             self.log("Transmission + SABnzbd configured", "SUCCESS")
             self.log("Root folder /media/books added", "SUCCESS")
-            self.log("Book indexers added (BookTracker, EBookBay, LearnFlakes)", "SUCCESS")
+            self.log("Add indexers (MyAnonamouse, etc.) manually via Prowlarr UI", "INFO")
             self.log("Note: MyAnonamouse (private, best for ebooks) requires manual setup in Prowlarr UI", "INFO")
 
     if __name__ == "__main__":
