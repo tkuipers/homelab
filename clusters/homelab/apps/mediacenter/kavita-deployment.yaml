@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kavita
+  namespace: mediacenter
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: kavita
+  template:
+    metadata:
+      labels:
+        app: kavita
+      annotations:
+        ad.datadoghq.com/kavita.logs: '[{"source":"kavita","service":"kavita"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      containers:
+      - name: kavita
+        image: lscr.io/linuxserver/kavita:latest
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "America/Los_Angeles"
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: media
+          mountPath: /media
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: config
+        hostPath:
+          path: /var/persist/kavita-config
+          type: DirectoryOrCreate
+      - name: media
+        persistentVolumeClaim:
+          claimName: jellyfin-media

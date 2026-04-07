@@ -32,6 +32,9 @@ resources:
   - sabnzbd-ingress.yaml
   - arr-integration-job.yaml
   - readarr-integration-job.yaml
+  - kavita-deployment.yaml
+  - kavita-service.yaml
+  - kavita-ingress.yaml
   - jellyseerr-credentials-external-secret.yaml
   - jellyseerr-deployment.yaml
   - jellyseerr-service.yaml
