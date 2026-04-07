@@ -35,7 +35,7 @@ spec:
         kubernetes.io/hostname: dell-r620
       containers:
       - name: readarr
-        image: linuxserver/readarr:nightly
+        image: linuxserver/readarr:0.4.19-nightly
         ports:
         - containerPort: 8787
           name: http
