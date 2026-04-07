@@ -53,7 +53,7 @@ spec:
           mountPath: /config
       containers:
       - name: readarr
-        image: linuxserver/readarr:0.4.19-nightly
+        image: ghcr.io/pennydreadful/bookshelf:hardcover
         ports:
         - containerPort: 8787
           name: http
