@@ -15,6 +15,9 @@ resources:
   - radarr-deployment.yaml
   - radarr-service.yaml
   - radarr-ingress.yaml
+  - readarr-deployment.yaml
+  - readarr-service.yaml
+  - readarr-ingress.yaml
   - bazarr-deployment.yaml
   - bazarr-service.yaml
   - bazarr-ingress.yaml
@@ -28,6 +31,7 @@ resources:
   - sabnzbd-service.yaml
   - sabnzbd-ingress.yaml
   - arr-integration-job.yaml
+  - readarr-integration-job.yaml
   - jellyseerr-credentials-external-secret.yaml
   - jellyseerr-deployment.yaml
   - jellyseerr-service.yaml

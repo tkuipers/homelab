@@ -1,0 +1,360 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: readarr-integration-script
+  namespace: mediacenter
+data:
+  setup.py: |
+    #!/usr/bin/env python3
+    import os
+    import sys
+    import time
+    import json
+    import urllib.request
+    import urllib.error
+    import xml.etree.ElementTree as ET
+    from typing import Optional, Dict, Any
+
+    class ReadarrIntegration:
+        def __init__(self):
+            self.readarr_url = "http://readarr:8787"
+            self.prowlarr_url = "http://prowlarr:9696"
+            self.transmission_url = "http://transmission:9091"
+            self.sabnzbd_url = "http://sabnzbd:8080"
+
+            self.transmission_user = os.getenv("TRANSMISSION_USER")
+            self.transmission_pass = os.getenv("TRANSMISSION_PASS")
+
+            self.readarr_api_key = None
+            self.prowlarr_api_key = None
+            self.sabnzbd_api_key = None
+
+        def log(self, message: str, level: str = "INFO"):
+            symbols = {"INFO": "i", "SUCCESS": "v", "ERROR": "x", "WARNING": "!"}
+            print(f"[{symbols.get(level, 'i')}] {message}", flush=True)
+
+        def wait_for_service(self, name: str, url: str, accept_401: bool = False):
+            self.log(f"Waiting for {name}...")
+            while True:
+                try:
+                    req = urllib.request.Request(url)
+                    urllib.request.urlopen(req, timeout=2)
+                    self.log(f"{name} is ready", "SUCCESS")
+                    break
+                except urllib.error.HTTPError as e:
+                    if e.code == 401 and accept_401:
+                        self.log(f"{name} is ready", "SUCCESS")
+                        break
+                except:
+                    pass
+                time.sleep(2)
+
+        def api_request(self, url: str, api_key: str, method: str = "GET", data: Optional[Dict] = None) -> tuple:
+            headers = {"X-Api-Key": api_key, "Content-Type": "application/json"}
+            request_data = json.dumps(data).encode() if data else None
+            req = urllib.request.Request(url, data=request_data, headers=headers, method=method)
+            try:
+                response = urllib.request.urlopen(req)
+                body = json.loads(response.read().decode())
+                return response.status, body
+            except urllib.error.HTTPError as e:
+                try:
+                    body = json.loads(e.read().decode())
+                except:
+                    body = {"error": e.reason}
+                return e.code, body
+
+        def extract_api_key(self, config_path: str, service_name: str) -> str:
+            self.log(f"Extracting {service_name} API key...")
+            try:
+                if config_path.endswith('.xml'):
+                    tree = ET.parse(config_path)
+                    root = tree.getroot()
+                    api_key = root.find(".//ApiKey").text
+                    if api_key:
+                        self.log(f"{service_name} API key extracted", "SUCCESS")
+                        return api_key
+                elif config_path.endswith('.ini'):
+                    with open(config_path, 'r') as f:
+                        for line in f:
+                            if 'api_key =' in line:
+                                api_key = line.split('=', 1)[1].strip()
+                                if api_key:
+                                    self.log(f"{service_name} API key extracted", "SUCCESS")
+                                    return api_key
+            except Exception as e:
+                self.log(f"Failed to extract {service_name} API key: {e}", "ERROR")
+                sys.exit(1)
+
+        def setup_prowlarr_app(self):
+            self.log("Linking Readarr to Prowlarr...")
+            status, apps = self.api_request(f"{self.prowlarr_url}/api/v1/applications", self.prowlarr_api_key)
+            if status == 200:
+                for app in apps:
+                    if app.get("name") == "Readarr":
+                        self.log("Readarr already linked in Prowlarr", "SUCCESS")
+                        return
+            payload = {
+                "name": "Readarr",
+                "syncLevel": "fullSync",
+                "implementation": "Readarr",
+                "configContract": "ReadarrSettings",
+                "fields": [
+                    {"name": "prowlarrUrl", "value": self.prowlarr_url},
+                    {"name": "baseUrl", "value": self.readarr_url},
+                    {"name": "apiKey", "value": self.readarr_api_key},
+                    {"name": "syncCategories", "value": [7000, 7020]}
+                ],
+                "tags": []
+            }
+            status, body = self.api_request(f"{self.prowlarr_url}/api/v1/applications", self.prowlarr_api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log("Readarr linked to Prowlarr", "SUCCESS")
+            else:
+                err = str(body)
+                if "already" in err.lower() or "unique" in err.lower():
+                    self.log("Readarr already linked in Prowlarr", "SUCCESS")
+                else:
+                    self.log(f"Failed to link Readarr: {body}", "WARNING")
+
+        def add_torrent_indexer(self, name: str, definition_file: str, app_profile_id: int):
+            self.log(f"Adding torrent indexer: {name}")
+            status, indexers = self.api_request(f"{self.prowlarr_url}/api/v1/indexer", self.prowlarr_api_key)
+            if status == 200:
+                for indexer in indexers:
+                    if indexer.get("name") == name or indexer.get("definitionName") == definition_file:
+                        self.log(f"Indexer {name} already configured", "SUCCESS")
+                        return
+            payload = {
+                "name": name,
+                "implementation": "Cardigann",
+                "configContract": "CardigannSettings",
+                "enable": True,
+                "redirect": False,
+                "appProfileId": app_profile_id,
+                "protocol": "torrent",
+                "priority": 25,
+                "fields": [
+                    {"name": "definitionFile", "value": definition_file}
+                ]
+            }
+            status, body = self.api_request(f"{self.prowlarr_url}/api/v1/indexer", self.prowlarr_api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"Indexer {name} added", "SUCCESS")
+            else:
+                err = str(body)
+                if "already" in err.lower() or "unique" in err.lower():
+                    self.log(f"Indexer {name} already configured", "SUCCESS")
+                else:
+                    self.log(f"Failed to add indexer {name}: {body}", "WARNING")
+
+        def add_download_client(self, name: str, url: str, api_key: str, category: str):
+            self.log(f"Adding Transmission to {name}...")
+            payload = {
+                "enable": True,
+                "protocol": "torrent",
+                "priority": 1,
+                "removeCompletedDownloads": True,
+                "removeFailedDownloads": True,
+                "name": "Transmission",
+                "fields": [
+                    {"name": "host", "value": "transmission"},
+                    {"name": "port", "value": 9091},
+                    {"name": "urlBase", "value": "/transmission/"},
+                    {"name": "username", "value": self.transmission_user},
+                    {"name": "password", "value": self.transmission_pass},
+                    {"name": "category", "value": category}
+                ],
+                "implementationName": "Transmission",
+                "implementation": "Transmission",
+                "configContract": "TransmissionSettings",
+                "tags": []
+            }
+            status, body = self.api_request(f"{url}/api/v1/downloadclient", api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"Transmission added to {name}", "SUCCESS")
+            else:
+                err = str(body)
+                if "already" in err.lower() or "unique" in err.lower():
+                    self.log(f"Transmission already configured in {name}", "SUCCESS")
+                else:
+                    self.log(f"Failed to add Transmission to {name}: {body}", "WARNING")
+
+        def add_sabnzbd_client(self, name: str, url: str, api_key: str, category: str):
+            self.log(f"Adding SABnzbd to {name}...")
+            payload = {
+                "enable": True,
+                "protocol": "usenet",
+                "priority": 1,
+                "removeCompletedDownloads": True,
+                "removeFailedDownloads": True,
+                "name": "SABnzbd",
+                "fields": [
+                    {"name": "host", "value": "sabnzbd"},
+                    {"name": "port", "value": 8080},
+                    {"name": "apiKey", "value": self.sabnzbd_api_key},
+                    {"name": "category", "value": category},
+                    {"name": "useSsl", "value": False}
+                ],
+                "implementationName": "SABnzbd",
+                "implementation": "Sabnzbd",
+                "configContract": "SabnzbdSettings",
+                "tags": []
+            }
+            status, body = self.api_request(f"{url}/api/v1/downloadclient", api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log(f"SABnzbd added to {name}", "SUCCESS")
+            else:
+                err = str(body)
+                if "already" in err.lower() or "unique" in err.lower():
+                    self.log(f"SABnzbd already configured in {name}", "SUCCESS")
+                else:
+                    self.log(f"Failed to add SABnzbd to {name}: {body}", "WARNING")
+
+        def add_path_mapping(self):
+            self.log("Adding remote path mapping to Readarr...")
+            payload = {
+                "host": "transmission",
+                "remotePath": "/downloads/",
+                "localPath": "/media/downloads/"
+            }
+            status, body = self.api_request(f"{self.readarr_url}/api/v1/remotepathmapping", self.readarr_api_key, "POST", payload)
+            if status in [200, 201]:
+                self.log("Remote path mapping added to Readarr", "SUCCESS")
+            else:
+                self.log("Path mapping may already exist in Readarr (this is fine)", "SUCCESS")
+
+        def add_root_folder(self):
+            path = "/media/books"
+            self.log(f"Adding root folder {path} to Readarr...")
+            status, folders = self.api_request(f"{self.readarr_url}/api/v1/rootfolder", self.readarr_api_key)
+            if status == 200:
+                for folder in folders:
+                    if folder.get("path") == path:
+                        self.log(f"Root folder {path} already exists", "SUCCESS")
+                        return
+            status, body = self.api_request(f"{self.readarr_url}/api/v1/rootfolder", self.readarr_api_key, "POST", {"path": path})
+            if status in [200, 201]:
+                self.log(f"Root folder {path} added", "SUCCESS")
+            else:
+                err = str(body)
+                if "already" in err.lower():
+                    self.log(f"Root folder {path} already exists", "SUCCESS")
+                else:
+                    self.log(f"Failed to add root folder: {body}", "WARNING")
+
+        def run(self):
+            print("=" * 60)
+            print("   Readarr Integration Setup")
+            print("=" * 60)
+            print()
+
+            self.wait_for_service("Readarr", f"{self.readarr_url}/ping")
+            self.wait_for_service("Prowlarr", f"{self.prowlarr_url}/ping")
+            self.wait_for_service("Transmission", self.transmission_url, accept_401=True)
+            self.wait_for_service("SABnzbd", f"{self.sabnzbd_url}/api?mode=version")
+            print()
+
+            self.readarr_api_key = self.extract_api_key("/readarr-config/config.xml", "Readarr")
+            self.prowlarr_api_key = self.extract_api_key("/prowlarr-config/config.xml", "Prowlarr")
+            self.sabnzbd_api_key = self.extract_api_key("/sabnzbd-config/sabnzbd.ini", "SABnzbd")
+            print()
+
+            self.setup_prowlarr_app()
+            print()
+
+            status, profiles = self.api_request(f"{self.prowlarr_url}/api/v1/appprofile", self.prowlarr_api_key)
+            app_profile_id = profiles[0]["id"] if status == 200 and profiles else 1
+            self.log(f"Using App Profile ID: {app_profile_id}")
+
+            # Book indexers focused on textbooks
+            # Anna's Archive: open-access aggregator covering LibGen, Z-Lib, etc. — excellent for textbooks
+            self.add_torrent_indexer("Anna's Archive", "annas-archive", app_profile_id)
+            # Library Genesis (libgen.rs): primary source for academic/science textbooks
+            self.add_torrent_indexer("LibGen RS", "libgen-rs", app_profile_id)
+            print()
+
+            self.add_download_client("Readarr", self.readarr_url, self.readarr_api_key, "readarr")
+            self.add_sabnzbd_client("Readarr", self.readarr_url, self.readarr_api_key, "books")
+            print()
+
+            self.add_path_mapping()
+            self.add_root_folder()
+            print()
+
+            self.log("Triggering Prowlarr indexer sync...")
+            self.api_request(f"{self.prowlarr_url}/api/v1/applications/sync", self.prowlarr_api_key, "POST")
+            print()
+
+            print("=" * 60)
+            print("   Setup Complete!")
+            print("=" * 60)
+            self.log("Readarr linked to Prowlarr", "SUCCESS")
+            self.log("Transmission + SABnzbd configured", "SUCCESS")
+            self.log("Root folder /media/books added", "SUCCESS")
+            self.log("Book indexers added (Anna's Archive, LibGen RS)", "SUCCESS")
+            self.log("Note: MyAnonamouse (private, best for ebooks) requires manual setup in Prowlarr UI", "INFO")
+
+    if __name__ == "__main__":
+        integration = ReadarrIntegration()
+        integration.run()
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: readarr-integration-setup
+  namespace: mediacenter
+spec:
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: OnFailure
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      containers:
+      - name: setup
+        image: python:3.14-slim
+        command:
+        - python3
+        - -u
+        - /scripts/setup.py
+        env:
+        - name: TRANSMISSION_USER
+          valueFrom:
+            secretKeyRef:
+              name: transmission-credentials
+              key: username
+        - name: TRANSMISSION_PASS
+          valueFrom:
+            secretKeyRef:
+              name: transmission-credentials
+              key: password
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        - name: readarr-config
+          mountPath: /readarr-config
+          readOnly: true
+        - name: prowlarr-config
+          mountPath: /prowlarr-config
+          readOnly: true
+        - name: sabnzbd-config
+          mountPath: /sabnzbd-config
+          readOnly: true
+      volumes:
+      - name: scripts
+        configMap:
+          name: readarr-integration-script
+          defaultMode: 0755
+      - name: readarr-config
+        hostPath:
+          path: /var/persist/readarr-config
+          type: Directory
+      - name: prowlarr-config
+        hostPath:
+          path: /var/persist/prowlarr-config
+          type: Directory
+      - name: sabnzbd-config
+        hostPath:
+          path: /var/persist/sabnzbd-config
+          type: Directory

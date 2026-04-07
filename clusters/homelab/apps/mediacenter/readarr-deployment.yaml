@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: readarr
+  namespace: mediacenter
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: readarr
+  template:
+    metadata:
+      labels:
+        app: readarr
+      annotations:
+        # Datadog Prometheus scraping
+        ad.datadoghq.com/exportarr.checks: |
+          {
+            "openmetrics": {
+              "instances": [
+                {
+                  "openmetrics_endpoint": "http://%%host%%:9709/metrics",
+                  "namespace": "readarr",
+                  "metrics": [".*"]
+                }
+              ]
+            }
+          }
+        # Datadog logs
+        ad.datadoghq.com/readarr.logs: '[{"source":"readarr","service":"readarr"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      containers:
+      - name: readarr
+        image: linuxserver/readarr:latest
+        ports:
+        - containerPort: 8787
+          name: http
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "America/Los_Angeles"
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: media
+          mountPath: /media
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      # Exportarr sidecar for Prometheus metrics
+      - name: exportarr
+        image: ghcr.io/onedr0p/exportarr:v2.0
+        args:
+          - readarr
+        env:
+        - name: PORT
+          value: "9709"
+        - name: URL
+          value: "http://localhost:8787"
+        - name: CONFIG
+          value: "/config/config.xml"
+        ports:
+        - containerPort: 9709
+          name: metrics
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+      volumes:
+      - name: config
+        hostPath:
+          path: /var/persist/readarr-config
+          type: DirectoryOrCreate
+      - name: media
+        persistentVolumeClaim:
+          claimName: jellyfin-media
