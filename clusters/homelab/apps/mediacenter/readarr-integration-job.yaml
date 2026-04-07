@@ -180,8 +180,32 @@ data:
                 else:
                     self.log(f"Failed to add Transmission to {name}: {body}", "WARNING")
 
+        def ensure_sabnzbd_category(self, category: str):
+            """Create SABnzbd category if it doesn't exist."""
+            self.log(f"Ensuring SABnzbd category '{category}' exists...")
+            try:
+                url = f"{self.sabnzbd_url}/api?mode=get_cats&output=json&apikey={self.sabnzbd_api_key}"
+                req = urllib.request.Request(url)
+                response = urllib.request.urlopen(req)
+                data = json.loads(response.read().decode())
+                cats = data.get("categories", [])
+                if category in cats or category.lower() in [c.lower() for c in cats]:
+                    self.log(f"SABnzbd category '{category}' already exists", "SUCCESS")
+                    return
+                # Create the category
+                create_url = (
+                    f"{self.sabnzbd_url}/api?mode=set_config_default"
+                    f"&section=categories&keyword=name&value={category}"
+                    f"&apikey={self.sabnzbd_api_key}"
+                )
+                urllib.request.urlopen(urllib.request.Request(create_url))
+                self.log(f"SABnzbd category '{category}' created", "SUCCESS")
+            except Exception as e:
+                self.log(f"Could not ensure SABnzbd category: {e} — will attempt client add anyway", "WARNING")
+
         def add_sabnzbd_client(self, name: str, url: str, api_key: str, category: str):
             self.log(f"Adding SABnzbd to {name}...")
+            # Readarr uses 'musicCategory' (forked from Lidarr)
             payload = {
                 "enable": True,
                 "protocol": "usenet",
@@ -193,7 +217,7 @@ data:
                     {"name": "host", "value": "sabnzbd"},
                     {"name": "port", "value": 8080},
                     {"name": "apiKey", "value": self.sabnzbd_api_key},
-                    {"name": "category", "value": category},
+                    {"name": "musicCategory", "value": category},
                     {"name": "useSsl", "value": False}
                 ],
                 "implementationName": "SABnzbd",
@@ -226,6 +250,9 @@ data:
 
         def add_root_folder(self):
             path = "/media/books"
+            self.log(f"Ensuring {path} directory exists...")
+            os.makedirs(path, exist_ok=True)
+
             self.log(f"Adding root folder {path} to Readarr...")
             status, folders = self.api_request(f"{self.readarr_url}/api/v1/rootfolder", self.readarr_api_key)
             if status == 200:
@@ -233,7 +260,20 @@ data:
                     if folder.get("path") == path:
                         self.log(f"Root folder {path} already exists", "SUCCESS")
                         return
-            status, body = self.api_request(f"{self.readarr_url}/api/v1/rootfolder", self.readarr_api_key, "POST", {"path": path})
+
+            # Readarr requires quality + metadata profile IDs and a name
+            _, quality_profiles = self.api_request(f"{self.readarr_url}/api/v1/qualityprofile", self.readarr_api_key)
+            _, metadata_profiles = self.api_request(f"{self.readarr_url}/api/v1/metadataprofile", self.readarr_api_key)
+            quality_id = quality_profiles[0]["id"] if isinstance(quality_profiles, list) and quality_profiles else 1
+            metadata_id = metadata_profiles[0]["id"] if isinstance(metadata_profiles, list) and metadata_profiles else 1
+
+            payload = {
+                "path": path,
+                "name": "Books",
+                "defaultQualityProfileId": quality_id,
+                "defaultMetadataProfileId": metadata_id,
+            }
+            status, body = self.api_request(f"{self.readarr_url}/api/v1/rootfolder", self.readarr_api_key, "POST", payload)
             if status in [200, 201]:
                 self.log(f"Root folder {path} added", "SUCCESS")
             else:
@@ -267,14 +307,14 @@ data:
             app_profile_id = profiles[0]["id"] if status == 200 and profiles else 1
             self.log(f"Using App Profile ID: {app_profile_id}")
 
-            # Book indexers focused on textbooks
-            # Anna's Archive: open-access aggregator covering LibGen, Z-Lib, etc. — excellent for textbooks
-            self.add_torrent_indexer("Anna's Archive", "annas-archive", app_profile_id)
-            # Library Genesis (libgen.rs): primary source for academic/science textbooks
-            self.add_torrent_indexer("LibGen RS", "libgen-rs", app_profile_id)
+            # Book indexers available in this Prowlarr version
+            self.add_torrent_indexer("BookTracker", "booktracker", app_profile_id)
+            self.add_torrent_indexer("EBookBay", "ebookbay", app_profile_id)
+            self.add_torrent_indexer("LearnFlakes", "learnflakes", app_profile_id)
             print()
 
             self.add_download_client("Readarr", self.readarr_url, self.readarr_api_key, "readarr")
+            self.ensure_sabnzbd_category("books")
             self.add_sabnzbd_client("Readarr", self.readarr_url, self.readarr_api_key, "books")
             print()
 
@@ -292,7 +332,7 @@ data:
             self.log("Readarr linked to Prowlarr", "SUCCESS")
             self.log("Transmission + SABnzbd configured", "SUCCESS")
             self.log("Root folder /media/books added", "SUCCESS")
-            self.log("Book indexers added (Anna's Archive, LibGen RS)", "SUCCESS")
+            self.log("Book indexers added (BookTracker, EBookBay, LearnFlakes)", "SUCCESS")
             self.log("Note: MyAnonamouse (private, best for ebooks) requires manual setup in Prowlarr UI", "INFO")
 
     if __name__ == "__main__":
@@ -341,6 +381,8 @@ spec:
         - name: sabnzbd-config
           mountPath: /sabnzbd-config
           readOnly: true
+        - name: media
+          mountPath: /media
       volumes:
       - name: scripts
         configMap:
@@ -358,3 +400,6 @@ spec:
         hostPath:
           path: /var/persist/sabnzbd-config
           type: Directory
+      - name: media
+        persistentVolumeClaim:
+          claimName: jellyfin-media
