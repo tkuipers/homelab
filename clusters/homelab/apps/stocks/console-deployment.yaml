@@ -39,7 +39,7 @@ spec:
             - name: OIDC_ISSUER
               value: https://auth.tkuipers.ca
             - name: OIDC_INTERNAL_ISSUER
-              value: http://authelia.authelia.svc.cluster.local:9091
+              value: http://authelia.authelia.svc.cluster.local:80
             - name: OIDC_TLS_VERIFY
               value: "true"
             - name: OIDC_CLIENT_ID
