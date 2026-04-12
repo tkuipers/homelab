@@ -137,5 +137,7 @@ spec:
             - key: oidc-issuer-private-key
               path: oidc-issuer-private-key
       - name: data
-        emptyDir: {}
+        hostPath:
+          path: /var/persist/authelia-data
+          type: DirectoryOrCreate
 
