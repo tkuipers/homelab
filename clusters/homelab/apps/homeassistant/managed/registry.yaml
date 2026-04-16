@@ -222,6 +222,15 @@ matter_devices:
       "PowerSource-47-12": { id: sensor.vacuum_room_window_battery, name: "Vacuum Room Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.vacuum_room_window_battery_type, name: "Vacuum Room Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.vacuum_room_window_battery_voltage, name: "Vacuum Room Window Battery Voltage", hidden: true }
+  # Aqara Door and Window Sensor [Aqara Door and Window Sensor]  (5 entities) — downstairs guest/spare bedroom window
+  - serial: "158d008c758b30"
+    area: "Spare Bedroom"
+    entities:
+      "ContactSensor-69-0": { id: binary_sensor.spare_bedroom_window, name: "Spare Bedroom Window" }
+      "IdentifyButton-3-1": { id: button.spare_bedroom_window_identify, name: "Spare Bedroom Window Identify", hidden: true }
+      "PowerSource-47-12": { id: sensor.spare_bedroom_window_battery, name: "Spare Bedroom Window Battery" }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.spare_bedroom_window_battery_type, name: "Spare Bedroom Window Battery Type", hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.spare_bedroom_window_battery_voltage, name: "Spare Bedroom Window Battery Voltage", hidden: true }
   # Aqara Smart Lock U50 [Aqara Smart Lock U50]  (7 entities)
   - serial: "54ef441000df5648"
     area: "Garage Entrance"
