@@ -25,6 +25,14 @@ group:
       - binary_sensor.ensuite_window
       - binary_sensor.vacuum_room_window
       - binary_sensor.spare_bedroom_window
+  # Exterior person-doors that breach the conditioned envelope (the overhead
+  # garage door has its own alert and the garage is unconditioned).
+  doors:
+    name: Doors
+    entities:
+      - binary_sensor.main_entrance_door
+      - binary_sensor.back_door
+      - binary_sensor.garage_entrance_door
 
 # Virtual "is it raining" sensor from the Met.no forecast condition, so the
 # automation can use one 5-minute duration regardless of which rainy sub-state
@@ -165,6 +173,61 @@ automation:
           message: >-
             It's been raining for over 5 minutes and these windows are open:
             {{ open_windows }}. You may want to close them.
+          data:
+            push:
+              interruption-level: time-sensitive
+
+  # Safety interlock: don't run HVAC against open openings. If a window has been
+  # open 5+ min or an exterior door 10+ min while the thermostat is in an active
+  # mode (heat/cool/heat_cool), switch it off and say to seal the house first.
+  # Also fires if the thermostat is turned on while something is already open too
+  # long, so HVAC can't be started against an unsealed house.
+  - id: hvac_seal_house_interlock
+    alias: "HVAC: Stop heating/cooling if house not sealed"
+    trigger:
+      - platform: state
+        entity_id: group.windows
+        to: "on"
+        for: "00:05:00"
+      - platform: state
+        entity_id: group.doors
+        to: "on"
+        for: "00:10:00"
+      - platform: state
+        entity_id: climate.main_floor_thermostat
+        to:
+          - heat
+          - cool
+          - heat_cool
+    condition:
+      - condition: state
+        entity_id: climate.main_floor_thermostat
+        state:
+          - heat
+          - cool
+          - heat_cool
+      - condition: template
+        value_template: >
+          {{ (expand('group.windows') | selectattr('state', 'eq', 'on')
+                | selectattr('last_changed', 'lt', now() - timedelta(minutes=5)) | list | count > 0)
+             or (expand('group.doors') | selectattr('state', 'eq', 'on')
+                | selectattr('last_changed', 'lt', now() - timedelta(minutes=10)) | list | count > 0) }}
+    action:
+      - variables:
+          open_too_long: >
+            {{ (expand('group.windows') | selectattr('state', 'eq', 'on')
+                  | selectattr('last_changed', 'lt', now() - timedelta(minutes=5)) | map(attribute='name') | list)
+               + (expand('group.doors') | selectattr('state', 'eq', 'on')
+                  | selectattr('last_changed', 'lt', now() - timedelta(minutes=10)) | map(attribute='name') | list) }}
+      - service: climate.turn_off
+        target:
+          entity_id: climate.main_floor_thermostat
+      - service: notify.all_phones
+        data:
+          title: "HVAC stopped — seal the house"
+          message: >-
+            Heating/cooling was switched off because the house isn't sealed.
+            Open: {{ open_too_long | join(', ') }}. Please close up before running HVAC again.
           data:
             push:
               interruption-level: time-sensitive
