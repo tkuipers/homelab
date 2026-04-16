@@ -150,6 +150,15 @@ matter_devices:
       "PowerSource-47-12": { id: sensor.garage_entrance_door_battery, name: "Garage Entrance Door Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.garage_entrance_door_battery_type, name: "Garage Entrance Door Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.garage_entrance_door_battery_voltage, name: "Garage Entrance Door Battery Voltage", hidden: true }
+  # Aqara Door and Window Sensor [Aqara Door and Window Sensor]  (5 entities)
+  - serial: "158d008c758be3"
+    area: "Dining"
+    entities:
+      "ContactSensor-69-0": { id: binary_sensor.dining_room_window, name: "Dining Room Window" }
+      "IdentifyButton-3-1": { id: button.dining_room_window_identify, name: "Dining Room Window Identify", hidden: true }
+      "PowerSource-47-12": { id: sensor.dining_room_window_battery, name: "Dining Room Window Battery" }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.dining_room_window_battery_type, name: "Dining Room Window Battery Type", hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.dining_room_window_battery_voltage, name: "Dining Room Window Battery Voltage", hidden: true }
   # Aqara Smart Lock U50 [Aqara Smart Lock U50]  (7 entities)
   - serial: "54ef441000df5648"
     area: "Garage Entrance"
