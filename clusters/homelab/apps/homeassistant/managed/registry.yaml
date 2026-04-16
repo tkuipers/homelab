@@ -204,6 +204,15 @@ matter_devices:
       "PowerSource-47-12": { id: sensor.main_bedroom_small_window_battery, name: "Main Bedroom Small Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.main_bedroom_small_window_battery_type, name: "Main Bedroom Small Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.main_bedroom_small_window_battery_voltage, name: "Main Bedroom Small Window Battery Voltage", hidden: true }
+  # Aqara Door and Window Sensor [Aqara Door and Window Sensor]  (5 entities) — master bath (ensuite) window
+  - serial: "158d008c7cbf99"
+    area: "Ensuite"
+    entities:
+      "ContactSensor-69-0": { id: binary_sensor.ensuite_window, name: "Ensuite Window" }
+      "IdentifyButton-3-1": { id: button.ensuite_window_identify, name: "Ensuite Window Identify", hidden: true }
+      "PowerSource-47-12": { id: sensor.ensuite_window_battery, name: "Ensuite Window Battery" }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.ensuite_window_battery_type, name: "Ensuite Window Battery Type", hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.ensuite_window_battery_voltage, name: "Ensuite Window Battery Voltage", hidden: true }
   # Aqara Smart Lock U50 [Aqara Smart Lock U50]  (7 entities)
   - serial: "54ef441000df5648"
     area: "Garage Entrance"
