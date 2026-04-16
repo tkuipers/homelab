@@ -132,55 +132,198 @@ async def prune(ha, desired_floors, desired_areas):
             await ha.call({"type": "config/floor_registry/delete", "floor_id": floor["floor_id"]})
 
 
-async def reconcile_entities(ha, desired):
-    if not desired:
+def _uid_role(uid):
+    # matter uid: <fabric>-<compressed>-<node>-<endpoint>-<Cluster-attr-idx>
+    p = (uid or "").split("-")
+    return "-".join(p[4:]) if len(p) >= 5 else uid
+
+
+def _uid_endpoint(uid):
+    p = (uid or "").split("-")
+    return int(p[3]) if len(p) >= 5 and p[3].isdigit() else 0
+
+
+def _parse_role_key(key):
+    # "MatterLight-6-0#1" -> ("MatterLight-6-0", 1); "PowerSource-47-12" -> (..., 0)
+    if "#" in key:
+        role, _, ordn = key.rpartition("#")
+        return role, int(ordn)
+    return key, 0
+
+
+async def reconcile_matter_devices(ha, desired):
+    """Match Matter devices by hardware serial (or, lacking one, by Matter identifier) and
+    their entities by cluster role (+#ordinal for same-role endpoints). STRICT: any Matter
+    device, or any entity on one, that isn't declared here is a fatal error — a paired device
+    you forgot to add blocks the sync until it's declared. There is no rename-by-slug path."""
+    specs = desired.get("matter_devices") or []
+    area_id_by_name = {a["name"]: a["area_id"] for a in await ha.call({"type": "config/area_registry/list"})}
+    dev_by_serial, dev_by_ident, matter_devices = {}, {}, {}
+    for d in await ha.call({"type": "config/device_registry/list"}):
+        is_matter = False
+        for i in d.get("identifiers", []):
+            if len(i) == 2:
+                dev_by_ident[f"{i[0]}:{i[1]}"] = d
+                if i[0] == "matter":
+                    is_matter = True
+        if d.get("serial_number"):
+            dev_by_serial[d["serial_number"]] = d
+        if is_matter:
+            matter_devices[d["id"]] = d
+    ents_by_device, existing_ids = {}, set()
+    for e in await ha.call({"type": "config/entity_registry/list"}):
+        existing_ids.add(e["entity_id"])
+        if e.get("device_id"):
+            ents_by_device.setdefault(e["device_id"], []).append(e)
+
+    errors, claimed_device_ids = [], set()
+    for spec in specs:
+        if spec.get("serial") is not None:
+            ref, d = f"serial {spec['serial']}", dev_by_serial.get(str(spec["serial"]))
+        elif spec.get("identifier"):
+            ref, d = f"identifier {spec['identifier']}", dev_by_ident.get(spec["identifier"])
+        else:
+            errors.append(f"matter_device with neither serial nor identifier: {spec!r}")
+            continue
+        if not d:
+            errors.append(f"matter_device {ref}: not found in HA")
+            continue
+        claimed_device_ids.add(d["id"])
+
+        area_name = spec.get("area")
+        area_id = area_id_by_name.get(area_name) if area_name else None
+        if area_name and area_id is None:
+            errors.append(f"matter_device {ref}: area {area_name!r} not found")
+            continue
+
+        dev_ents = ents_by_device.get(d["id"], [])
+        groups = {}
+        for e in sorted(dev_ents, key=lambda e: _uid_endpoint(e.get("unique_id"))):
+            groups.setdefault(_uid_role(e.get("unique_id")), []).append(e)
+
+        matched = set()
+        for key, ent_spec in (spec.get("entities") or {}).items():
+            role, ordinal = _parse_role_key(key)
+            grp = groups.get(role, [])
+            if ordinal >= len(grp):
+                errors.append(f"matter_device {ref}: no entity for role {key!r}")
+                continue
+            e = grp[ordinal]
+            matched.add(e["entity_id"])
+            target_id = ent_spec["id"] if isinstance(ent_spec, dict) else ent_spec
+            name = ent_spec.get("name") if isinstance(ent_spec, dict) else None
+            hidden = bool(ent_spec.get("hidden")) if isinstance(ent_spec, dict) else False
+
+            cur = e["entity_id"]
+            if cur != target_id:
+                if target_id in existing_ids:
+                    errors.append(f"matter_device {ref}: target {target_id} already exists")
+                    continue
+                await ha.call({"type": "config/entity_registry/update", "entity_id": cur, "new_entity_id": target_id})
+                print(f"matter rename: {cur} -> {target_id}", flush=True)
+                existing_ids.discard(cur)
+                existing_ids.add(target_id)
+                cur = target_id
+            await ha.call({
+                "type": "config/entity_registry/update",
+                "entity_id": cur,
+                "area_id": area_id,
+                "name": name,
+                "hidden_by": "user" if hidden else None,
+            })
+            print(f"matter update: {cur} -> {area_name} hidden={hidden}" + (f" name={name!r}" if name else ""), flush=True)
+
+        for e in dev_ents:  # STRICT: every entity on a claimed device must be declared
+            if e["entity_id"] not in matched:
+                errors.append(
+                    f"matter_device {ref} ({d.get('name')}): UNCLAIMED entity {e['entity_id']} "
+                    f"(role {_uid_role(e.get('unique_id'))!r}) — add it to this device's entities"
+                )
+
+    for did, d in matter_devices.items():  # STRICT: every Matter device must be declared
+        if did not in claimed_device_ids:
+            errors.append(
+                f"UNCLAIMED Matter device: {d.get('name')!r} serial={d.get('serial_number')} "
+                f"identifiers={d.get('identifiers')} — add a matter_devices block for it"
+            )
+
+    if errors:
+        for msg in errors:
+            print(f"ERROR {msg}", flush=True)
+        raise RuntimeError(f"matter_devices reconcile failed: {len(errors)} error(s)")
+
+
+async def reconcile_unique_id_entities(ha, desired):
+    """Canonical entity_id / area / hidden for non-Matter entities matched by stable unique_id
+    (e.g. the Daikin renames). No slug renaming, so it can't collide."""
+    specs = desired.get("unique_id_entities") or {}
+    if not specs:
+        return
+    area_id_by_name = {a["name"]: a["area_id"] for a in await ha.call({"type": "config/area_registry/list"})}
+    ents = await ha.call({"type": "config/entity_registry/list"})
+    by_uid = {e.get("unique_id"): e for e in ents}
+    existing_ids = {e["entity_id"] for e in ents}
+    errors = []
+    for uid, spec in specs.items():
+        e = by_uid.get(uid)
+        if not e:
+            errors.append(f"unique_id_entity {uid}: no entity with that unique_id")
+            continue
+        target_id = spec["id"] if isinstance(spec, dict) else spec
+        area_name = spec.get("area") if isinstance(spec, dict) else None
+        hidden = spec.get("hidden") if isinstance(spec, dict) else None
+        name = spec.get("name") if isinstance(spec, dict) else None
+        area_id = area_id_by_name.get(area_name) if area_name else None
+        if area_name and area_id is None:
+            errors.append(f"unique_id_entity {uid}: area {area_name!r} not found")
+            continue
+        cur = e["entity_id"]
+        if cur != target_id:
+            if target_id in existing_ids:
+                errors.append(f"unique_id_entity {uid}: target {target_id} already exists")
+                continue
+            await ha.call({"type": "config/entity_registry/update", "entity_id": cur, "new_entity_id": target_id})
+            print(f"uid rename: {cur} -> {target_id}", flush=True)
+            existing_ids.discard(cur)
+            existing_ids.add(target_id)
+            cur = target_id
+        update = {"entity_id": cur}
+        if area_id is not None:
+            update["area_id"] = area_id
+        if name is not None:
+            update["name"] = name
+        if hidden is not None:
+            update["hidden_by"] = "user" if hidden else None
+        await ha.call({"type": "config/entity_registry/update", **update})
+        print(f"uid update: {cur} -> {area_name} hidden={hidden}", flush=True)
+    if errors:
+        for msg in errors:
+            print(f"ERROR {msg}", flush=True)
+        raise RuntimeError(f"unique_id_entities reconcile failed: {len(errors)} error(s)")
+
+
+async def reconcile_static_areas(ha, desired):
+    """Area-only assignment for already-canonical entity_ids (templates, Dreame). No rename."""
+    mapping = desired.get("static_areas") or {}
+    if not mapping:
         return
     area_id_by_name = {a["name"]: a["area_id"] for a in await ha.call({"type": "config/area_registry/list"})}
     existing_ids = {e["entity_id"] for e in await ha.call({"type": "config/entity_registry/list"})}
-    for entity_id, spec in desired.items():
-        # spec can be a plain area name string or {area, hidden, rename_from}
-        if isinstance(spec, str):
-            area_name, hidden, rename_from = spec, None, None
-        else:
-            area_name = spec.get("area")
-            hidden = spec.get("hidden")
-            rename_from = spec.get("rename_from")
-
-        # If the target doesn't exist yet but a source entity does, rename it first.
-        # Idempotent: after the rename the target exists and rename_from is a no-op.
-        if rename_from and entity_id not in existing_ids and rename_from in existing_ids:
-            try:
-                await ha.call({
-                    "type": "config/entity_registry/update",
-                    "entity_id": rename_from,
-                    "new_entity_id": entity_id,
-                })
-                print(f"entity rename: {rename_from} -> {entity_id}", flush=True)
-                existing_ids.discard(rename_from)
-                existing_ids.add(entity_id)
-            except RuntimeError as e:
-                print(f"WARN entity rename {rename_from} -> {entity_id}: {e}", flush=True)
-                continue
-
-        target_area_id = area_id_by_name.get(area_name) if area_name else None
-        if area_name and not target_area_id:
-            print(f"WARN entity {entity_id}: area {area_name!r} not found", flush=True)
+    errors = []
+    for entity_id, area_name in mapping.items():
+        if entity_id not in existing_ids:
+            errors.append(f"static_area {entity_id}: entity not found")
             continue
-
-        update = {"entity_id": entity_id}
-        if target_area_id is not None:
-            update["area_id"] = target_area_id
-        if hidden is True:
-            update["hidden_by"] = "user"
-        elif hidden is False:
-            update["hidden_by"] = None
-
-        try:
-            await ha.call({"type": "config/entity_registry/update", **update})
-            flags = f"hidden={hidden}" if hidden is not None else ""
-            print(f"entity update: {entity_id} -> {area_name}{' ' + flags if flags else ''}", flush=True)
-        except RuntimeError as e:
-            print(f"WARN entity {entity_id}: {e}", flush=True)
+        area_id = area_id_by_name.get(area_name)
+        if area_id is None:
+            errors.append(f"static_area {entity_id}: area {area_name!r} not found")
+            continue
+        await ha.call({"type": "config/entity_registry/update", "entity_id": entity_id, "area_id": area_id})
+        print(f"static area: {entity_id} -> {area_name}", flush=True)
+    if errors:
+        for msg in errors:
+            print(f"ERROR {msg}", flush=True)
+        raise RuntimeError(f"static_areas reconcile failed: {len(errors)} error(s)")
 
 
 async def reconcile_daikin_integration(desired):
@@ -407,7 +550,9 @@ async def main():
     print(
         f"Reconciling: {len(desired.get('floors', []))} floors, "
         f"{len(desired.get('areas', []))} areas, "
-        f"{len(desired.get('entities') or {})} entity assignments",
+        f"{len(desired.get('matter_devices') or [])} matter devices, "
+        f"{len(desired.get('unique_id_entities') or {})} unique-id entities, "
+        f"{len(desired.get('static_areas') or {})} static areas",
         flush=True,
     )
     ws = await connect_with_retry()
@@ -419,7 +564,9 @@ async def main():
         await reconcile_areas(ha, areas)
         if desired.get("prune"):
             await prune(ha, floors, areas)
-        await reconcile_entities(ha, desired.get("entities") or {})
+        await reconcile_matter_devices(ha, desired)
+        await reconcile_unique_id_entities(ha, desired)
+        await reconcile_static_areas(ha, desired)
         await reconcile_daikin_integration(desired)
         await reconcile_dreame_vacuum_integration(desired)
         await reconcile_matter_integration(desired)

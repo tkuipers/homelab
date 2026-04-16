@@ -95,269 +95,153 @@ areas:
     floor: "Attic"
     icon: mdi:thermometer
 
-# entity_id -> area assignment, hidden flag, and optional rename.
+# ── Device → entity registry mapping ───────────────────────────────────────
+# Matter devices are matched by hardware SERIAL (or, when a device exposes no
+# serial, by its Matter `identifier`). Each device's entities are matched by
+# their Matter cluster "role" (the unique_id suffix), with `#N` ordinals to
+# disambiguate same-role endpoints (e.g. the dual-relay's two channels). This
+# is stable across re-pairing and cannot collide, unlike HA's auto-generated
+# entity_ids — so there is intentionally NO rename-by-slug mechanism anymore.
 #
-# Each key is the *desired* entity_id (HA's canonical name). Value forms:
-#   - "Area Name"                           # shorthand: just assign area
-#   - { area, hidden, rename_from }
+# STRICT: the reconciler FAILS if any Matter device, or any entity on one, is
+# not declared here — so a newly-paired sensor you forget to add blocks the
+# sync until it's added. To add one: find its serial in HA Settings > Devices
+# (or `device_registry/list`), then add a block mapping each role -> entity id.
 #
-# rename_from: the current HA-generated entity_id to rename FROM. Once renamed
-# the target exists and rename_from becomes a no-op, so it's safe to leave in.
-# If you re-pair a device and HA assigns a new ugly id (e.g. _3), update
-# rename_from to the new value.
-entities:
-  # --- Template-defined (already canonical) ---
+# Entity value: { id: <entity_id>, name: <optional friendly name>, hidden: <bool> }
+#
+# Non-Matter devices can't collide, so they stay simple:
+#   unique_id_entities: matched by stable unique_id (the Daikin renames live here)
+#   static_areas:       area-only assignment for canonical ids (templates, Dreame)
+matter_devices:
+  # Aqara Water Leak Sensor [Aqara Water Leak Sensor]  (5 entities)
+  - serial: "158d008b87c44d"
+    area: "Utilities Room"
+    entities:
+      "IdentifyButton-3-1": { id: button.utilities_water_leak_identify, hidden: true }
+      "PowerSource-47-12": { id: sensor.utilities_water_leak_battery }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.utilities_water_leak_battery_type, hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.utilities_water_leak_battery_voltage, hidden: true }
+      "WaterLeakDetector-69-0": { id: binary_sensor.utilities_water_leak }
+  # Aqara Door and Window Sensor [Aqara Door and Window Sensor]  (5 entities)
+  - serial: "158d008c7b8da8"
+    area: "Garage"
+    entities:
+      "ContactSensor-69-0": { id: binary_sensor.garage_door_contact, name: "Garage Door Contact", hidden: true }
+      "IdentifyButton-3-1": { id: button.garage_door_contact_identify, name: "Garage Door Contact Identify", hidden: true }
+      "PowerSource-47-12": { id: sensor.garage_door_contact_battery, name: "Garage Door Contact Battery" }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.garage_door_contact_battery_type, name: "Garage Door Contact Battery Type", hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.garage_door_contact_battery_voltage, name: "Garage Door Contact Battery Voltage", hidden: true }
+  # Aqara Door and Window Sensor [Aqara Door and Window Sensor]  (5 entities)
+  - serial: "158d008c7b8f37"
+    area: "Outside"
+    entities:
+      "ContactSensor-69-0": { id: binary_sensor.back_door, name: "Back Door" }
+      "IdentifyButton-3-1": { id: button.back_door_identify, name: "Back Door Identify", hidden: true }
+      "PowerSource-47-12": { id: sensor.back_door_battery, name: "Back Door Battery" }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.back_door_battery_type, name: "Back Door Battery Type", hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.back_door_battery_voltage, name: "Back Door Battery Voltage", hidden: true }
+  # Aqara Door and Window Sensor [Aqara Door and Window Sensor]  (5 entities)
+  - serial: "158d008c7c424c"
+    area: "Garage Entrance"
+    entities:
+      "ContactSensor-69-0": { id: binary_sensor.garage_entrance_door, name: "Garage Entrance Door" }
+      "IdentifyButton-3-1": { id: button.garage_entrance_door_identify, name: "Garage Entrance Door Identify", hidden: true }
+      "PowerSource-47-12": { id: sensor.garage_entrance_door_battery, name: "Garage Entrance Door Battery" }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.garage_entrance_door_battery_type, name: "Garage Entrance Door Battery Type", hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.garage_entrance_door_battery_voltage, name: "Garage Entrance Door Battery Voltage", hidden: true }
+  # Aqara Smart Lock U50 [Aqara Smart Lock U50]  (7 entities)
+  - serial: "54ef441000df5648"
+    area: "Garage Entrance"
+    entities:
+      "DoorLockOperatingMode-257-37": { id: select.garage_entrance_operating_mode, hidden: true }
+      "IdentifyButton-3-1": { id: button.garage_entrance_identify, hidden: true }
+      "LockActuatorEnabledSensor-257-2": { id: binary_sensor.garage_entrance_actuator, hidden: true }
+      "MatterLock-257-0": { id: lock.garage_entrance }
+      "PowerSource-47-12": { id: sensor.garage_entrance_battery }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.garage_entrance_battery_type, hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.garage_entrance_battery_voltage, hidden: true }
+  # Aqara Smart Lock U50 [Aqara Smart Lock U50]  (7 entities)
+  - serial: "54ef441000df578b"
+    area: "Main Entrance"
+    entities:
+      "DoorLockOperatingMode-257-37": { id: select.main_entrance_operating_mode, hidden: true }
+      "IdentifyButton-3-1": { id: button.main_entrance_identify, hidden: true }
+      "LockActuatorEnabledSensor-257-2": { id: binary_sensor.main_entrance_actuator, hidden: true }
+      "MatterLock-257-0": { id: lock.main_entrance }
+      "PowerSource-47-12": { id: sensor.main_entrance_battery }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.main_entrance_battery_type, hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.main_entrance_battery_voltage, hidden: true }
+  # Aqara Dual Relay Module T2 [Aqara Dual Relay Module T2]  (7 entities)
+  - serial: "54ef441001191fe8"
+    area: "Garage"
+    entities:
+      "ElectricalEnergyMeasurementCumulativeEnergyImported-145-1": { id: sensor.garage_door_opener_energy, hidden: true }
+      "ElectricalPowerMeasurementActiveCurrent-144-5": { id: sensor.garage_door_opener_current, hidden: true }
+      "ElectricalPowerMeasurementWatt-144-8": { id: sensor.garage_door_opener_power, hidden: true }
+      "IdentifyButton-3-1#0": { id: button.garage_door_opener_identify, hidden: true }
+      "IdentifyButton-3-1#1": { id: button.garage_door_opener_aux_identify, hidden: true }
+      "MatterLight-6-0#0": { id: light.garage_door_opener, hidden: true }
+      "MatterLight-6-0#1": { id: light.garage_door_opener_aux, hidden: true }
+  # Aqara Temp/Humidity Sensor T1 [Aqara Temp/Humidity Sensor T1]  (7 entities)
+  - serial: "54ef4410012f0098"
+    area: "Attic"
+    entities:
+      "HumiditySensor-1029-0": { id: sensor.attic_humidity }
+      "IdentifyButton-3-1#0": { id: button.attic_sensor_identify, hidden: true }
+      "IdentifyButton-3-1#1": { id: button.attic_sensor_identify_2, hidden: true }
+      "PowerSource-47-12": { id: sensor.attic_sensor_battery }
+      "PowerSourceBatReplacementDescription-47-19": { id: sensor.attic_sensor_battery_type, hidden: true }
+      "PowerSourceBatVoltage-47-11": { id: sensor.attic_sensor_battery_voltage, hidden: true }
+      "TemperatureSensor-1026-0": { id: sensor.attic_temperature }
+  # Aqara Hub M3 [Aqara Hub M3]  (1 entities)
+  - serial: "54ef4476343a"
+    area: null
+    entities:
+      "IdentifyButton-3-1": { id: button.aqara_hub_identify, hidden: true }
+  # Smart Wi-Fi Switch [Smart Wi-Fi Switch]  (3 entities)
+  - serial: "BC071D001664"
+    area: "Main Bedroom"
+    entities:
+      "MatterLight-6-0": { id: light.main_bedroom }
+      "MatterStartUpOnOff-6-16387": { id: select.main_bedroom_power_on_behavior, hidden: true }
+      "MatterUpdate-40-9": { id: update.main_bedroom_firmware, hidden: true }
+  # H7057 [H7057]  (11 entities)
+  - identifier: "matter:deviceid_DF8F5546DC2CCC5A-0000000000000004-MatterNodeDevice"
+    area: "Outside"
+    entities:
+      "IdentifyButton-3-1#0": { id: button.h7057_identify_0, hidden: true }
+      "IdentifyButton-3-1#1": { id: button.h7057_identify_1, hidden: true }
+      "MatterLight-6-0": { id: light.back_yard_floodlights }
+      "MatterModeSelect-80-3": { id: select.h7057_music, hidden: true }
+      "MatterStartUpOnOff-6-16387": { id: select.h7057_power_on_behavior, hidden: true }
+      "MatterUpdate-40-9": { id: update.h7057_firmware, hidden: true }
+      "off_transition_time-8-19": { id: number.h7057_off_transition_time, hidden: true }
+      "on_level-8-17": { id: number.h7057_on_level, hidden: true }
+      "on_off_transition_time-8-16": { id: number.h7057_on_off_transition_time, hidden: true }
+      "on_transition_time-8-18": { id: number.h7057_on_transition_time, hidden: true }
+      "power_on_level-8-16384": { id: number.h7057_power_on_level, hidden: true }
+
+unique_id_entities:
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-climate": { id: climate.main_floor_thermostat, area: "Main Common Space" }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-fan_speed": { id: select.main_floor_fan_speed, area: "Main Common Space" }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-indoor_temperature": { id: sensor.main_floor_indoor_temperature, area: "Main Common Space" }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-indoor_humidity": { id: sensor.main_floor_indoor_humidity, area: "Main Common Space" }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-online": { id: sensor.main_floor_thermostat_online, area: "Main Common Space", hidden: true }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-outdoor_temperature": { id: sensor.outdoor_temperature, area: "Outside" }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-outdoor_humidity": { id: sensor.outdoor_humidity, area: "Outside" }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-outdoor_air_quality_summary": { id: sensor.outdoor_air_quality, area: "Outside" }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-outdoor_air_quality_index": { id: sensor.outdoor_aqi, area: "Outside" }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-outdoor_air_quality_ozone": { id: sensor.outdoor_air_quality_ozone, area: "Outside", hidden: true }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-outdoor_air_quality_particles": { id: sensor.outdoor_air_quality_particles, area: "Outside", hidden: true }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-DC6VSS3610-2504174763-outdoor_fan_speed": { id: sensor.hvac_outdoor_fan_speed, area: "Outside", hidden: true }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-DC6VSS3610-2504174763-outdoor_fan_target": { id: sensor.hvac_outdoor_fan_target_speed, area: "Outside", hidden: true }
+  "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-eevcoil-2504250707-indoor_superheat_temperature": { id: sensor.hvac_indoor_superheat_temperature, area: "Main Common Space", hidden: true }
+
+static_areas:
   binary_sensor.garage_door: "Garage"
   button.garage_door_trigger: "Garage"
   cover.garage_door: "Garage"
-
-  # --- Aqara Hub M3 ---
-  button.aqara_hub_identify:
-    hidden: true
-    rename_from: button.aqara_hub_m3_identify
-
-  # --- Garage: door contact sensor ---
-  binary_sensor.garage_door_contact:
-    area: "Garage"
-    hidden: true
-    rename_from: binary_sensor.aqara_door_and_window_sensor_door
-  button.garage_door_contact_identify:
-    area: "Garage"
-    hidden: true
-    rename_from: button.aqara_door_and_window_sensor_identify
-  sensor.garage_door_contact_battery:
-    area: "Garage"
-    rename_from: sensor.aqara_door_and_window_sensor_battery
-  sensor.garage_door_contact_battery_voltage:
-    area: "Garage"
-    hidden: true
-    rename_from: sensor.aqara_door_and_window_sensor_battery_voltage
-  sensor.garage_door_contact_battery_type:
-    area: "Garage"
-    hidden: true
-    rename_from: sensor.aqara_door_and_window_sensor_battery_type
-
-  # --- Garage: dual relay driving the opener (channel 1 active, channel 2 unused) ---
-  light.garage_door_opener:
-    area: "Garage"
-    hidden: true
-    rename_from: light.aqara_dual_relay_module_t2
-  light.garage_door_opener_aux:
-    area: "Garage"
-    hidden: true
-    rename_from: light.aqara_dual_relay_module_t2_2
-  sensor.garage_door_opener_power:
-    area: "Garage"
-    hidden: true
-    rename_from: sensor.aqara_dual_relay_module_t2_power
-  sensor.garage_door_opener_current:
-    area: "Garage"
-    hidden: true
-    rename_from: sensor.aqara_dual_relay_module_t2_active_current
-  sensor.garage_door_opener_energy:
-    area: "Garage"
-    hidden: true
-    rename_from: sensor.aqara_dual_relay_module_t2_energy
-  button.garage_door_opener_identify:
-    area: "Garage"
-    hidden: true
-    rename_from: button.aqara_dual_relay_module_t2_identify
-  button.garage_door_opener_aux_identify:
-    area: "Garage"
-    hidden: true
-    rename_from: button.aqara_dual_relay_module_t2_identify_2
-
-  # --- Garage Entrance lock (Aqara U50 #1) ---
-  lock.garage_entrance:
-    area: "Garage Entrance"
-    rename_from: lock.aqara_smart_lock_u50
-  binary_sensor.garage_entrance_actuator:
-    area: "Garage Entrance"
-    hidden: true
-    rename_from: binary_sensor.aqara_smart_lock_u50_actuator
-  select.garage_entrance_operating_mode:
-    area: "Garage Entrance"
-    hidden: true
-    rename_from: select.aqara_smart_lock_u50_operating_mode
-  sensor.garage_entrance_battery:
-    area: "Garage Entrance"
-    rename_from: sensor.aqara_smart_lock_u50_battery
-  sensor.garage_entrance_battery_voltage:
-    area: "Garage Entrance"
-    hidden: true
-    rename_from: sensor.aqara_smart_lock_u50_battery_voltage
-  sensor.garage_entrance_battery_type:
-    area: "Garage Entrance"
-    hidden: true
-    rename_from: sensor.aqara_smart_lock_u50_battery_type
-  button.garage_entrance_identify:
-    area: "Garage Entrance"
-    hidden: true
-    rename_from: button.aqara_smart_lock_u50_identify
-
-  # --- Main Entrance lock (Aqara U50 #2) ---
-  lock.main_entrance:
-    area: "Main Entrance"
-    rename_from: lock.aqara_smart_lock_u50_2
-  binary_sensor.main_entrance_actuator:
-    area: "Main Entrance"
-    hidden: true
-    rename_from: binary_sensor.aqara_smart_lock_u50_actuator_2
-  select.main_entrance_operating_mode:
-    area: "Main Entrance"
-    hidden: true
-    rename_from: select.aqara_smart_lock_u50_operating_mode_2
-  sensor.main_entrance_battery:
-    area: "Main Entrance"
-    rename_from: sensor.aqara_smart_lock_u50_battery_2
-  sensor.main_entrance_battery_voltage:
-    area: "Main Entrance"
-    hidden: true
-    rename_from: sensor.aqara_smart_lock_u50_battery_voltage_2
-  sensor.main_entrance_battery_type:
-    area: "Main Entrance"
-    hidden: true
-    rename_from: sensor.aqara_smart_lock_u50_battery_type_2
-  button.main_entrance_identify:
-    area: "Main Entrance"
-    hidden: true
-    rename_from: button.aqara_smart_lock_u50_identify_2
-
-  # --- Utilities Room: water leak sensor ---
-  binary_sensor.utilities_water_leak:
-    area: "Utilities Room"
-    rename_from: binary_sensor.aqara_water_leak_sensor_water_leak
-  sensor.utilities_water_leak_battery:
-    area: "Utilities Room"
-    rename_from: sensor.aqara_water_leak_sensor_battery
-  sensor.utilities_water_leak_battery_voltage:
-    area: "Utilities Room"
-    hidden: true
-    rename_from: sensor.aqara_water_leak_sensor_battery_voltage
-  sensor.utilities_water_leak_battery_type:
-    area: "Utilities Room"
-    hidden: true
-    rename_from: sensor.aqara_water_leak_sensor_battery_type
-  button.utilities_water_leak_identify:
-    area: "Utilities Room"
-    hidden: true
-    rename_from: button.aqara_water_leak_sensor_identify
-
-  # --- Attic: temp/humidity sensor ---
-  sensor.attic_temperature:
-    area: "Attic"
-    rename_from: sensor.aqara_temp_humidity_sensor_t1_temperature
-  sensor.attic_humidity:
-    area: "Attic"
-    rename_from: sensor.aqara_temp_humidity_sensor_t1_humidity
-  sensor.attic_sensor_battery:
-    area: "Attic"
-    rename_from: sensor.aqara_temp_humidity_sensor_t1_battery
-  sensor.attic_sensor_battery_voltage:
-    area: "Attic"
-    hidden: true
-    rename_from: sensor.aqara_temp_humidity_sensor_t1_battery_voltage
-  sensor.attic_sensor_battery_type:
-    area: "Attic"
-    hidden: true
-    rename_from: sensor.aqara_temp_humidity_sensor_t1_battery_type
-  button.attic_sensor_identify:
-    area: "Attic"
-    hidden: true
-    rename_from: button.aqara_temp_humidity_sensor_t1_identify
-  # Aqara T1 exposes two identify endpoints (temp + humidity sub-devices).
-  button.attic_sensor_identify_2:
-    area: "Attic"
-    hidden: true
-    rename_from: button.aqara_temp_humidity_sensor_t1_identify_2
-
-  # --- Back yard: door sensor + Govee H7057 floodlights ---
-  binary_sensor.back_door:
-    area: "Outside"
-    rename_from: binary_sensor.aqara_door_and_window_sensor_door_2
-  button.back_door_identify:
-    area: "Outside"
-    hidden: true
-    rename_from: button.aqara_door_and_window_sensor_identify_2
-  sensor.back_door_battery:
-    area: "Outside"
-    rename_from: sensor.aqara_door_and_window_sensor_battery_2
-  sensor.back_door_battery_voltage:
-    area: "Outside"
-    hidden: true
-    rename_from: sensor.aqara_door_and_window_sensor_battery_voltage_2
-  sensor.back_door_battery_type:
-    area: "Outside"
-    hidden: true
-    rename_from: sensor.aqara_door_and_window_sensor_battery_type_2
-  light.back_yard_floodlights:
-    area: "Outside"
-    rename_from: light.h7057
-
-  # --- Main floor thermostat + sensors (Daikin) ---
-  climate.main_floor_thermostat:
-    area: "Main Common Space"
-    rename_from: climate.main_room_thermostat
-  select.main_floor_fan_speed:
-    area: "Main Common Space"
-    rename_from: select.main_room_thermostat_fan_speed
-  sensor.main_floor_indoor_temperature:
-    area: "Main Common Space"
-    rename_from: sensor.main_room_thermostat_indoor_temperature
-  sensor.main_floor_indoor_humidity:
-    area: "Main Common Space"
-    rename_from: sensor.main_room_thermostat_indoor_humidity
-  sensor.main_floor_thermostat_online:
-    area: "Main Common Space"
-    hidden: true
-    rename_from: sensor.main_room_thermostat_online_status
-  sensor.outdoor_temperature:
-    area: "Outside"
-    rename_from: sensor.main_room_thermostat_outdoor_temperature
-  sensor.outdoor_humidity:
-    area: "Outside"
-    rename_from: sensor.main_room_thermostat_outdoor_humidity
-  sensor.outdoor_air_quality:
-    area: "Outside"
-    rename_from: sensor.main_room_thermostat_outdoor_air_quality
-  sensor.outdoor_aqi:
-    area: "Outside"
-    rename_from: sensor.main_room_thermostat_outdoor_air_quality_index
-  sensor.outdoor_air_quality_ozone:
-    area: "Outside"
-    hidden: true
-    rename_from: sensor.main_room_thermostat_outdoor_air_quality_ozone
-  sensor.outdoor_air_quality_particles:
-    area: "Outside"
-    hidden: true
-    rename_from: sensor.main_room_thermostat_outdoor_air_quality_particles
-  sensor.hvac_outdoor_fan_speed:
-    area: "Outside"
-    hidden: true
-    rename_from: sensor.main_room_condensing_unit_outdoor_fan_speed
-  sensor.hvac_outdoor_fan_target_speed:
-    area: "Outside"
-    hidden: true
-    rename_from: sensor.main_room_condensing_unit_outdoor_fan_target_speed
-  sensor.hvac_indoor_superheat_temperature:
-    area: "Main Common Space"
-    hidden: true
-    rename_from: sensor.main_room_eev_coil_indoor_superheat_temperature
-
-  # --- Main Bedroom (TP-Link smart switch) ---
-  light.main_bedroom:
-    area: "Main Bedroom"
-    rename_from: light.smart_wi_fi_switch
-  select.main_bedroom_power_on_behavior:
-    area: "Main Bedroom"
-    hidden: true
-    rename_from: select.smart_wi_fi_switch_power_on_behavior
-  update.main_bedroom_firmware:
-    area: "Main Bedroom"
-    hidden: true
-    rename_from: update.smart_wi_fi_switch_firmware
-
-  # --- Dreame vacuum (already canonical; just area assignments) ---
   vacuum.dreame_vacuum: "Dining"
   sensor.dreame_vacuum_battery_level: "Dining"
   sensor.dreame_vacuum_status: "Dining"
@@ -370,8 +254,6 @@ entities:
   sensor.dreame_vacuum_cleaned_area: "Dining"
   camera.dreame_vacuum_map: "Dining"
 
-# Matter integration. The reconciler ensures this config entry exists in HA.
-# Pairing devices (e.g. Aqara Hub M3) is a one-time manual step via the HA UI.
 daikin:
   managed: true
 
