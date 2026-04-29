@@ -32,4 +32,5 @@ resources:
   - decision-service.yaml
   - execution-deployment.yaml
   - execution-service.yaml
-  - training-cronjob.yaml
+  - training-deployment.yaml
+  - training-service.yaml
