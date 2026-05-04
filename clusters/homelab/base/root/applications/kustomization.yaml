@@ -20,3 +20,4 @@ resources:
   - argocd-application-stock-guesser.yaml
   - argocd-application-anki.yaml
   - argocd-application-stocks.yaml
+  - argocd-application-homeassistant.yaml
