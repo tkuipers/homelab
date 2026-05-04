@@ -259,4 +259,28 @@ data:
             access_token_signed_response_alg: 'none'
             userinfo_signed_response_alg: 'none'
             token_endpoint_auth_method: 'client_secret_basic'
+          - client_id: 'homeassistant'
+            client_name: 'Home Assistant'
+            # Hash populated by tooling/scripts/setup-credentials/setup-homeassistant-oidc.sh
+            client_secret: '$argon2id$v=19$m=65536,t=3,p=4$anJoHfslXmTwqqog2Ic/Qg$FLX2l+rbD3EfIx2JrDgoEHUwAetEmNt3ZvN35qsnyak'
+            public: false
+            authorization_policy: 'one_factor'
+            consent_mode: 'pre-configured'
+            pre_configured_consent_duration: '30d'
+            require_pkce: true
+            pkce_challenge_method: 'S256'
+            redirect_uris:
+              - 'https://home.tkuipers.ca/auth/oidc/callback'
+            scopes:
+              - 'openid'
+              - 'email'
+              - 'profile'
+              - 'groups'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'client_secret_post'
 
