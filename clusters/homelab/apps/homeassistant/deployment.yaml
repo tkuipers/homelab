@@ -119,7 +119,7 @@ spec:
               lovelace:
                 mode: storage
                 dashboards:
-                  home:
+                  home-yaml:
                     mode: yaml
                     filename: dashboards/home.yaml
                     title: Home
