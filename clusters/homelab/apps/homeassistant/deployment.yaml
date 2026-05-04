@@ -22,16 +22,28 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
       initContainers:
-        # Ensures HA's configuration.yaml trusts the ingress-nginx proxy.
-        # Without this HA's forwarded middleware rejects all requests with HTTP 400.
+        # Bootstraps configuration.yaml (trusted_proxies for ingress-nginx),
+        # installs hass-oidc-auth at the pinned version, and rewrites a
+        # sentinel-bracketed auth_oidc block from the OIDC client secret on
+        # every boot (so rotation propagates on pod restart).
         - name: seed-config
           image: busybox:1.36
+          env:
+            - name: OIDC_INTEGRATION_VERSION
+              value: "1.0.2"
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: homeassistant-oidc
+                  key: client_secret
           command:
             - sh
             - -c
             - |
               set -eu
               CONFIG=/config/configuration.yaml
+
+              # --- Ensure base config + http trusted_proxies block ---
               if [ ! -f "$CONFIG" ]; then
                 cat > "$CONFIG" <<'EOF'
               # Loads default set of integrations. Do not remove.
@@ -61,6 +73,45 @@ spec:
                   - 10.96.0.0/12
               EOF
               fi
+
+              # --- Install/upgrade hass-oidc-auth custom_component ---
+              TARGET=/config/custom_components/auth_oidc
+              WANT_VER="$OIDC_INTEGRATION_VERSION"
+              CURRENT_VER=""
+              if [ -f "$TARGET/manifest.json" ]; then
+                CURRENT_VER=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$TARGET/manifest.json" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+              fi
+              if [ "$CURRENT_VER" != "$WANT_VER" ]; then
+                echo "Installing hass-oidc-auth v$WANT_VER (had: ${CURRENT_VER:-none})"
+                rm -rf "$TARGET"
+                mkdir -p "$TARGET"
+                wget -q -O /tmp/auth_oidc.zip "https://github.com/christiaangoossens/hass-oidc-auth/releases/download/v${WANT_VER}/hass-oidc-auth.zip"
+                (cd "$TARGET" && unzip -q /tmp/auth_oidc.zip)
+                rm /tmp/auth_oidc.zip
+              fi
+
+              # --- Manage auth_oidc block (rewrite on every boot) ---
+              # Strip any existing sentinel-bracketed block so we can rewrite cleanly.
+              awk '
+                /# >>> auth_oidc managed >>>/ { in_block=1; next }
+                /# <<< auth_oidc managed <<</ { in_block=0; next }
+                !in_block { print }
+              ' "$CONFIG" > "$CONFIG.tmp"
+              cat >> "$CONFIG.tmp" <<EOF
+
+              # >>> auth_oidc managed >>>
+              # Managed by the seed-config initContainer.
+              # Edits between these markers are overwritten on every pod restart.
+              auth_oidc:
+                client_id: "homeassistant"
+                client_secret: "$OIDC_CLIENT_SECRET"
+                discovery_url: "https://auth.tkuipers.ca/.well-known/openid-configuration"
+                display_name: "Authelia"
+                features:
+                  automatic_user_linking: true
+              # <<< auth_oidc managed <<<
+              EOF
+              mv "$CONFIG.tmp" "$CONFIG"
           volumeMounts:
             - name: config
               mountPath: /config
