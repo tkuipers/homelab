@@ -1,15 +1,96 @@
 # Desired state for HA's area / floor / entity registries.
 # Reconciled on every ArgoCD sync via the reconciler Job (PostSync hook).
+#
+# prune: when true, floors and areas not listed below are deleted.
+# Entities in deleted areas keep their state but become unassigned.
+
+prune: true
 
 floors:
-  - name: "Main Floor"
+  - name: "Basement"
+    level: -1
+    icon: mdi:stairs-down
+  - name: "Ground Floor"
+    level: 0
+    icon: mdi:home
+  - name: "Upstairs"
     level: 1
+    icon: mdi:stairs-up
+  - name: "Attic"
+    level: 2
+    icon: mdi:home-roof
 
 areas:
-  - name: "Living Room"
-    floor: "Main Floor"
+  # --- Basement ---
+  - name: "Spare Bedroom"
+    floor: "Basement"
+    icon: mdi:bed
+  - name: "Workout Room"
+    floor: "Basement"
+    icon: mdi:dumbbell
+  - name: "Basement Common Space"
+    floor: "Basement"
+    icon: mdi:sofa
+  - name: "Utilities Room"
+    floor: "Basement"
+    icon: mdi:tools
+  - name: "Basement Bathroom"
+    floor: "Basement"
+    icon: mdi:shower
+
+  # --- Ground Floor ---
+  - name: "Main Entrance"
+    floor: "Ground Floor"
+    icon: mdi:door
+  - name: "Garage Entrance"
+    floor: "Ground Floor"
+    icon: mdi:door-sliding
+  - name: "Main Bathroom"
+    floor: "Ground Floor"
+    icon: mdi:toilet
+  - name: "Laundry Room"
+    floor: "Ground Floor"
+    icon: mdi:washing-machine
   - name: "Kitchen"
-    floor: "Main Floor"
+    floor: "Ground Floor"
+    icon: mdi:silverware-fork-knife
+  - name: "Dining"
+    floor: "Ground Floor"
+    icon: mdi:table-chair
+  - name: "Main Common Space"
+    floor: "Ground Floor"
+    icon: mdi:sofa
+  - name: "Garage"
+    floor: "Ground Floor"
+    icon: mdi:garage
+
+  # --- Upstairs ---
+  - name: "Upstairs Common Room"
+    floor: "Upstairs"
+    icon: mdi:sofa
+  - name: "Vacuum Room"
+    floor: "Upstairs"
+    icon: mdi:robot-vacuum
+  - name: "Hallway"
+    floor: "Upstairs"
+    icon: mdi:walk
+  - name: "Guest Bathroom"
+    floor: "Upstairs"
+    icon: mdi:shower
+  - name: "Main Bedroom"
+    floor: "Upstairs"
+    icon: mdi:bed-king
+  - name: "Main Closet"
+    floor: "Upstairs"
+    icon: mdi:wardrobe
+  - name: "Ensuite"
+    floor: "Upstairs"
+    icon: mdi:shower-head
+
+  # --- Attic (uninhabited; temp/humidity sensor only) ---
+  - name: "Attic"
+    floor: "Attic"
+    icon: mdi:thermometer
 
 # entity_id -> area name. Entity must already exist (created by an integration).
 entities: {}

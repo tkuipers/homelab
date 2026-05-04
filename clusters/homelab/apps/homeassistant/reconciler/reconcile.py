@@ -102,6 +102,19 @@ async def reconcile_areas(ha, desired):
             await ha.call(params)
 
 
+async def prune(ha, desired_floors, desired_areas):
+    desired_area_names = {a["name"] for a in desired_areas}
+    for area in await ha.call({"type": "config/area_registry/list"}):
+        if area["name"] not in desired_area_names:
+            print(f"area delete: {area['name']}", flush=True)
+            await ha.call({"type": "config/area_registry/delete", "area_id": area["area_id"]})
+    desired_floor_names = {f["name"] for f in desired_floors}
+    for floor in await ha.call({"type": "config/floor_registry/list"}):
+        if floor["name"] not in desired_floor_names:
+            print(f"floor delete: {floor['name']}", flush=True)
+            await ha.call({"type": "config/floor_registry/delete", "floor_id": floor["floor_id"]})
+
+
 async def reconcile_entities(ha, desired):
     if not desired:
         return
@@ -130,8 +143,12 @@ async def main():
     ws = await connect_with_retry()
     try:
         ha = HA(ws)
-        await reconcile_floors(ha, desired.get("floors", []))
-        await reconcile_areas(ha, desired.get("areas", []))
+        floors = desired.get("floors", [])
+        areas = desired.get("areas", [])
+        await reconcile_floors(ha, floors)
+        await reconcile_areas(ha, areas)
+        if desired.get("prune"):
+            await prune(ha, floors, areas)
         await reconcile_entities(ha, desired.get("entities") or {})
         print("done", flush=True)
     finally:
