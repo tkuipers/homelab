@@ -90,18 +90,47 @@ spec:
                 rm /tmp/auth_oidc.zip
               fi
 
-              # --- Manage auth_oidc block (rewrite on every boot) ---
-              # Strip any existing sentinel-bracketed block so we can rewrite cleanly.
+              # --- Sync declarative config from kustomize-generated ConfigMaps ---
+              mkdir -p /config/packages /config/dashboards
+              rm -f /config/packages/*.yaml /config/dashboards/*.yaml 2>/dev/null || true
+              for f in /managed-config/packages/*.yaml; do
+                [ -e "$f" ] && cp "$f" /config/packages/
+              done
+              for f in /managed-config/dashboards/*.yaml; do
+                [ -e "$f" ] && cp "$f" /config/dashboards/
+              done
+
+              # --- Manage sentinel-bracketed blocks (rewrite on every boot) ---
+              # Strip any existing managed blocks so we can rewrite cleanly.
               awk '
-                /# >>> auth_oidc managed >>>/ { in_block=1; next }
-                /# <<< auth_oidc managed <<</ { in_block=0; next }
+                /^# >>> .* managed >>>/ { in_block=1; next }
+                /^# <<< .* managed <<</ { in_block=0; next }
                 !in_block { print }
               ' "$CONFIG" > "$CONFIG.tmp"
+
+              cat >> "$CONFIG.tmp" <<'EOF'
+
+              # >>> homeassistant managed >>>
+              # Managed by the seed-config initContainer.
+              # Drop files into managed/packages/ in git to add HA config.
+              # Edit managed/dashboards/home.yaml for the declarative dashboard.
+              homeassistant:
+                packages: !include_dir_named packages
+              lovelace:
+                mode: storage
+                dashboards:
+                  home:
+                    mode: yaml
+                    filename: dashboards/home.yaml
+                    title: Home
+                    icon: mdi:home
+                    show_in_sidebar: true
+              # <<< homeassistant managed <<<
+              EOF
+
               cat >> "$CONFIG.tmp" <<EOF
 
               # >>> auth_oidc managed >>>
-              # Managed by the seed-config initContainer.
-              # Edits between these markers are overwritten on every pod restart.
               auth_oidc:
                 client_id: "homeassistant"
                 client_secret: "$OIDC_CLIENT_SECRET"
@@ -115,6 +144,12 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
+            - name: managed-packages
+              mountPath: /managed-config/packages
+              readOnly: true
+            - name: managed-dashboards
+              mountPath: /managed-config/dashboards
+              readOnly: true
       containers:
         - name: homeassistant
           # renovate: datasource=docker
@@ -154,3 +189,9 @@ spec:
           hostPath:
             path: /var/persist/homeassistant-config
             type: DirectoryOrCreate
+        - name: managed-packages
+          configMap:
+            name: homeassistant-packages
+        - name: managed-dashboards
+          configMap:
+            name: homeassistant-dashboards

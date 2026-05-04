@@ -1,0 +1,15 @@
+# Desired state for HA's area / floor / entity registries.
+# Reconciled on every ArgoCD sync via the reconciler Job (PostSync hook).
+
+floors:
+  - name: "Main Floor"
+    level: 1
+
+areas:
+  - name: "Living Room"
+    floor: "Main Floor"
+  - name: "Kitchen"
+    floor: "Main Floor"
+
+# entity_id -> area name. Entity must already exist (created by an integration).
+entities: {}

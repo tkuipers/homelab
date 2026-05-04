@@ -1,0 +1,10 @@
+title: Home
+views:
+  - title: Overview
+    path: overview
+    icon: mdi:home
+    cards:
+      - type: markdown
+        content: |
+          # Home
+          Declarative dashboard. Edit `managed/dashboards/home.yaml` in git.

@@ -1,8 +1,24 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: homeassistant
 resources:
   - namespace.yaml
   - external-secret.yaml
+  - reconciler-external-secret.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+  - reconciler-job.yaml
+configMapGenerator:
+  - name: homeassistant-packages
+    files:
+      - managed/packages/example_living_room.yaml
+  - name: homeassistant-dashboards
+    files:
+      - managed/dashboards/home.yaml
+  - name: homeassistant-registry
+    files:
+      - managed/registry.yaml
+  - name: homeassistant-reconciler-script
+    files:
+      - reconciler/reconcile.py

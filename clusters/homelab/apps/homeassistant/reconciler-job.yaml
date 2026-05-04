@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: homeassistant-reconciler
+  namespace: homeassistant
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: reconciler
+          image: python:3.12-slim
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              pip install --quiet --no-cache-dir pyyaml websockets
+              exec python /app/reconcile.py
+          env:
+            - name: HA_URL
+              value: "ws://homeassistant.homeassistant.svc.cluster.local:8123/api/websocket"
+            - name: HA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: homeassistant-reconciler
+                  key: token
+            - name: REGISTRY_PATH
+              value: /registry/registry.yaml
+          volumeMounts:
+            - name: script
+              mountPath: /app
+            - name: registry
+              mountPath: /registry
+      volumes:
+        - name: script
+          configMap:
+            name: homeassistant-reconciler-script
+        - name: registry
+          configMap:
+            name: homeassistant-registry

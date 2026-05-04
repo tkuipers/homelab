@@ -1,0 +1,15 @@
+input_boolean:
+  living_room_movie_mode:
+    name: Movie Mode
+    icon: mdi:movie
+
+automation:
+  - alias: "Notify on movie mode toggle"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.living_room_movie_mode
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Movie mode"
+          message: "Movie mode is now {{ trigger.to_state.state }}"
