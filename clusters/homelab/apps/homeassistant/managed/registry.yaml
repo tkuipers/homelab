@@ -63,6 +63,9 @@ areas:
   - name: "Garage"
     floor: "Ground Floor"
     icon: mdi:garage
+  - name: "Outside"
+    floor: "Ground Floor"
+    icon: mdi:weather-partly-cloudy
 
   # --- Upstairs ---
   - name: "Upstairs Common Room"
@@ -111,6 +114,23 @@ entities:
     hidden: true
   sensor.aqara_temp_humidity_sensor_t1_temperature: "Attic"
   sensor.aqara_temp_humidity_sensor_t1_humidity: "Attic"
+  climate.main_room_thermostat: "Main Common Space"
+  select.main_room_thermostat_fan_speed: "Main Common Space"
+  sensor.main_room_thermostat_indoor_temperature: "Main Common Space"
+  sensor.main_room_thermostat_indoor_humidity: "Main Common Space"
+  sensor.main_room_thermostat_online_status:
+    area: "Main Common Space"
+    hidden: true
+  sensor.main_room_thermostat_outdoor_temperature: "Outside"
+  sensor.main_room_thermostat_outdoor_humidity: "Outside"
+  sensor.main_room_thermostat_outdoor_air_quality: "Outside"
+  sensor.main_room_thermostat_outdoor_air_quality_index: "Outside"
+  sensor.main_room_thermostat_outdoor_air_quality_ozone:
+    area: "Outside"
+    hidden: true
+  sensor.main_room_thermostat_outdoor_air_quality_particles:
+    area: "Outside"
+    hidden: true
 
 # Matter integration. The reconciler ensures this config entry exists in HA.
 # Pairing devices (e.g. Aqara Hub M3) is a one-time manual step via the HA UI.
