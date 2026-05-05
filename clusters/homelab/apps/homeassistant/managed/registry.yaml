@@ -95,6 +95,18 @@ areas:
 # entity_id -> area name. Entity must already exist (created by an integration).
 entities:
   binary_sensor.garage_door: "Garage"
+  binary_sensor.aqara_water_leak_sensor_water_leak: "Utilities Room"
+  binary_sensor.aqara_door_and_window_sensor_door:
+    area: "Garage"
+    hidden: true
+  lock.aqara_smart_lock_u50: "Garage Entrance"
+  lock.aqara_smart_lock_u50_2: "Main Entrance"
+  light.aqara_dual_relay_module_t2: "Garage"
+  light.aqara_dual_relay_module_t2_2:
+    area: "Garage"
+    hidden: true
+  sensor.aqara_temp_humidity_sensor_t1_temperature: "Attic"
+  sensor.aqara_temp_humidity_sensor_t1_humidity: "Attic"
 
 # Matter integration. The reconciler ensures this config entry exists in HA.
 # Pairing devices (e.g. Aqara Hub M3) is a one-time manual step via the HA UI.

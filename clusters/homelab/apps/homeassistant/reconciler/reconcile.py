@@ -136,14 +136,30 @@ async def reconcile_entities(ha, desired):
     if not desired:
         return
     area_id_by_name = {a["name"]: a["area_id"] for a in await ha.call({"type": "config/area_registry/list"})}
-    for entity_id, area_name in desired.items():
-        target_area_id = area_id_by_name.get(area_name)
-        if not target_area_id:
+    for entity_id, spec in desired.items():
+        # spec can be a plain area name string or {area: ..., hidden: ...}
+        if isinstance(spec, str):
+            area_name, hidden = spec, None
+        else:
+            area_name, hidden = spec.get("area"), spec.get("hidden")
+
+        target_area_id = area_id_by_name.get(area_name) if area_name else None
+        if area_name and not target_area_id:
             print(f"WARN entity {entity_id}: area {area_name!r} not found", flush=True)
             continue
+
+        update = {"entity_id": entity_id}
+        if target_area_id is not None:
+            update["area_id"] = target_area_id
+        if hidden is True:
+            update["hidden_by"] = "user"
+        elif hidden is False:
+            update["hidden_by"] = None
+
         try:
-            await ha.call({"type": "config/entity_registry/update", "entity_id": entity_id, "area_id": target_area_id})
-            print(f"entity assign: {entity_id} -> {area_name}", flush=True)
+            await ha.call({"type": "config/entity_registry/update", **update})
+            flags = f"hidden={hidden}" if hidden is not None else ""
+            print(f"entity update: {entity_id} -> {area_name}{' ' + flags if flags else ''}", flush=True)
         except RuntimeError as e:
             print(f"WARN entity {entity_id}: {e}", flush=True)
 
