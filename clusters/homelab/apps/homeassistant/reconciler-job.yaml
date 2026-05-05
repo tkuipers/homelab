@@ -20,7 +20,7 @@ spec:
             - -c
             - |
               set -e
-              pip install --quiet --no-cache-dir pyyaml websockets
+              pip install --quiet --no-cache-dir --root-user-action=ignore pyyaml websockets
               exec python /app/reconcile.py
           env:
             - name: HA_URL
