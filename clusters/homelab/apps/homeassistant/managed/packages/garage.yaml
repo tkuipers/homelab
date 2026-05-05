@@ -1,15 +1,3 @@
-script:
-  garage_door_pulse:
-    alias: "Garage Door Pulse"
-    sequence:
-      - action: light.turn_on
-        target:
-          entity_id: light.aqara_dual_relay_module_t2
-      - delay: "00:00:01"
-      - action: light.turn_off
-        target:
-          entity_id: light.aqara_dual_relay_module_t2
-
 template:
   - binary_sensor:
       - name: "Garage Door"
@@ -23,9 +11,13 @@ template:
         unique_id: "garage_door_trigger"
         icon: mdi:garage
         press:
-          - action: script.turn_on
+          - action: light.turn_on
             target:
-              entity_id: script.garage_door_pulse
+              entity_id: light.aqara_dual_relay_module_t2
+          - delay: "00:00:01"
+          - action: light.turn_off
+            target:
+              entity_id: light.aqara_dual_relay_module_t2
 
 cover:
   - platform: template
@@ -36,8 +28,14 @@ cover:
         device_class: garage
         value_template: "{{ is_state('binary_sensor.garage_door', 'on') }}"
         open_cover:
-          service: script.garage_door_pulse
+          service: button.press
+          target:
+            entity_id: button.garage_door_trigger
         close_cover:
-          service: script.garage_door_pulse
+          service: button.press
+          target:
+            entity_id: button.garage_door_trigger
         stop_cover:
-          service: script.garage_door_pulse
+          service: button.press
+          target:
+            entity_id: button.garage_door_trigger
