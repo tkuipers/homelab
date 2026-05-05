@@ -5,3 +5,16 @@ template:
         device_class: garage_door
         state: "{{ is_state('binary_sensor.aqara_door_and_window_sensor_door', 'off') }}"
         availability: "{{ states('binary_sensor.aqara_door_and_window_sensor_door') not in ['unavailable', 'unknown'] }}"
+
+  - button:
+      - name: "Garage Door Trigger"
+        unique_id: "garage_door_trigger"
+        icon: mdi:garage
+        press:
+          - action: light.turn_on
+            target:
+              entity_id: light.aqara_dual_relay_module_t2_2
+          - delay: "00:00:01"
+          - action: light.turn_off
+            target:
+              entity_id: light.aqara_dual_relay_module_t2_2

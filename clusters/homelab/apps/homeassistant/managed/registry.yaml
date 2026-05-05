@@ -95,6 +95,7 @@ areas:
 # entity_id -> area name. Entity must already exist (created by an integration).
 entities:
   binary_sensor.garage_door: "Garage"
+  button.garage_door_trigger: "Garage"
   binary_sensor.aqara_water_leak_sensor_water_leak: "Utilities Room"
   binary_sensor.aqara_door_and_window_sensor_door:
     area: "Garage"
