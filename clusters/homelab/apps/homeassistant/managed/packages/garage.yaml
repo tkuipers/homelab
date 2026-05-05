@@ -11,12 +11,7 @@ template:
         unique_id: "garage_door_trigger"
         icon: mdi:garage
         press:
-          - action: light.turn_on
-            target:
-              entity_id: light.aqara_dual_relay_module_t2
-          - delay:
-              milliseconds: 200
-          - action: light.turn_off
+          - action: light.toggle
             target:
               entity_id: light.aqara_dual_relay_module_t2
 
