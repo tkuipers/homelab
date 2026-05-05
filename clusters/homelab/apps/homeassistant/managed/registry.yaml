@@ -93,7 +93,8 @@ areas:
     icon: mdi:thermometer
 
 # entity_id -> area name. Entity must already exist (created by an integration).
-entities: {}
+entities:
+  binary_sensor.garage_door: "Garage"
 
 # Matter integration. The reconciler ensures this config entry exists in HA.
 # Pairing devices (e.g. Aqara Hub M3) is a one-time manual step via the HA UI.

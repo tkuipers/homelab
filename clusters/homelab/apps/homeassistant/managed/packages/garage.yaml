@@ -1,0 +1,6 @@
+template:
+  - binary_sensor:
+      - name: "Garage Door"
+        device_class: garage_door
+        state: "{{ is_state('binary_sensor.aqara_door_and_window_sensor_door', 'off') }}"
+        availability: "{{ states('binary_sensor.aqara_door_and_window_sensor_door') not in ['unavailable', 'unknown'] }}"
