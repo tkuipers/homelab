@@ -106,11 +106,16 @@ entities:
   light.aqara_dual_relay_module_t2:
     area: "Garage"
     hidden: true
-  light.aqara_dual_relay_module_t2_2: "Garage"
+  light.aqara_dual_relay_module_t2_2:
+    area: "Garage"
+    hidden: true
   sensor.aqara_temp_humidity_sensor_t1_temperature: "Attic"
   sensor.aqara_temp_humidity_sensor_t1_humidity: "Attic"
 
 # Matter integration. The reconciler ensures this config entry exists in HA.
 # Pairing devices (e.g. Aqara Hub M3) is a one-time manual step via the HA UI.
+daikin:
+  managed: true
+
 matter:
   server_url: ws://matter-server.homeassistant.svc.cluster.local:5580/ws

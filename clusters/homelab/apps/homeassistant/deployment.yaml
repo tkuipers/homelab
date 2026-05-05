@@ -31,6 +31,8 @@ spec:
           env:
             - name: OIDC_INTEGRATION_VERSION
               value: "1.0.2"
+            - name: DAIKIN_INTEGRATION_VERSION
+              value: "0.10.1"
             - name: OIDC_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -88,6 +90,23 @@ spec:
                 wget -q -O /tmp/auth_oidc.zip "https://github.com/christiaangoossens/hass-oidc-auth/releases/download/v${WANT_VER}/hass-oidc-auth.zip"
                 (cd "$TARGET" && unzip -q /tmp/auth_oidc.zip)
                 rm /tmp/auth_oidc.zip
+              fi
+
+              # --- Install/upgrade ha-daikinone custom_component ---
+              TARGET=/config/custom_components/daikinone
+              WANT_VER="$DAIKIN_INTEGRATION_VERSION"
+              CURRENT_VER=""
+              if [ -f "$TARGET/manifest.json" ]; then
+                CURRENT_VER=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$TARGET/manifest.json" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+              fi
+              if [ "$CURRENT_VER" != "$WANT_VER" ]; then
+                echo "Installing ha-daikinone v$WANT_VER (had: ${CURRENT_VER:-none})"
+                rm -rf "$TARGET" /tmp/daikin-extract /tmp/daikin.tar.gz
+                mkdir -p /tmp/daikin-extract /config/custom_components
+                wget -q -O /tmp/daikin.tar.gz "https://github.com/zlangbert/ha-daikinone/archive/refs/tags/v${WANT_VER}.tar.gz"
+                tar xz -C /tmp/daikin-extract --strip-components=1 -f /tmp/daikin.tar.gz
+                cp -r /tmp/daikin-extract/custom_components/daikinone "$TARGET"
+                rm -rf /tmp/daikin.tar.gz /tmp/daikin-extract
               fi
 
               # --- Sync declarative config from kustomize-generated ConfigMaps ---

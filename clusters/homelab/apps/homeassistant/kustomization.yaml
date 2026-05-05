@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - external-secret.yaml
   - reconciler-external-secret.yaml
+  - daikin-external-secret.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml

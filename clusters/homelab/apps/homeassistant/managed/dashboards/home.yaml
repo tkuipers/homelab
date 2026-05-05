@@ -3,8 +3,45 @@ views:
   - title: Overview
     path: overview
     icon: mdi:home
-    cards:
-      - type: markdown
-        content: |
-          # Home
-          Declarative dashboard. Edit `managed/dashboards/home.yaml` in git.
+    type: sections
+    sections:
+      - title: Entrances
+        cards:
+          - type: tile
+            entity: cover.garage_door
+          - type: tile
+            entity: lock.aqara_smart_lock_u50
+            name: Garage Entrance
+          - type: tile
+            entity: lock.aqara_smart_lock_u50_2
+            name: Main Entrance
+
+      - title: Monitoring
+        cards:
+          - type: tile
+            entity: binary_sensor.aqara_water_leak_sensor_water_leak
+            name: Water Leak
+          - type: tile
+            entity: sensor.aqara_temp_humidity_sensor_t1_temperature
+            name: Attic Temperature
+          - type: tile
+            entity: sensor.aqara_temp_humidity_sensor_t1_humidity
+            name: Attic Humidity
+
+  - title: Climate
+    path: climate
+    icon: mdi:thermometer
+    type: sections
+    sections:
+      - title: Attic
+        cards:
+          - type: history-graph
+            title: Temperature
+            hours_to_show: 24
+            entities:
+              - entity: sensor.aqara_temp_humidity_sensor_t1_temperature
+          - type: history-graph
+            title: Humidity
+            hours_to_show: 24
+            entities:
+              - entity: sensor.aqara_temp_humidity_sensor_t1_humidity

@@ -30,6 +30,16 @@ spec:
                 secretKeyRef:
                   name: homeassistant-reconciler
                   key: token
+            - name: DAIKIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: homeassistant-daikin
+                  key: email
+            - name: DAIKIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: homeassistant-daikin
+                  key: password
             - name: REGISTRY_PATH
               value: /registry/registry.yaml
           volumeMounts:

@@ -164,6 +164,39 @@ async def reconcile_entities(ha, desired):
             print(f"WARN entity {entity_id}: {e}", flush=True)
 
 
+async def reconcile_daikin_integration(desired):
+    if not (desired.get("daikin") or {}).get("managed"):
+        return
+
+    email = os.environ.get("DAIKIN_EMAIL")
+    password = os.environ.get("DAIKIN_PASSWORD")
+    if not email or not password:
+        print("WARN daikin: DAIKIN_EMAIL/DAIKIN_PASSWORD not set", flush=True)
+        return
+
+    entries = ha_http("GET", "/api/config/config_entries/entry")
+    if any(e.get("domain") == "daikinone" for e in entries):
+        print("daikin integration already configured", flush=True)
+        return
+
+    print("creating daikin integration...", flush=True)
+    flow = ha_http("POST", "/api/config/config_entries/flow", {"handler": "daikinone"})
+    flow_id = flow["flow_id"]
+    step_id = flow.get("step_id")
+
+    if step_id == "user":
+        result = ha_http("POST", f"/api/config/config_entries/flow/{flow_id}", {
+            "email": email,
+            "password": password,
+        })
+        if result.get("type") == "create_entry":
+            print("daikin integration created", flush=True)
+        else:
+            print(f"WARN daikin flow unexpected result: {result}", flush=True)
+    else:
+        print(f"WARN unexpected daikin flow step: {step_id!r}, full response: {flow}", flush=True)
+
+
 async def reconcile_matter_integration(desired):
     matter_cfg = desired.get("matter") or {}
     server_url = matter_cfg.get("server_url")
@@ -210,6 +243,7 @@ async def main():
         if desired.get("prune"):
             await prune(ha, floors, areas)
         await reconcile_entities(ha, desired.get("entities") or {})
+        await reconcile_daikin_integration(desired)
         await reconcile_matter_integration(desired)
         print("done", flush=True)
     finally:
