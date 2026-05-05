@@ -3,12 +3,29 @@ import asyncio
 import json
 import os
 import sys
+import urllib.error
+import urllib.request
 import yaml
 import websockets
 
 HA_URL = os.environ["HA_URL"]
 HA_TOKEN = os.environ["HA_TOKEN"]
 REGISTRY_PATH = os.environ.get("REGISTRY_PATH", "/registry/registry.yaml")
+
+# Derive HTTP base URL from the WebSocket URL (ws://host:port/api/websocket -> http://host:port)
+_HA_HTTP_BASE = HA_URL.replace("wss://", "https://").replace("ws://", "http://").removesuffix("/api/websocket")
+
+
+def ha_http(method, path, body=None):
+    url = f"{_HA_HTTP_BASE}{path}"
+    headers = {"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"}
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code} {method} {path}: {e.read().decode()}")
 
 
 class HA:
@@ -131,6 +148,33 @@ async def reconcile_entities(ha, desired):
             print(f"WARN entity {entity_id}: {e}", flush=True)
 
 
+async def reconcile_matter_integration(desired):
+    matter_cfg = desired.get("matter") or {}
+    server_url = matter_cfg.get("server_url")
+    if not server_url:
+        return
+
+    entries = ha_http("GET", "/api/config/config_entries/entry")
+    if any(e.get("domain") == "matter" for e in entries):
+        print("matter integration already configured", flush=True)
+        return
+
+    print(f"creating matter integration (url={server_url})...", flush=True)
+    flow = ha_http("POST", "/api/config/config_entries/flow", {"handler": "matter"})
+    flow_id = flow["flow_id"]
+    step_id = flow.get("step_id")
+
+    if step_id == "manual":
+        result = ha_http("POST", f"/api/config/config_entries/flow/{flow_id}", {"url": server_url})
+        if result.get("type") == "create_entry":
+            print("matter integration created", flush=True)
+        else:
+            print(f"WARN matter flow unexpected result: {result}", flush=True)
+    else:
+        # On HAOS a different step is presented; log and bail rather than silently failing.
+        print(f"WARN unexpected matter flow step: {step_id!r}, full response: {flow}", flush=True)
+
+
 async def main():
     with open(REGISTRY_PATH) as f:
         desired = yaml.safe_load(f) or {}
@@ -150,6 +194,7 @@ async def main():
         if desired.get("prune"):
             await prune(ha, floors, areas)
         await reconcile_entities(ha, desired.get("entities") or {})
+        await reconcile_matter_integration(desired)
         print("done", flush=True)
     finally:
         await ws.close()
