@@ -14,7 +14,6 @@ resources:
 configMapGenerator:
   - name: homeassistant-packages
     files:
-      - managed/packages/example_living_room.yaml
       - managed/packages/garage.yaml
   - name: homeassistant-dashboards
     files:
