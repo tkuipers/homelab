@@ -14,7 +14,8 @@ template:
           - action: light.turn_on
             target:
               entity_id: light.aqara_dual_relay_module_t2
-          - delay: "00:00:01"
+          - delay:
+              milliseconds: 200
           - action: light.turn_off
             target:
               entity_id: light.aqara_dual_relay_module_t2
