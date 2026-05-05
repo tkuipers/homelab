@@ -18,3 +18,24 @@ template:
           - action: light.turn_off
             target:
               entity_id: light.aqara_dual_relay_module_t2_2
+
+cover:
+  - platform: template
+    covers:
+      garage_door:
+        friendly_name: "Garage Door"
+        unique_id: "garage_door_cover"
+        device_class: garage
+        value_template: "{{ is_state('binary_sensor.garage_door', 'on') }}"
+        open_cover:
+          - action: button.press
+            target:
+              entity_id: button.garage_door_trigger
+        close_cover:
+          - action: button.press
+            target:
+              entity_id: button.garage_door_trigger
+        stop_cover:
+          - action: button.press
+            target:
+              entity_id: button.garage_door_trigger

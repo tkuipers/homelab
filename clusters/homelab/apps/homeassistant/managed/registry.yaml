@@ -96,6 +96,7 @@ areas:
 entities:
   binary_sensor.garage_door: "Garage"
   button.garage_door_trigger: "Garage"
+  cover.garage_door: "Garage"
   binary_sensor.aqara_water_leak_sensor_water_leak: "Utilities Room"
   binary_sensor.aqara_door_and_window_sensor_door:
     area: "Garage"
