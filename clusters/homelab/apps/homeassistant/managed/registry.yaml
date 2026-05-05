@@ -103,10 +103,10 @@ entities:
     hidden: true
   lock.aqara_smart_lock_u50: "Garage Entrance"
   lock.aqara_smart_lock_u50_2: "Main Entrance"
-  light.aqara_dual_relay_module_t2: "Garage"
-  light.aqara_dual_relay_module_t2_2:
+  light.aqara_dual_relay_module_t2:
     area: "Garage"
     hidden: true
+  light.aqara_dual_relay_module_t2_2: "Garage"
   sensor.aqara_temp_humidity_sensor_t1_temperature: "Attic"
   sensor.aqara_temp_humidity_sensor_t1_humidity: "Attic"
 
