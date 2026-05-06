@@ -179,6 +179,11 @@ spec:
           env:
             - name: TZ
               value: "America/Los_Angeles"
+            - name: HA_HEALTHCHECK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: homeassistant-reconciler
+                  key: token
           volumeMounts:
             - name: config
               mountPath: /config
@@ -189,20 +194,63 @@ spec:
             limits:
               memory: "1Gi"
               cpu: "1000m"
+          # Probes hit /api/config (auth-required) so we can detect
+          # recovery_mode / safe_mode / non-RUNNING state — / returns
+          # 200 even when HA boots into recovery mode after a config error.
+          # On 401/403 the probe soft-passes: HTTP layer is up, the token
+          # is just bad, so we'd rather degrade detection than restart-loop.
           livenessProbe:
-            httpGet:
-              path: /
-              port: 8123
-            initialDelaySeconds: 60
-            periodSeconds: 30
-            timeoutSeconds: 10
+            exec:
+              command:
+                - python3
+                - -c
+                - |
+                  import json, os, sys, urllib.request, urllib.error
+                  req = urllib.request.Request(
+                      "http://localhost:8123/api/config",
+                      headers={"Authorization": "Bearer " + os.environ.get("HA_HEALTHCHECK_TOKEN", "")},
+                  )
+                  try:
+                      with urllib.request.urlopen(req, timeout=10) as r:
+                          cfg = json.loads(r.read())
+                  except urllib.error.HTTPError as e:
+                      sys.exit(0 if e.code in (401, 403) else 1)
+                  except Exception:
+                      sys.exit(1)
+                  if cfg.get("recovery_mode") or cfg.get("safe_mode"):
+                      sys.exit(1)
+                  if cfg.get("state") != "RUNNING":
+                      sys.exit(1)
+            initialDelaySeconds: 120
+            periodSeconds: 60
+            timeoutSeconds: 15
+            failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /
-              port: 8123
+            exec:
+              command:
+                - python3
+                - -c
+                - |
+                  import json, os, sys, urllib.request, urllib.error
+                  req = urllib.request.Request(
+                      "http://localhost:8123/api/config",
+                      headers={"Authorization": "Bearer " + os.environ.get("HA_HEALTHCHECK_TOKEN", "")},
+                  )
+                  try:
+                      with urllib.request.urlopen(req, timeout=10) as r:
+                          cfg = json.loads(r.read())
+                  except urllib.error.HTTPError as e:
+                      sys.exit(0 if e.code in (401, 403) else 1)
+                  except Exception:
+                      sys.exit(1)
+                  if cfg.get("recovery_mode") or cfg.get("safe_mode"):
+                      sys.exit(1)
+                  if cfg.get("state") != "RUNNING":
+                      sys.exit(1)
             initialDelaySeconds: 30
-            periodSeconds: 10
+            periodSeconds: 15
             timeoutSeconds: 10
+            failureThreshold: 3
       volumes:
         - name: config
           hostPath:
