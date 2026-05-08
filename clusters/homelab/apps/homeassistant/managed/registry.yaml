@@ -131,6 +131,17 @@ entities:
   sensor.main_room_thermostat_outdoor_air_quality_particles:
     area: "Outside"
     hidden: true
+  vacuum.dreame_vacuum: "Dining"
+  sensor.dreame_vacuum_battery_level: "Dining"
+  sensor.dreame_vacuum_status: "Dining"
+  sensor.dreame_vacuum_state: "Dining"
+  sensor.dreame_vacuum_current_room: "Dining"
+  sensor.dreame_vacuum_error: "Dining"
+  sensor.dreame_vacuum_charging_status: "Dining"
+  sensor.dreame_vacuum_cleaning_progress: "Dining"
+  sensor.dreame_vacuum_cleaning_time: "Dining"
+  sensor.dreame_vacuum_cleaned_area: "Dining"
+  camera.dreame_vacuum_map: "Dining"
 
 # Matter integration. The reconciler ensures this config entry exists in HA.
 # Pairing devices (e.g. Aqara Hub M3) is a one-time manual step via the HA UI.

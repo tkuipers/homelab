@@ -1,4 +1,8 @@
 title: Home
+# Resources are declared per-YAML-dashboard (storage-mode resources don't carry over).
+resources:
+  - url: /local/dreame-vacuum-map-card/dreame-vacuum-map-card.js
+    type: module
 views:
   - title: Overview
     path: overview
@@ -51,6 +55,189 @@ views:
           - type: tile
             entity: sensor.aqara_temp_humidity_sensor_t1_humidity
             name: Attic Humidity
+
+      - title: Vacuum
+        cards:
+          - type: tile
+            entity: vacuum.dreame_vacuum
+            name: Dreame Vacuum
+            features:
+              - type: vacuum-commands
+                commands:
+                  - start_pause
+                  - return_home
+          - type: tile
+            entity: sensor.dreame_vacuum_status
+            name: Status
+          - type: tile
+            entity: sensor.dreame_vacuum_battery_level
+            name: Battery
+          - type: tile
+            entity: sensor.dreame_vacuum_current_room
+            name: Current Room
+          - type: button
+            name: Full Clean
+            icon: mdi:robot-vacuum
+            tap_action:
+              action: call-service
+              service: vacuum.start
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+
+  - title: Vacuum
+    path: vacuum
+    icon: mdi:robot-vacuum
+    type: sections
+    sections:
+      - title: Status
+        cards:
+          - type: tile
+            entity: vacuum.dreame_vacuum
+            name: Dreame Vacuum
+            features:
+              - type: vacuum-commands
+                commands:
+                  - start_pause
+                  - stop
+                  - return_home
+                  - locate
+          - type: tile
+            entity: sensor.dreame_vacuum_status
+            name: Status
+          - type: tile
+            entity: sensor.dreame_vacuum_state
+            name: State
+          - type: tile
+            entity: sensor.dreame_vacuum_battery_level
+            name: Battery
+          - type: tile
+            entity: sensor.dreame_vacuum_current_room
+            name: Current Room
+          - type: tile
+            entity: sensor.dreame_vacuum_charging_status
+            name: Charging
+          - type: tile
+            entity: sensor.dreame_vacuum_error
+            name: Error
+          - type: tile
+            entity: sensor.dreame_vacuum_cleaning_progress
+            name: Progress
+          - type: tile
+            entity: sensor.dreame_vacuum_cleaning_time
+            name: Cleaning Time
+
+      - title: Map (Tap rooms to clean)
+        cards:
+          # Interactive map card from noambergauz/dreame-vacuum-map-card.
+          # Lets you select rooms or zones from the map and start a clean,
+          # mirroring the Dreame Home app's room-picker UX.
+          - type: custom:dreame-vacuum-map-card
+            entity: vacuum.dreame_vacuum
+
+      - title: Quick Actions
+        cards:
+          - type: button
+            name: Full Clean
+            icon: mdi:robot-vacuum
+            icon_height: 60px
+            tap_action:
+              action: call-service
+              service: vacuum.start
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+          - type: button
+            name: Return to Dock
+            icon: mdi:home-import-outline
+            tap_action:
+              action: call-service
+              service: vacuum.return_to_base
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+          - type: button
+            name: Pause / Stop
+            icon: mdi:pause
+            tap_action:
+              action: call-service
+              service: vacuum.stop
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+          - type: button
+            name: Locate
+            icon: mdi:map-marker
+            tap_action:
+              action: call-service
+              service: vacuum.locate
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+
+      # Per-room buttons. Fallback if the map card isn't loading; also handy on
+      # mobile where tapping a button is faster than zooming the map.
+      # Segment IDs: see vacuum.dreame_vacuum.attributes.rooms.
+      - title: Clean a Room
+        cards:
+          - type: button
+            name: Living Room
+            icon: mdi:sofa-outline
+            tap_action:
+              action: call-service
+              service: dreame_vacuum.vacuum_clean_segment
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+                segments: [7]
+          - type: button
+            name: Kitchen
+            icon: mdi:chef-hat
+            tap_action:
+              action: call-service
+              service: dreame_vacuum.vacuum_clean_segment
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+                segments: [6]
+          - type: button
+            name: Dining Hall
+            icon: mdi:silverware-fork-knife
+            tap_action:
+              action: call-service
+              service: dreame_vacuum.vacuum_clean_segment
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+                segments: [5]
+          - type: button
+            name: Corridor
+            icon: mdi:foot-print
+            tap_action:
+              action: call-service
+              service: dreame_vacuum.vacuum_clean_segment
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+                segments: [4]
+          - type: button
+            name: Entry
+            icon: mdi:door
+            tap_action:
+              action: call-service
+              service: dreame_vacuum.vacuum_clean_segment
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+                segments: [3]
+          - type: button
+            name: Laundry
+            icon: mdi:washing-machine
+            tap_action:
+              action: call-service
+              service: dreame_vacuum.vacuum_clean_segment
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+                segments: [2]
+          - type: button
+            name: Bathroom
+            icon: mdi:toilet
+            tap_action:
+              action: call-service
+              service: dreame_vacuum.vacuum_clean_segment
+              service_data:
+                entity_id: vacuum.dreame_vacuum
+                segments: [1]
 
   - title: Climate
     path: climate

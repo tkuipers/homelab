@@ -36,6 +36,8 @@ spec:
             - name: DREAME_INTEGRATION_VERSION
               # v2 beta — required for Dreamehome account login (v1.x is Mi cloud only).
               value: "2.0.0b23"
+            - name: DREAME_MAP_CARD_VERSION
+              value: "1.4.2"
             - name: OIDC_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -130,6 +132,23 @@ spec:
                 rm /tmp/dreame_vacuum.zip
               fi
 
+              # --- Install/upgrade dreame-vacuum-map-card (Lovelace JS module) ---
+              # Single-file card — drop into /config/www/ so HA serves it at /local/.
+              CARD_DIR=/config/www/dreame-vacuum-map-card
+              CARD_FILE="$CARD_DIR/dreame-vacuum-map-card.js"
+              CARD_VER_FILE="$CARD_DIR/.version"
+              CURRENT_VER=""
+              if [ -f "$CARD_VER_FILE" ]; then
+                CURRENT_VER=$(cat "$CARD_VER_FILE")
+              fi
+              if [ "$CURRENT_VER" != "$DREAME_MAP_CARD_VERSION" ] || [ ! -f "$CARD_FILE" ]; then
+                echo "Installing dreame-vacuum-map-card v$DREAME_MAP_CARD_VERSION (had: ${CURRENT_VER:-none})"
+                mkdir -p "$CARD_DIR"
+                wget -q -O "$CARD_FILE.tmp" "https://github.com/noambergauz/dreame-vacuum-map-card/releases/download/v${DREAME_MAP_CARD_VERSION}/dreame-vacuum-map-card.js"
+                mv "$CARD_FILE.tmp" "$CARD_FILE"
+                echo "$DREAME_MAP_CARD_VERSION" > "$CARD_VER_FILE"
+              fi
+
               # --- Sync declarative config from kustomize-generated ConfigMaps ---
               mkdir -p /config/packages /config/dashboards
               rm -f /config/packages/*.yaml /config/dashboards/*.yaml 2>/dev/null || true
@@ -213,10 +232,10 @@ spec:
               memory: "1Gi"
               cpu: "100m"
             limits:
-              # 4Gi headroom for dreame-vacuum: the integration ships ~15MB of bundled map
-              # resources and pulls in mini-racer (V8) + numpy + pillow + pycryptodome.
-              # Old 1Gi limit caused OOMKill loops on first boot after install.
-              memory: "4Gi"
+              # dreame-vacuum needs serious headroom on first boot: the integration ships
+              # ~15MB of bundled map resources + pulls in mini-racer (V8 engine) + numpy +
+              # pillow + pycryptodome. Observed peak >4Gi while loading; 8Gi is safe.
+              memory: "8Gi"
               cpu: "1000m"
           # Probes hit /api/config (auth-required) so we can detect
           # recovery_mode / safe_mode / non-RUNNING state — / returns
