@@ -48,19 +48,8 @@ views:
       - title: Vacuum
         cards:
           - type: tile
-            entity: vacuum.dreame_vacuum
-            name: Dreame Vacuum
-            features:
-              - type: vacuum-commands
-                commands:
-                  - start_pause
-                  - return_home
-          - type: tile
             entity: sensor.dreame_vacuum_status
             name: Status
-          - type: tile
-            entity: sensor.dreame_vacuum_battery_level
-            name: Battery
           - type: tile
             entity: sensor.dreame_vacuum_current_room
             name: Current Room
