@@ -53,14 +53,6 @@ views:
           - type: tile
             entity: sensor.dreame_vacuum_current_room
             name: Current Room
-          - type: button
-            name: Full Clean
-            icon: mdi:robot-vacuum
-            tap_action:
-              action: call-service
-              service: vacuum.start
-              service_data:
-                entity_id: vacuum.dreame_vacuum
           - type: entities
             title: Pick rooms
             show_header_toggle: false
@@ -78,6 +70,14 @@ views:
             tap_action:
               action: call-service
               service: script.vacuum_clean_selected_rooms
+          - type: button
+            name: Full Clean
+            icon: mdi:robot-vacuum
+            tap_action:
+              action: call-service
+              service: vacuum.start
+              service_data:
+                entity_id: vacuum.dreame_vacuum
 
       - title: Monitoring
         cards:
