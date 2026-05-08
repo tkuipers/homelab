@@ -137,5 +137,8 @@ entities:
 daikin:
   managed: true
 
+dreame_vacuum:
+  managed: true
+
 matter:
   server_url: ws://matter-server.homeassistant.svc.cluster.local:5580/ws

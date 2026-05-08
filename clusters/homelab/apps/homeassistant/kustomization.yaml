@@ -6,6 +6,7 @@ resources:
   - external-secret.yaml
   - reconciler-external-secret.yaml
   - daikin-external-secret.yaml
+  - dreame-vacuum-external-secret.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml

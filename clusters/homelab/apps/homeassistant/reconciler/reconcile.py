@@ -197,6 +197,103 @@ async def reconcile_daikin_integration(desired):
         print(f"WARN unexpected daikin flow step: {step_id!r}, full response: {flow}", flush=True)
 
 
+async def reconcile_dreame_vacuum_integration(desired):
+    if not (desired.get("dreame_vacuum") or {}).get("managed"):
+        return
+
+    username = os.environ.get("DREAME_USERNAME")
+    password = os.environ.get("DREAME_PASSWORD")
+    country = os.environ.get("DREAME_COUNTRY")
+    if not username or not password or not country:
+        print("WARN dreame_vacuum: DREAME_USERNAME/DREAME_PASSWORD/DREAME_COUNTRY not set", flush=True)
+        return
+
+    entries = ha_http("GET", "/api/config/config_entries/entry")
+    if any(e.get("domain") == "dreame_vacuum" for e in entries):
+        print("dreame_vacuum integration already configured", flush=True)
+        return
+
+    print("creating dreame_vacuum integration...", flush=True)
+    flow = ha_http("POST", "/api/config/config_entries/flow", {"handler": "dreame_vacuum"})
+
+    # Walk the multi-step flow. Inputs the dreame_vacuum config_flow expects, in order:
+    #   user      -> {"configuration_type": "With map (Automatic)"}
+    #   mi        -> {"username", "password", "country", "prefer_cloud"}
+    #   devices   -> {"devices": "<display key>"}   (skipped automatically when only 1 device)
+    #   options   -> {"name", "notify", "color_scheme", "icon_set", "hidden_map_objects"}
+    #   donation  -> {"donated": false}
+    # The flow can also yield "captcha" or "2fa" steps after `mi`. Those need a human at
+    # the HA UI, so we bail with a warning and leave the flow open for the user to finish.
+    for _ in range(8):
+        flow_id = flow.get("flow_id")
+        flow_type = flow.get("type")
+        step_id = flow.get("step_id")
+
+        if flow_type == "create_entry":
+            print("dreame_vacuum integration created", flush=True)
+            return
+        if flow_type == "abort":
+            print(f"WARN dreame_vacuum flow aborted: {flow.get('reason')}", flush=True)
+            return
+
+        if step_id == "user":
+            payload = {"configuration_type": "With map (Automatic)"}
+        elif step_id == "mi":
+            # prefer_cloud=False keeps the integration LAN-first when reachable; the cloud
+            # session is still established for the map feature.
+            payload = {
+                "username": username,
+                "password": password,
+                "country": country,
+                "prefer_cloud": False,
+            }
+        elif step_id == "devices":
+            # HA serializes the schema as [{"name": "devices", "options": [...]}, ...].
+            # `options` may be flat strings or [value, label] pairs depending on HA version.
+            options = []
+            for field in flow.get("data_schema") or []:
+                if isinstance(field, dict) and field.get("name") == "devices":
+                    for opt in field.get("options") or []:
+                        if isinstance(opt, (list, tuple)) and opt:
+                            options.append(opt[0])
+                        else:
+                            options.append(opt)
+                    break
+            if not options:
+                print(f"WARN dreame_vacuum: device list missing from flow response: {flow}", flush=True)
+                return
+            if len(options) > 1:
+                print(f"WARN dreame_vacuum: multiple devices found ({options}); picking first", flush=True)
+            payload = {"devices": options[0]}
+        elif step_id == "options":
+            # Defaults mirror the integration's own defaults for non-Mijia models. The user
+            # can override via the HA UI's options flow afterwards if they want a different
+            # color scheme / icon set.
+            payload = {
+                "name": "Dreame Vacuum",
+                "notify": [],
+                "color_scheme": "Dreame Light",
+                "icon_set": "Dreame",
+                "hidden_map_objects": [],
+            }
+        elif step_id == "donation":
+            payload = {"donated": False}
+        elif step_id in ("captcha", "2fa", "reauth_confirm"):
+            print(
+                f"WARN dreame_vacuum: flow needs interactive {step_id!r} step — finish in the HA UI "
+                f"(Settings > Devices > Add integration). Flow id {flow_id} is open.",
+                flush=True,
+            )
+            return
+        else:
+            print(f"WARN dreame_vacuum: unexpected step {step_id!r}, full response: {flow}", flush=True)
+            return
+
+        flow = ha_http("POST", f"/api/config/config_entries/flow/{flow_id}", payload)
+
+    print(f"WARN dreame_vacuum: flow did not complete after 8 steps, last response: {flow}", flush=True)
+
+
 async def reconcile_matter_integration(desired):
     matter_cfg = desired.get("matter") or {}
     server_url = matter_cfg.get("server_url")
@@ -244,6 +341,7 @@ async def main():
             await prune(ha, floors, areas)
         await reconcile_entities(ha, desired.get("entities") or {})
         await reconcile_daikin_integration(desired)
+        await reconcile_dreame_vacuum_integration(desired)
         await reconcile_matter_integration(desired)
         print("done", flush=True)
     finally:

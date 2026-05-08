@@ -33,6 +33,8 @@ spec:
               value: "1.0.2"
             - name: DAIKIN_INTEGRATION_VERSION
               value: "0.10.1"
+            - name: DREAME_INTEGRATION_VERSION
+              value: "1.0.9"
             - name: OIDC_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -107,6 +109,23 @@ spec:
                 tar xz -C /tmp/daikin-extract --strip-components=1 -f /tmp/daikin.tar.gz
                 cp -r /tmp/daikin-extract/custom_components/daikinone "$TARGET"
                 rm -rf /tmp/daikin.tar.gz /tmp/daikin-extract
+              fi
+
+              # --- Install/upgrade dreame-vacuum custom_component ---
+              # Release zip is flat (files at the archive root), so unzip directly into the target.
+              TARGET=/config/custom_components/dreame_vacuum
+              WANT_VER="$DREAME_INTEGRATION_VERSION"
+              CURRENT_VER=""
+              if [ -f "$TARGET/manifest.json" ]; then
+                CURRENT_VER=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"v?[^"]+"' "$TARGET/manifest.json" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+              fi
+              if [ "$CURRENT_VER" != "$WANT_VER" ]; then
+                echo "Installing dreame-vacuum v$WANT_VER (had: ${CURRENT_VER:-none})"
+                rm -rf "$TARGET"
+                mkdir -p "$TARGET"
+                wget -q -O /tmp/dreame_vacuum.zip "https://github.com/Tasshack/dreame-vacuum/releases/download/v${WANT_VER}/dreame_vacuum.zip"
+                (cd "$TARGET" && unzip -q /tmp/dreame_vacuum.zip)
+                rm /tmp/dreame_vacuum.zip
               fi
 
               # --- Sync declarative config from kustomize-generated ConfigMaps ---

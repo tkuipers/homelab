@@ -40,6 +40,21 @@ spec:
                 secretKeyRef:
                   name: homeassistant-daikin
                   key: password
+            - name: DREAME_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: homeassistant-dreame-vacuum
+                  key: username
+            - name: DREAME_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: homeassistant-dreame-vacuum
+                  key: password
+            - name: DREAME_COUNTRY
+              valueFrom:
+                secretKeyRef:
+                  name: homeassistant-dreame-vacuum
+                  key: country
             - name: REGISTRY_PATH
               value: /registry/registry.yaml
           volumeMounts:
