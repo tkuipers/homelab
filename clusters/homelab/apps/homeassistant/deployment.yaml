@@ -210,10 +210,13 @@ spec:
               mountPath: /config
           resources:
             requests:
-              memory: "256Mi"
+              memory: "1Gi"
               cpu: "100m"
             limits:
-              memory: "1Gi"
+              # 4Gi headroom for dreame-vacuum: the integration ships ~15MB of bundled map
+              # resources and pulls in mini-racer (V8) + numpy + pillow + pycryptodome.
+              # Old 1Gi limit caused OOMKill loops on first boot after install.
+              memory: "4Gi"
               cpu: "1000m"
           # Probes hit /api/config (auth-required) so we can detect
           # recovery_mode / safe_mode / non-RUNNING state — / returns
