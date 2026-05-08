@@ -1,0 +1,74 @@
+# Multi-room selection helpers + script for the Dreame vacuum.
+# Toggle one or more room booleans on the dashboard, then press "Clean Selected
+# Rooms" to dispatch a single dreame_vacuum.vacuum_clean_segment call with all
+# chosen segment IDs. The script clears the toggles after dispatch.
+#
+# Segment IDs come from vacuum.dreame_vacuum.attributes.rooms (Map 1):
+#   1=Bathroom 2=Laundry 3=Entry 4=Corridor 5=Dining Hall 6=Kitchen 7=Living Room
+
+input_boolean:
+  vacuum_pick_bathroom:
+    name: "Bathroom"
+    icon: mdi:toilet
+  vacuum_pick_laundry:
+    name: "Laundry"
+    icon: mdi:washing-machine
+  vacuum_pick_entry:
+    name: "Entry"
+    icon: mdi:door
+  vacuum_pick_corridor:
+    name: "Corridor"
+    icon: mdi:foot-print
+  vacuum_pick_dining_hall:
+    name: "Dining Hall"
+    icon: mdi:silverware-fork-knife
+  vacuum_pick_kitchen:
+    name: "Kitchen"
+    icon: mdi:chef-hat
+  vacuum_pick_living_room:
+    name: "Living Room"
+    icon: mdi:sofa-outline
+
+script:
+  vacuum_clean_selected_rooms:
+    alias: "Vacuum: Clean Selected Rooms"
+    icon: mdi:robot-vacuum-variant
+    mode: single
+    sequence:
+      - variables:
+          # Build the segment ID list from the per-room toggles. Order matches the
+          # vacuum's cleaning_sequence (5,4,7,3,2,1,6) so picks come back in the
+          # natural traversal order.
+          segments: >-
+            {%- set picks = [
+              ('input_boolean.vacuum_pick_dining_hall', 5),
+              ('input_boolean.vacuum_pick_corridor', 4),
+              ('input_boolean.vacuum_pick_living_room', 7),
+              ('input_boolean.vacuum_pick_entry', 3),
+              ('input_boolean.vacuum_pick_laundry', 2),
+              ('input_boolean.vacuum_pick_bathroom', 1),
+              ('input_boolean.vacuum_pick_kitchen', 6),
+            ] -%}
+            {{ picks | selectattr(0, 'is_state', 'on') | map(attribute=1) | list }}
+      - choose:
+          - conditions: "{{ segments | length == 0 }}"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Vacuum"
+                  message: "Pick at least one room before tapping Clean Selected Rooms."
+        default:
+          - action: dreame_vacuum.vacuum_clean_segment
+            data:
+              entity_id: vacuum.dreame_vacuum
+              segments: "{{ segments }}"
+          - action: input_boolean.turn_off
+            target:
+              entity_id:
+                - input_boolean.vacuum_pick_bathroom
+                - input_boolean.vacuum_pick_laundry
+                - input_boolean.vacuum_pick_entry
+                - input_boolean.vacuum_pick_corridor
+                - input_boolean.vacuum_pick_dining_hall
+                - input_boolean.vacuum_pick_kitchen
+                - input_boolean.vacuum_pick_living_room

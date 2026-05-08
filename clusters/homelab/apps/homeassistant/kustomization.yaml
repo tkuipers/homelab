@@ -17,6 +17,7 @@ configMapGenerator:
   - name: homeassistant-packages
     files:
       - managed/packages/garage.yaml
+      - managed/packages/vacuum.yaml
   - name: homeassistant-dashboards
     files:
       - managed/dashboards/home.yaml

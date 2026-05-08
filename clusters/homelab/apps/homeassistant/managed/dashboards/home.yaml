@@ -170,10 +170,33 @@ views:
               service_data:
                 entity_id: vacuum.dreame_vacuum
 
-      # Per-room buttons. Fallback if the map card isn't loading; also handy on
-      # mobile where tapping a button is faster than zooming the map.
+      # Multi-room selection without the map. Toggle one or more rooms, then tap
+      # the big "Clean Selected Rooms" button to dispatch them all in one call.
+      # Backed by input_booleans + script.vacuum_clean_selected_rooms (managed/packages/vacuum.yaml).
+      - title: Pick Rooms & Clean
+        cards:
+          - type: entities
+            show_header_toggle: false
+            entities:
+              - entity: input_boolean.vacuum_pick_living_room
+              - entity: input_boolean.vacuum_pick_kitchen
+              - entity: input_boolean.vacuum_pick_dining_hall
+              - entity: input_boolean.vacuum_pick_corridor
+              - entity: input_boolean.vacuum_pick_entry
+              - entity: input_boolean.vacuum_pick_laundry
+              - entity: input_boolean.vacuum_pick_bathroom
+          - type: button
+            name: Clean Selected Rooms
+            icon: mdi:robot-vacuum-variant
+            icon_height: 60px
+            tap_action:
+              action: call-service
+              service: script.vacuum_clean_selected_rooms
+
+      # Per-room single-tap buttons. Each one immediately starts a clean of that
+      # room only — no toggling, no confirmation. Handy for "just do this one."
       # Segment IDs: see vacuum.dreame_vacuum.attributes.rooms.
-      - title: Clean a Room
+      - title: Clean One Room
         cards:
           - type: button
             name: Living Room
