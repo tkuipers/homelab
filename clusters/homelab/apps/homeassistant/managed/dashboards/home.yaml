@@ -131,11 +131,18 @@ views:
           # Interactive map card from noambergauz/dreame-vacuum-map-card.
           # Lets you select rooms or zones from the map and start a clean,
           # mirroring the Dreame Home app's room-picker UX.
+          # grid_options: full-width — the card needs the whole row to render
+          # its map + tabs; HA's section grid otherwise shrinks it to ~6 cols
+          # and the rendered content can't fit, surfacing as a "Configuration
+          # error" chip even when the config itself validates.
           - type: custom:dreame-vacuum-map-card
             entity: vacuum.dreame_vacuum
             map_entity: camera.dreame_vacuum_map
             title: Dreame Vacuum
             default_mode: room
+            grid_options:
+              columns: full
+              rows: auto
 
       - title: Quick Actions
         cards:
