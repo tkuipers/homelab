@@ -197,6 +197,34 @@ async def reconcile_daikin_integration(desired):
         print(f"WARN unexpected daikin flow step: {step_id!r}, full response: {flow}", flush=True)
 
 
+async def reconcile_lovelace_resources(ha, desired):
+    resources = desired.get("lovelace_resources") or []
+    if not resources:
+        return
+    existing = await ha.call({"type": "lovelace/resources"})
+    by_url = {r["url"]: r for r in existing}
+    for res in resources:
+        url = res["url"]
+        res_type = res.get("type", "module")
+        if url in by_url:
+            cur = by_url[url]
+            if cur.get("type") != res_type:
+                await ha.call({
+                    "type": "lovelace/resources/update",
+                    "resource_id": cur["id"],
+                    "url": url,
+                    "res_type": res_type,
+                })
+                print(f"lovelace resource update: {url}", flush=True)
+        else:
+            await ha.call({
+                "type": "lovelace/resources/create",
+                "url": url,
+                "res_type": res_type,
+            })
+            print(f"lovelace resource create: {url}", flush=True)
+
+
 async def reconcile_dreame_vacuum_integration(desired):
     if not (desired.get("dreame_vacuum") or {}).get("managed"):
         return
@@ -376,6 +404,7 @@ async def main():
         await reconcile_daikin_integration(desired)
         await reconcile_dreame_vacuum_integration(desired)
         await reconcile_matter_integration(desired)
+        await reconcile_lovelace_resources(ha, desired)
         print("done", flush=True)
     finally:
         await ws.close()

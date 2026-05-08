@@ -1,8 +1,8 @@
 title: Home
-# Resources are declared per-YAML-dashboard (storage-mode resources don't carry over).
-resources:
-  - url: /local/dreame-vacuum-map-card/dreame-vacuum-map-card.js
-    type: module
+# Lovelace resources for this dashboard (e.g. dreame-vacuum-map-card.js) are
+# registered via HA's storage-mode resources API by the reconciler — see
+# managed/registry.yaml `lovelace_resources` and reconciler/reconcile.py.
+# A `resources:` block here would be ignored under lovelace.mode: storage.
 views:
   - title: Overview
     path: overview

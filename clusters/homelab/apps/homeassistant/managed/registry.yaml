@@ -153,3 +153,10 @@ dreame_vacuum:
 
 matter:
   server_url: ws://matter-server.homeassistant.svc.cluster.local:5580/ws
+
+# Lovelace resources to register with the storage-mode UI. With mode: storage
+# (our setup), resources can't be declared inside YAML dashboard files — they
+# must go through HA's lovelace/resources API. The reconciler handles that.
+lovelace_resources:
+  - url: /local/dreame-vacuum-map-card/dreame-vacuum-map-card.js
+    type: module
