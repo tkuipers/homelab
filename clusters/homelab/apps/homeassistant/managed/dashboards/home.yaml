@@ -44,18 +44,7 @@ views:
             entity: select.main_room_thermostat_fan_speed
             name: Fan Speed
 
-      - title: Monitoring
-        cards:
-          - type: tile
-            entity: binary_sensor.aqara_water_leak_sensor_water_leak
-            name: Water Leak
-          - type: tile
-            entity: sensor.aqara_temp_humidity_sensor_t1_temperature
-            name: Attic Temperature
-          - type: tile
-            entity: sensor.aqara_temp_humidity_sensor_t1_humidity
-            name: Attic Humidity
-
+      # Sits between Climate and Monitoring per home-priority ordering.
       - title: Vacuum
         cards:
           - type: tile
@@ -83,6 +72,35 @@ views:
               service: vacuum.start
               service_data:
                 entity_id: vacuum.dreame_vacuum
+          - type: entities
+            title: Pick rooms
+            show_header_toggle: false
+            entities:
+              - entity: input_boolean.vacuum_pick_living_room
+              - entity: input_boolean.vacuum_pick_kitchen
+              - entity: input_boolean.vacuum_pick_dining_hall
+              - entity: input_boolean.vacuum_pick_corridor
+              - entity: input_boolean.vacuum_pick_entry
+              - entity: input_boolean.vacuum_pick_laundry
+              - entity: input_boolean.vacuum_pick_bathroom
+          - type: button
+            name: Clean Selected Rooms
+            icon: mdi:robot-vacuum-variant
+            tap_action:
+              action: call-service
+              service: script.vacuum_clean_selected_rooms
+
+      - title: Monitoring
+        cards:
+          - type: tile
+            entity: binary_sensor.aqara_water_leak_sensor_water_leak
+            name: Water Leak
+          - type: tile
+            entity: sensor.aqara_temp_humidity_sensor_t1_temperature
+            name: Attic Temperature
+          - type: tile
+            entity: sensor.aqara_temp_humidity_sensor_t1_humidity
+            name: Attic Humidity
 
   - title: Vacuum
     path: vacuum
@@ -126,25 +144,6 @@ views:
             entity: sensor.dreame_vacuum_cleaning_time
             name: Cleaning Time
 
-      - title: Map (Tap rooms to clean)
-        cards:
-          # Interactive map card from noambergauz/dreame-vacuum-map-card.
-          # Lets you select rooms or zones from the map and start a clean,
-          # mirroring the Dreame Home app's room-picker UX.
-          # grid_options: full-width — the card needs the whole row to render
-          # its map + tabs; HA's section grid otherwise shrinks it to ~6 cols
-          # and the rendered content can't fit, surfacing as a "Configuration
-          # error" chip even when the config itself validates.
-          - type: custom:dreame-vacuum-map-card
-            entity: vacuum.dreame_vacuum
-            map_entity: camera.dreame_vacuum_map
-            title: Dreame Vacuum
-            default_mode: room
-            theme: dark
-            grid_options:
-              columns: full
-              rows: auto
-
       - title: Quick Actions
         cards:
           - type: button
@@ -180,6 +179,12 @@ views:
               service: vacuum.locate
               service_data:
                 entity_id: vacuum.dreame_vacuum
+          - type: button
+            name: Open Map
+            icon: mdi:map
+            tap_action:
+              action: navigate
+              navigation_path: /home-yaml/vacuum-map
 
       # Multi-room selection without the map. Toggle one or more rooms, then tap
       # the big "Clean Selected Rooms" button to dispatch them all in one call.
@@ -331,3 +336,24 @@ views:
             hours_to_show: 24
             entities:
               - entity: sensor.aqara_temp_humidity_sensor_t1_humidity
+
+  # Hidden subview — accessed via the "Open Map" button in the Vacuum view
+  # (or by URL: /home-yaml/vacuum-map). subview: true keeps it out of the tab
+  # bar so the (admittedly ugly) map card isn't in your face every visit.
+  - title: Vacuum Map
+    path: vacuum-map
+    icon: mdi:map
+    subview: true
+    type: sections
+    sections:
+      - title: ""
+        cards:
+          - type: custom:dreame-vacuum-map-card
+            entity: vacuum.dreame_vacuum
+            map_entity: camera.dreame_vacuum_map
+            title: Dreame Vacuum
+            default_mode: room
+            theme: dark
+            grid_options:
+              columns: full
+              rows: auto
