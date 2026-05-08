@@ -140,6 +140,7 @@ views:
             map_entity: camera.dreame_vacuum_map
             title: Dreame Vacuum
             default_mode: room
+            theme: dark
             grid_options:
               columns: full
               rows: auto
