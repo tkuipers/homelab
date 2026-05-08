@@ -133,6 +133,9 @@ views:
           # mirroring the Dreame Home app's room-picker UX.
           - type: custom:dreame-vacuum-map-card
             entity: vacuum.dreame_vacuum
+            map_entity: camera.dreame_vacuum_map
+            title: Dreame Vacuum
+            default_mode: room
 
       - title: Quick Actions
         cards:
