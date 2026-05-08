@@ -7,8 +7,9 @@ VAULT_NAME="Homelab"
 ITEM_NAME="Dreame Vacuum"
 ITEM_CATEGORY="login"
 
-# Country codes accepted by the dreame-vacuum integration's Miio cloud login.
-VALID_COUNTRIES=("de" "cn" "us" "ru" "tw" "sg" "in" "i2")
+# Country codes accepted by the dreame-vacuum integration's Dreamehome cloud login (v2.x).
+# (Different from Mi cloud's list — no de/tw/in/i2; eu replaces de, kr added.)
+VALID_COUNTRIES=("eu" "cn" "us" "ru" "sg" "kr")
 
 # Colors for output
 RED='\033[0;31m'
@@ -121,23 +122,23 @@ is_valid_country() {
 
 collect_input() {
     echo
-    log_info "=== Dreame Vacuum (Xiaomi Miio Cloud) Credentials ==="
+    log_info "=== Dreame Vacuum (Dreamehome Cloud) Credentials ==="
     echo
-    log_info "These are your Xiaomi/Mi Home account credentials — the same ones you"
-    log_info "use to log into the Mi Home / Dreamehome app."
-    log_info "Used by the dreame-vacuum custom_component to log into the Miio cloud."
+    log_info "These are your Dreamehome app account credentials — same email + password"
+    log_info "you use to log in to the Dreame Home app on your phone."
+    log_info "Used by the dreame-vacuum v2.x custom_component (account_type=dreame)."
     echo
     log_info "Valid country codes: ${VALID_COUNTRIES[*]}"
-    log_info "  de=Germany/EU  cn=China  us=USA  ru=Russia  tw=Taiwan  sg=Singapore  in=India  i2=India 2"
+    log_info "  eu=Europe  cn=China  us=USA  ru=Russia  sg=Singapore  kr=Korea"
     echo
 
-    prompt_for_input "Mi/Xiaomi account email or username" USERNAME "$CURRENT_USERNAME"
+    prompt_for_input "Dreamehome account email" USERNAME "$CURRENT_USERNAME"
     if [ -z "$USERNAME" ]; then
         log_error "Username is required"
         exit 1
     fi
 
-    prompt_for_input "Mi/Xiaomi account password" PASSWORD "$CURRENT_PASSWORD" true
+    prompt_for_input "Dreamehome account password" PASSWORD "$CURRENT_PASSWORD" true
     if [ -z "$PASSWORD" ]; then
         log_error "Password is required"
         exit 1

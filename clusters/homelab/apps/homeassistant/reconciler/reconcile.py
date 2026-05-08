@@ -216,18 +216,22 @@ async def reconcile_dreame_vacuum_integration(desired):
     print("creating dreame_vacuum integration...", flush=True)
     flow = ha_http("POST", "/api/config/config_entries/flow", {"handler": "dreame_vacuum"})
 
-    # Walk the multi-step flow. Inputs the dreame_vacuum config_flow expects, in order:
-    #   user      -> {"configuration_type": "With map (Automatic)"}
-    #   mi        -> {"username", "password", "country", "prefer_cloud"}
-    #   devices   -> {"devices": "<display key>"}   (skipped automatically when only 1 device)
+    # Walk the multi-step flow (v2.0.0+). Inputs the dreame_vacuum config_flow expects:
+    #   user      -> {"configuration_type": "Dreamehome Account"}
+    #   dreame    -> {"username", "password", "country"}    (Dreame cloud login)
+    #   devices   -> {"devices": "<display key>"}           (skipped when only 1 device)
     #   options   -> {"name", "notify", "color_scheme", "icon_set", "hidden_map_objects"}
     #   donation  -> {"donated": false}
-    # The flow can also yield "captcha" or "2fa" steps after `mi`. Those need a human at
+    # The flow can also yield "captcha" or "2fa" steps after login. Those need a human at
     # the HA UI, so we bail with a warning and leave the flow open for the user to finish.
+    # NOTE: never log the raw flow response — it contains form defaults that echo back the
+    # credentials we just submitted (HA returns last user_input as field defaults).
+    prev_step_id = None
     for _ in range(8):
         flow_id = flow.get("flow_id")
         flow_type = flow.get("type")
         step_id = flow.get("step_id")
+        errors = flow.get("errors") or {}
 
         if flow_type == "create_entry":
             print("dreame_vacuum integration created", flush=True)
@@ -236,11 +240,40 @@ async def reconcile_dreame_vacuum_integration(desired):
             print(f"WARN dreame_vacuum flow aborted: {flow.get('reason')}", flush=True)
             return
 
+        # If HA re-rendered the same form with errors, the input was rejected — bail
+        # rather than POSTing the same payload again in a loop.
+        if errors:
+            print(
+                f"WARN dreame_vacuum: flow rejected step {step_id!r} with errors {errors}. "
+                f"Common causes: wrong Mi credentials, captcha/email-verification required, "
+                f"or a 2FA challenge that didn't surface. Try logging into the Mi Home app "
+                f"or account.xiaomi.com first to clear any pending verification, then retry. "
+                f"If that fails, finish setup once in the HA UI (flow id {flow_id} is open).",
+                flush=True,
+            )
+            return
+        if step_id is not None and step_id == prev_step_id:
+            print(
+                f"WARN dreame_vacuum: flow stuck on step {step_id!r} (no error reported). "
+                f"Flow id {flow_id} is open — finish in the HA UI.",
+                flush=True,
+            )
+            return
+        prev_step_id = step_id
+
         if step_id == "user":
-            payload = {"configuration_type": "With map (Automatic)"}
+            payload = {"configuration_type": "Dreamehome Account"}
+        elif step_id == "dreame":
+            # Dreame cloud login (separate from Mi cloud). The integration sets prefer_cloud=True
+            # internally for Dreame accounts, so we omit it here.
+            payload = {
+                "username": username,
+                "password": password,
+                "country": country,
+            }
         elif step_id == "mi":
-            # prefer_cloud=False keeps the integration LAN-first when reachable; the cloud
-            # session is still established for the map feature.
+            # Defensive: if the user manually picks Xiaomi Home Account in 1Password's account_type
+            # field someday, we still handle it.
             payload = {
                 "username": username,
                 "password": password,
@@ -260,7 +293,7 @@ async def reconcile_dreame_vacuum_integration(desired):
                             options.append(opt)
                     break
             if not options:
-                print(f"WARN dreame_vacuum: device list missing from flow response: {flow}", flush=True)
+                print("WARN dreame_vacuum: device list missing from flow response", flush=True)
                 return
             if len(options) > 1:
                 print(f"WARN dreame_vacuum: multiple devices found ({options}); picking first", flush=True)
@@ -286,12 +319,12 @@ async def reconcile_dreame_vacuum_integration(desired):
             )
             return
         else:
-            print(f"WARN dreame_vacuum: unexpected step {step_id!r}, full response: {flow}", flush=True)
+            print(f"WARN dreame_vacuum: unexpected step {step_id!r} (flow_id {flow_id})", flush=True)
             return
 
         flow = ha_http("POST", f"/api/config/config_entries/flow/{flow_id}", payload)
 
-    print(f"WARN dreame_vacuum: flow did not complete after 8 steps, last response: {flow}", flush=True)
+    print(f"WARN dreame_vacuum: flow did not complete after 8 steps (last step {prev_step_id!r})", flush=True)
 
 
 async def reconcile_matter_integration(desired):

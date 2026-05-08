@@ -34,7 +34,8 @@ spec:
             - name: DAIKIN_INTEGRATION_VERSION
               value: "0.10.1"
             - name: DREAME_INTEGRATION_VERSION
-              value: "1.0.9"
+              # v2 beta — required for Dreamehome account login (v1.x is Mi cloud only).
+              value: "2.0.0b23"
             - name: OIDC_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -117,7 +118,8 @@ spec:
               WANT_VER="$DREAME_INTEGRATION_VERSION"
               CURRENT_VER=""
               if [ -f "$TARGET/manifest.json" ]; then
-                CURRENT_VER=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"v?[^"]+"' "$TARGET/manifest.json" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+                # Capture beta suffix too (e.g. "2.0.0b23") so we don't redownload every pod start.
+                CURRENT_VER=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"v?[^"]+"' "$TARGET/manifest.json" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9]*' || true)
               fi
               if [ "$CURRENT_VER" != "$WANT_VER" ]; then
                 echo "Installing dreame-vacuum v$WANT_VER (had: ${CURRENT_VER:-none})"
