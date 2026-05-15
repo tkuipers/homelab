@@ -1,0 +1,98 @@
+# Notification group — add entries here as phones are registered in the HA app.
+# Service names follow the pattern: mobile_app_<device_name_slugified>.
+notify:
+  - platform: group
+    name: all_phones
+    services:
+      - service: mobile_app_iphone
+
+# Presence group — add device_tracker entity IDs here as phones are registered.
+# The group is 'home' if any member is home, 'not_home' only when all are away.
+group:
+  household_phones:
+    name: Household Phones
+    entities:
+      - device_tracker.iphone
+
+automation:
+  # Notify both phones when the garage door has been open for 5+ minutes and
+  # nobody is home. The notification carries a "Close Door" action button that
+  # triggers the garage cover close (via the Aqara relay toggle).
+  - id: security_garage_open_alert
+    alias: "Security: Garage open > 5 min with nobody home"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.garage_door
+        to: "on"
+        for: "00:05:00"
+    condition:
+      - condition: state
+        entity_id: group.household_phones
+        state: "not_home"
+    action:
+      - service: notify.all_phones
+        data:
+          title: "Garage Door Open"
+          message: "The garage door has been open for over 5 minutes and nobody is home."
+          data:
+            actions:
+              - action: "CLOSE_GARAGE"
+                title: "Close Door"
+            push:
+              interruption-level: time-sensitive
+
+  - id: security_garage_close_action
+    alias: "Security: Close garage from notification action"
+    trigger:
+      - platform: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: "CLOSE_GARAGE"
+    condition:
+      - condition: state
+        entity_id: binary_sensor.garage_door
+        state: "on"
+    action:
+      - service: cover.close_cover
+        target:
+          entity_id: cover.garage_door
+
+  # Auto-lock: if either entrance lock is left unlocked for 5 continuous minutes
+  # after 9:30 PM, lock it and send a notification.
+  - id: security_autolock_garage_entrance
+    alias: "Security: Auto-lock garage entrance after 5 min unlocked (after 9:30 PM)"
+    trigger:
+      - platform: state
+        entity_id: lock.aqara_smart_lock_u50
+        to: "unlocked"
+        for: "00:05:00"
+    condition:
+      - condition: time
+        after: "21:30:00"
+    action:
+      - service: lock.lock
+        target:
+          entity_id: lock.aqara_smart_lock_u50
+      - service: notify.all_phones
+        data:
+          title: "Garage Entrance Locked"
+          message: "Garage entrance was auto-locked (unlocked for 5+ min after 9:30 PM)."
+
+  - id: security_autolock_main_entrance
+    alias: "Security: Auto-lock main entrance after 5 min unlocked (after 9:30 PM)"
+    trigger:
+      - platform: state
+        entity_id: lock.aqara_smart_lock_u50_2
+        to: "unlocked"
+        for: "00:05:00"
+    condition:
+      - condition: time
+        after: "21:30:00"
+    action:
+      - service: lock.lock
+        target:
+          entity_id: lock.aqara_smart_lock_u50_2
+      - service: notify.all_phones
+        data:
+          title: "Main Entrance Locked"
+          message: "Main entrance was auto-locked (unlocked for 5+ min after 9:30 PM)."

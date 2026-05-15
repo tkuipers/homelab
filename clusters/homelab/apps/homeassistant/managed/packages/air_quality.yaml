@@ -1,0 +1,18 @@
+automation:
+  # Notify when outdoor AQI crosses above 100 (Unhealthy for Sensitive Groups).
+  # Fires once per crossing — won't repeat while AQI stays elevated.
+  # Uses notify.all_phones defined in security.yaml (merged at load time).
+  - id: environment_air_quality_alert
+    alias: "Environment: Outdoor air quality unhealthy"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.main_room_thermostat_outdoor_air_quality_index
+        above: 100
+    action:
+      - service: notify.all_phones
+        data:
+          title: "Poor Outdoor Air Quality"
+          message: >
+            AQI is {{ states('sensor.main_room_thermostat_outdoor_air_quality_index') | int }}
+            — {{ states('sensor.main_room_thermostat_outdoor_air_quality') }}.
+            Consider closing windows.
