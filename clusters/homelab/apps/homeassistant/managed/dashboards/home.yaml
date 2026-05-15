@@ -79,6 +79,12 @@ views:
               service_data:
                 entity_id: vacuum.dreame_vacuum
 
+      - title: Bedroom
+        cards:
+          - type: tile
+            entity: light.smart_wi_fi_switch
+            name: Bedroom Light
+
       - title: Monitoring
         cards:
           - type: tile

@@ -142,6 +142,13 @@ entities:
   sensor.dreame_vacuum_cleaning_time: "Dining"
   sensor.dreame_vacuum_cleaned_area: "Dining"
   camera.dreame_vacuum_map: "Dining"
+  light.smart_wi_fi_switch: "Main Bedroom"
+  select.smart_wi_fi_switch_power_on_behavior:
+    area: "Main Bedroom"
+    hidden: true
+  update.smart_wi_fi_switch_firmware:
+    area: "Main Bedroom"
+    hidden: true
 
 # Matter integration. The reconciler ensures this config entry exists in HA.
 # Pairing devices (e.g. Aqara Hub M3) is a one-time manual step via the HA UI.
