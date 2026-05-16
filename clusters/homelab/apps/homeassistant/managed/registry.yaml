@@ -142,6 +142,7 @@ entities:
   sensor.dreame_vacuum_cleaning_time: "Dining"
   sensor.dreame_vacuum_cleaned_area: "Dining"
   camera.dreame_vacuum_map: "Dining"
+  light.h3200: "Outside"
   light.smart_wi_fi_switch: "Main Bedroom"
   select.smart_wi_fi_switch_power_on_behavior:
     area: "Main Bedroom"

@@ -1,0 +1,14 @@
+automation:
+  - id: outdoor_lighting_backyard_pre_sunset
+    alias: "Outdoor Lighting: Back yard on 30 min before sunset"
+    trigger:
+      - platform: sun
+        event: sunset
+        offset: "-00:30:00"
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.h3200
+        data:
+          brightness_pct: 100
+          color_temp_kelvin: 2700
