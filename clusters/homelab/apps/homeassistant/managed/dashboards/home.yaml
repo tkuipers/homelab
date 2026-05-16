@@ -9,6 +9,16 @@ views:
     icon: mdi:home
     type: sections
     sections:
+      - title: Quick Actions
+        cards:
+          - type: button
+            name: Good Night
+            icon: mdi:weather-night
+            icon_height: 60px
+            tap_action:
+              action: call-service
+              service: script.good_night
+
       - title: Entrances
         cards:
           - type: tile
