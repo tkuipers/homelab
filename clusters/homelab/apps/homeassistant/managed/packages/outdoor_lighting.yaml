@@ -12,3 +12,19 @@ automation:
         data:
           brightness_pct: 100
           color_temp_kelvin: 2700
+
+  # Fallback in case nobody runs the Good Night script: kill the back yard
+  # lights at solar midnight. Template trigger fires once when now() crosses
+  # sun.sun's next_midnight attribute (which then advances to tomorrow,
+  # resetting the trigger).
+  - id: outdoor_lighting_backyard_off_solar_midnight
+    alias: "Outdoor Lighting: Back yard off at solar midnight"
+    trigger:
+      - platform: template
+        value_template: >
+          {{ state_attr('sun.sun', 'next_midnight') is not none and
+             now() >= as_datetime(state_attr('sun.sun', 'next_midnight')) }}
+    action:
+      - service: light.turn_off
+        target:
+          entity_id: light.h3200
