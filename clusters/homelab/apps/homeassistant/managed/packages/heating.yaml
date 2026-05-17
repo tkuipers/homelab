@@ -1,0 +1,104 @@
+# Ownership flag — true only while the freeze guard is the reason the
+# thermostat is running. If anyone (or anything else) touches the thermostat,
+# the release automation clears the flag and the 07:00 off becomes a no-op.
+input_boolean:
+  heating_freeze_guard_active:
+    name: "Heating freeze guard active"
+    icon: mdi:snowflake-thermometer
+
+automation:
+  # Overnight freeze guard: if it's cold in the attic AND outside while the
+  # thermostat is off, kick on the heat at 20°C between midnight and 7am.
+  # Triggers on the start of the window or on either temp crossing below 5°C
+  # mid-window; the condition block makes sure all four facts hold before we
+  # touch the thermostat. Claims ownership BEFORE changing state so the
+  # release automation can see we're the source of the resulting state change.
+  - id: heating_overnight_freeze_guard_on
+    alias: "Heating: Overnight freeze guard (on)"
+    trigger:
+      - platform: time
+        at: "00:00:00"
+      - platform: numeric_state
+        entity_id: sensor.attic_temperature
+        below: 5
+      - platform: numeric_state
+        entity_id: sensor.outdoor_temperature
+        below: 5
+    condition:
+      - condition: time
+        after: "00:00:00"
+        before: "07:00:00"
+      - condition: state
+        entity_id: climate.main_floor_thermostat
+        state: "off"
+      - condition: numeric_state
+        entity_id: sensor.attic_temperature
+        below: 5
+      - condition: numeric_state
+        entity_id: sensor.outdoor_temperature
+        below: 5
+    action:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.heating_freeze_guard_active
+      - service: climate.set_temperature
+        target:
+          entity_id: climate.main_floor_thermostat
+        data:
+          hvac_mode: heat
+          temperature: 20.0
+
+  # Cut the heat back to off at 7am — but only if our claim is still active.
+  # If someone manually changed mode or setpoint overnight (e.g. flipped to
+  # AC, bumped temp to 22), the release automation will have cleared the
+  # claim and this becomes a no-op.
+  - id: heating_overnight_freeze_guard_off
+    alias: "Heating: Overnight freeze guard (off at 07:00)"
+    trigger:
+      - platform: time
+        at: "07:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.heating_freeze_guard_active
+        state: "on"
+    action:
+      - service: climate.set_hvac_mode
+        target:
+          entity_id: climate.main_floor_thermostat
+        data:
+          hvac_mode: "off"
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.heating_freeze_guard_active
+
+  # User (or any other automation) changes the thermostat mode away from heat
+  # or the setpoint away from 20°C → release the freeze guard's claim. Our
+  # own on-action lands as state=heat + temp=20, so the OR condition stays
+  # false during it and we don't accidentally release on our own change.
+  - id: heating_release_freeze_guard_claim
+    alias: "Heating: Release freeze guard claim on manual override"
+    trigger:
+      - platform: state
+        entity_id: climate.main_floor_thermostat
+      - platform: state
+        entity_id: climate.main_floor_thermostat
+        attribute: temperature
+    condition:
+      - condition: state
+        entity_id: input_boolean.heating_freeze_guard_active
+        state: "on"
+      - condition: or
+        conditions:
+          - condition: not
+            conditions:
+              - condition: state
+                entity_id: climate.main_floor_thermostat
+                state: "heat"
+          - condition: template
+            value_template: >
+              {%- set t = state_attr('climate.main_floor_thermostat', 'temperature') -%}
+              {{ t is not none and (t | float - 20.0) | abs > 0.1 }}
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.heating_freeze_guard_active

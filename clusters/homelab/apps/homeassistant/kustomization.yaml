@@ -22,6 +22,7 @@ configMapGenerator:
       - managed/packages/air_quality.yaml
       - managed/packages/outdoor_lighting.yaml
       - managed/packages/good_night.yaml
+      - managed/packages/heating.yaml
   - name: homeassistant-dashboards
     files:
       - managed/dashboards/home.yaml
