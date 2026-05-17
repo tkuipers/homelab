@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hamh
+  namespace: homeassistant
+  labels:
+    app: hamh
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: hamh
+  template:
+    metadata:
+      labels:
+        app: hamh
+    spec:
+      # Matter requires raw mDNS/UDP multicast on the host network + IPv6.
+      # ClusterFirstWithHostNet keeps cluster DNS working so HAMH can resolve
+      # homeassistant.homeassistant.svc.cluster.local for the HA WebSocket.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      containers:
+        - name: hamh
+          # renovate: datasource=docker
+          image: ghcr.io/riddix/home-assistant-matter-hub:v2.0.44
+          env:
+            - name: HAMH_HOME_ASSISTANT_URL
+              value: "http://homeassistant.homeassistant.svc.cluster.local:8123"
+            - name: HAMH_HOME_ASSISTANT_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: homeassistant-reconciler
+                  key: token
+            - name: HAMH_STORAGE_LOCATION
+              value: /data
+            - name: HAMH_HTTP_PORT
+              value: "8482"
+            - name: HAMH_LOG_LEVEL
+              value: info
+          ports:
+            - containerPort: 8482
+              name: http
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "50m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8482
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8482
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: data
+          hostPath:
+            path: /var/persist/hamh-data
+            type: DirectoryOrCreate

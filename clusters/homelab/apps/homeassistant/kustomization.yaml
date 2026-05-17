@@ -12,6 +12,9 @@ resources:
   - ingress.yaml
   - matter-server-deployment.yaml
   - matter-server-service.yaml
+  - hamh-deployment.yaml
+  - hamh-service.yaml
+  - hamh-ingress.yaml
   - reconciler-job.yaml
 configMapGenerator:
   - name: homeassistant-packages

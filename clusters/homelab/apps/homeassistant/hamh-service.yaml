@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hamh
+  namespace: homeassistant
+  labels:
+    app: hamh
+spec:
+  selector:
+    app: hamh
+  ports:
+    - port: 8482
+      targetPort: 8482
+      protocol: TCP
+      name: http
+  type: ClusterIP
