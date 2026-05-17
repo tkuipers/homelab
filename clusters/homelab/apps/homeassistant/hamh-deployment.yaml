@@ -28,7 +28,7 @@ spec:
       containers:
         - name: hamh
           # renovate: datasource=docker
-          image: ghcr.io/riddix/home-assistant-matter-hub:v2.0.44
+          image: ghcr.io/riddix/home-assistant-matter-hub:2.0.44
           env:
             - name: HAMH_HOME_ASSISTANT_URL
               value: "http://homeassistant.homeassistant.svc.cluster.local:8123"
