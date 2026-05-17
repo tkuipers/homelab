@@ -95,42 +95,269 @@ areas:
     floor: "Attic"
     icon: mdi:thermometer
 
-# entity_id -> area name. Entity must already exist (created by an integration).
+# entity_id -> area assignment, hidden flag, and optional rename.
+#
+# Each key is the *desired* entity_id (HA's canonical name). Value forms:
+#   - "Area Name"                           # shorthand: just assign area
+#   - { area, hidden, rename_from }
+#
+# rename_from: the current HA-generated entity_id to rename FROM. Once renamed
+# the target exists and rename_from becomes a no-op, so it's safe to leave in.
+# If you re-pair a device and HA assigns a new ugly id (e.g. _3), update
+# rename_from to the new value.
 entities:
+  # --- Template-defined (already canonical) ---
   binary_sensor.garage_door: "Garage"
   button.garage_door_trigger: "Garage"
   cover.garage_door: "Garage"
-  binary_sensor.aqara_water_leak_sensor_water_leak: "Utilities Room"
-  binary_sensor.aqara_door_and_window_sensor_door:
+
+  # --- Aqara Hub M3 ---
+  button.aqara_hub_identify:
+    hidden: true
+    rename_from: button.aqara_hub_m3_identify
+
+  # --- Garage: door contact sensor ---
+  binary_sensor.garage_door_contact:
     area: "Garage"
     hidden: true
-  lock.aqara_smart_lock_u50: "Garage Entrance"
-  lock.aqara_smart_lock_u50_2: "Main Entrance"
-  light.aqara_dual_relay_module_t2:
+    rename_from: binary_sensor.aqara_door_and_window_sensor_door
+  button.garage_door_contact_identify:
     area: "Garage"
     hidden: true
-  light.aqara_dual_relay_module_t2_2:
+    rename_from: button.aqara_door_and_window_sensor_identify
+  sensor.garage_door_contact_battery:
+    area: "Garage"
+    rename_from: sensor.aqara_door_and_window_sensor_battery
+  sensor.garage_door_contact_battery_voltage:
     area: "Garage"
     hidden: true
-  sensor.aqara_temp_humidity_sensor_t1_temperature: "Attic"
-  sensor.aqara_temp_humidity_sensor_t1_humidity: "Attic"
-  climate.main_room_thermostat: "Main Common Space"
-  select.main_room_thermostat_fan_speed: "Main Common Space"
-  sensor.main_room_thermostat_indoor_temperature: "Main Common Space"
-  sensor.main_room_thermostat_indoor_humidity: "Main Common Space"
-  sensor.main_room_thermostat_online_status:
+    rename_from: sensor.aqara_door_and_window_sensor_battery_voltage
+  sensor.garage_door_contact_battery_type:
+    area: "Garage"
+    hidden: true
+    rename_from: sensor.aqara_door_and_window_sensor_battery_type
+
+  # --- Garage: dual relay driving the opener (channel 1 active, channel 2 unused) ---
+  light.garage_door_opener:
+    area: "Garage"
+    hidden: true
+    rename_from: light.aqara_dual_relay_module_t2
+  light.garage_door_opener_aux:
+    area: "Garage"
+    hidden: true
+    rename_from: light.aqara_dual_relay_module_t2_2
+  sensor.garage_door_opener_power:
+    area: "Garage"
+    hidden: true
+    rename_from: sensor.aqara_dual_relay_module_t2_power
+  sensor.garage_door_opener_current:
+    area: "Garage"
+    hidden: true
+    rename_from: sensor.aqara_dual_relay_module_t2_active_current
+  sensor.garage_door_opener_energy:
+    area: "Garage"
+    hidden: true
+    rename_from: sensor.aqara_dual_relay_module_t2_energy
+  button.garage_door_opener_identify:
+    area: "Garage"
+    hidden: true
+    rename_from: button.aqara_dual_relay_module_t2_identify
+  button.garage_door_opener_aux_identify:
+    area: "Garage"
+    hidden: true
+    rename_from: button.aqara_dual_relay_module_t2_identify_2
+
+  # --- Garage Entrance lock (Aqara U50 #1) ---
+  lock.garage_entrance:
+    area: "Garage Entrance"
+    rename_from: lock.aqara_smart_lock_u50
+  binary_sensor.garage_entrance_actuator:
+    area: "Garage Entrance"
+    hidden: true
+    rename_from: binary_sensor.aqara_smart_lock_u50_actuator
+  select.garage_entrance_operating_mode:
+    area: "Garage Entrance"
+    hidden: true
+    rename_from: select.aqara_smart_lock_u50_operating_mode
+  sensor.garage_entrance_battery:
+    area: "Garage Entrance"
+    rename_from: sensor.aqara_smart_lock_u50_battery
+  sensor.garage_entrance_battery_voltage:
+    area: "Garage Entrance"
+    hidden: true
+    rename_from: sensor.aqara_smart_lock_u50_battery_voltage
+  sensor.garage_entrance_battery_type:
+    area: "Garage Entrance"
+    hidden: true
+    rename_from: sensor.aqara_smart_lock_u50_battery_type
+  button.garage_entrance_identify:
+    area: "Garage Entrance"
+    hidden: true
+    rename_from: button.aqara_smart_lock_u50_identify
+
+  # --- Main Entrance lock (Aqara U50 #2) ---
+  lock.main_entrance:
+    area: "Main Entrance"
+    rename_from: lock.aqara_smart_lock_u50_2
+  binary_sensor.main_entrance_actuator:
+    area: "Main Entrance"
+    hidden: true
+    rename_from: binary_sensor.aqara_smart_lock_u50_actuator_2
+  select.main_entrance_operating_mode:
+    area: "Main Entrance"
+    hidden: true
+    rename_from: select.aqara_smart_lock_u50_operating_mode_2
+  sensor.main_entrance_battery:
+    area: "Main Entrance"
+    rename_from: sensor.aqara_smart_lock_u50_battery_2
+  sensor.main_entrance_battery_voltage:
+    area: "Main Entrance"
+    hidden: true
+    rename_from: sensor.aqara_smart_lock_u50_battery_voltage_2
+  sensor.main_entrance_battery_type:
+    area: "Main Entrance"
+    hidden: true
+    rename_from: sensor.aqara_smart_lock_u50_battery_type_2
+  button.main_entrance_identify:
+    area: "Main Entrance"
+    hidden: true
+    rename_from: button.aqara_smart_lock_u50_identify_2
+
+  # --- Utilities Room: water leak sensor ---
+  binary_sensor.utilities_water_leak:
+    area: "Utilities Room"
+    rename_from: binary_sensor.aqara_water_leak_sensor_water_leak
+  sensor.utilities_water_leak_battery:
+    area: "Utilities Room"
+    rename_from: sensor.aqara_water_leak_sensor_battery
+  sensor.utilities_water_leak_battery_voltage:
+    area: "Utilities Room"
+    hidden: true
+    rename_from: sensor.aqara_water_leak_sensor_battery_voltage
+  sensor.utilities_water_leak_battery_type:
+    area: "Utilities Room"
+    hidden: true
+    rename_from: sensor.aqara_water_leak_sensor_battery_type
+  button.utilities_water_leak_identify:
+    area: "Utilities Room"
+    hidden: true
+    rename_from: button.aqara_water_leak_sensor_identify
+
+  # --- Attic: temp/humidity sensor ---
+  sensor.attic_temperature:
+    area: "Attic"
+    rename_from: sensor.aqara_temp_humidity_sensor_t1_temperature
+  sensor.attic_humidity:
+    area: "Attic"
+    rename_from: sensor.aqara_temp_humidity_sensor_t1_humidity
+  sensor.attic_sensor_battery:
+    area: "Attic"
+    rename_from: sensor.aqara_temp_humidity_sensor_t1_battery
+  sensor.attic_sensor_battery_voltage:
+    area: "Attic"
+    hidden: true
+    rename_from: sensor.aqara_temp_humidity_sensor_t1_battery_voltage
+  sensor.attic_sensor_battery_type:
+    area: "Attic"
+    hidden: true
+    rename_from: sensor.aqara_temp_humidity_sensor_t1_battery_type
+  button.attic_sensor_identify:
+    area: "Attic"
+    hidden: true
+    rename_from: button.aqara_temp_humidity_sensor_t1_identify
+  # Aqara T1 exposes two identify endpoints (temp + humidity sub-devices).
+  button.attic_sensor_identify_2:
+    area: "Attic"
+    hidden: true
+    rename_from: button.aqara_temp_humidity_sensor_t1_identify_2
+
+  # --- Back yard: door sensor + Govee H7057 floodlights ---
+  binary_sensor.back_door:
+    area: "Outside"
+    rename_from: binary_sensor.aqara_door_and_window_sensor_door_2
+  button.back_door_identify:
+    area: "Outside"
+    hidden: true
+    rename_from: button.aqara_door_and_window_sensor_identify_2
+  sensor.back_door_battery:
+    area: "Outside"
+    rename_from: sensor.aqara_door_and_window_sensor_battery_2
+  sensor.back_door_battery_voltage:
+    area: "Outside"
+    hidden: true
+    rename_from: sensor.aqara_door_and_window_sensor_battery_voltage_2
+  sensor.back_door_battery_type:
+    area: "Outside"
+    hidden: true
+    rename_from: sensor.aqara_door_and_window_sensor_battery_type_2
+  light.back_yard_floodlights:
+    area: "Outside"
+    rename_from: light.h7057
+
+  # --- Main floor thermostat + sensors (Daikin) ---
+  climate.main_floor_thermostat:
+    area: "Main Common Space"
+    rename_from: climate.main_room_thermostat
+  select.main_floor_fan_speed:
+    area: "Main Common Space"
+    rename_from: select.main_room_thermostat_fan_speed
+  sensor.main_floor_indoor_temperature:
+    area: "Main Common Space"
+    rename_from: sensor.main_room_thermostat_indoor_temperature
+  sensor.main_floor_indoor_humidity:
+    area: "Main Common Space"
+    rename_from: sensor.main_room_thermostat_indoor_humidity
+  sensor.main_floor_thermostat_online:
     area: "Main Common Space"
     hidden: true
-  sensor.main_room_thermostat_outdoor_temperature: "Outside"
-  sensor.main_room_thermostat_outdoor_humidity: "Outside"
-  sensor.main_room_thermostat_outdoor_air_quality: "Outside"
-  sensor.main_room_thermostat_outdoor_air_quality_index: "Outside"
-  sensor.main_room_thermostat_outdoor_air_quality_ozone:
+    rename_from: sensor.main_room_thermostat_online_status
+  sensor.outdoor_temperature:
+    area: "Outside"
+    rename_from: sensor.main_room_thermostat_outdoor_temperature
+  sensor.outdoor_humidity:
+    area: "Outside"
+    rename_from: sensor.main_room_thermostat_outdoor_humidity
+  sensor.outdoor_air_quality:
+    area: "Outside"
+    rename_from: sensor.main_room_thermostat_outdoor_air_quality
+  sensor.outdoor_aqi:
+    area: "Outside"
+    rename_from: sensor.main_room_thermostat_outdoor_air_quality_index
+  sensor.outdoor_air_quality_ozone:
     area: "Outside"
     hidden: true
-  sensor.main_room_thermostat_outdoor_air_quality_particles:
+    rename_from: sensor.main_room_thermostat_outdoor_air_quality_ozone
+  sensor.outdoor_air_quality_particles:
     area: "Outside"
     hidden: true
+    rename_from: sensor.main_room_thermostat_outdoor_air_quality_particles
+  sensor.hvac_outdoor_fan_speed:
+    area: "Outside"
+    hidden: true
+    rename_from: sensor.main_room_condensing_unit_outdoor_fan_speed
+  sensor.hvac_outdoor_fan_target_speed:
+    area: "Outside"
+    hidden: true
+    rename_from: sensor.main_room_condensing_unit_outdoor_fan_target_speed
+  sensor.hvac_indoor_superheat_temperature:
+    area: "Main Common Space"
+    hidden: true
+    rename_from: sensor.main_room_eev_coil_indoor_superheat_temperature
+
+  # --- Main Bedroom (TP-Link smart switch) ---
+  light.main_bedroom:
+    area: "Main Bedroom"
+    rename_from: light.smart_wi_fi_switch
+  select.main_bedroom_power_on_behavior:
+    area: "Main Bedroom"
+    hidden: true
+    rename_from: select.smart_wi_fi_switch_power_on_behavior
+  update.main_bedroom_firmware:
+    area: "Main Bedroom"
+    hidden: true
+    rename_from: update.smart_wi_fi_switch_firmware
+
+  # --- Dreame vacuum (already canonical; just area assignments) ---
   vacuum.dreame_vacuum: "Dining"
   sensor.dreame_vacuum_battery_level: "Dining"
   sensor.dreame_vacuum_status: "Dining"
@@ -142,14 +369,6 @@ entities:
   sensor.dreame_vacuum_cleaning_time: "Dining"
   sensor.dreame_vacuum_cleaned_area: "Dining"
   camera.dreame_vacuum_map: "Dining"
-  light.h3200: "Outside"
-  light.smart_wi_fi_switch: "Main Bedroom"
-  select.smart_wi_fi_switch_power_on_behavior:
-    area: "Main Bedroom"
-    hidden: true
-  update.smart_wi_fi_switch_firmware:
-    area: "Main Bedroom"
-    hidden: true
 
 # Matter integration. The reconciler ensures this config entry exists in HA.
 # Pairing devices (e.g. Aqara Hub M3) is a one-time manual step via the HA UI.

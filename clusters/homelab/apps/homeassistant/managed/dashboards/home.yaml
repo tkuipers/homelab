@@ -24,34 +24,34 @@ views:
           - type: tile
             entity: cover.garage_door
           - type: tile
-            entity: lock.aqara_smart_lock_u50
+            entity: lock.garage_entrance
             name: Garage Entrance
           - type: tile
-            entity: lock.aqara_smart_lock_u50_2
+            entity: lock.main_entrance
             name: Main Entrance
 
       - title: Climate
         cards:
           - type: thermostat
-            entity: climate.main_room_thermostat
+            entity: climate.main_floor_thermostat
             name: Main Floor
           - type: tile
-            entity: sensor.main_room_thermostat_indoor_temperature
+            entity: sensor.main_floor_indoor_temperature
             name: Indoor Temperature
           - type: tile
-            entity: sensor.main_room_thermostat_indoor_humidity
+            entity: sensor.main_floor_indoor_humidity
             name: Indoor Humidity
           - type: tile
-            entity: sensor.main_room_thermostat_outdoor_temperature
+            entity: sensor.outdoor_temperature
             name: Outdoor Temperature
           - type: tile
-            entity: sensor.main_room_thermostat_outdoor_humidity
+            entity: sensor.outdoor_humidity
             name: Outdoor Humidity
           - type: tile
-            entity: sensor.main_room_thermostat_outdoor_air_quality
+            entity: sensor.outdoor_air_quality
             name: Air Quality
           - type: tile
-            entity: select.main_room_thermostat_fan_speed
+            entity: select.main_floor_fan_speed
             name: Fan Speed
 
       # Sits between Climate and Monitoring per home-priority ordering.
@@ -92,19 +92,19 @@ views:
       - title: Bedroom
         cards:
           - type: tile
-            entity: light.smart_wi_fi_switch
+            entity: light.main_bedroom
             name: Bedroom Light
 
       - title: Monitoring
         cards:
           - type: tile
-            entity: binary_sensor.aqara_water_leak_sensor_water_leak
+            entity: binary_sensor.utilities_water_leak
             name: Water Leak
           - type: tile
-            entity: sensor.aqara_temp_humidity_sensor_t1_temperature
+            entity: sensor.attic_temperature
             name: Attic Temperature
           - type: tile
-            entity: sensor.aqara_temp_humidity_sensor_t1_humidity
+            entity: sensor.attic_humidity
             name: Attic Humidity
 
   - title: Vacuum
@@ -291,9 +291,9 @@ views:
       - title: Main Floor
         cards:
           - type: thermostat
-            entity: climate.main_room_thermostat
+            entity: climate.main_floor_thermostat
           - type: tile
-            entity: select.main_room_thermostat_fan_speed
+            entity: select.main_floor_fan_speed
             name: Fan Speed
 
       - title: Indoor
@@ -302,32 +302,32 @@ views:
             title: Temperature
             hours_to_show: 24
             entities:
-              - entity: sensor.main_room_thermostat_indoor_temperature
+              - entity: sensor.main_floor_indoor_temperature
           - type: history-graph
             title: Humidity
             hours_to_show: 24
             entities:
-              - entity: sensor.main_room_thermostat_indoor_humidity
+              - entity: sensor.main_floor_indoor_humidity
 
       - title: Outside
         cards:
           - type: tile
-            entity: sensor.main_room_thermostat_outdoor_temperature
+            entity: sensor.outdoor_temperature
             name: Temperature
           - type: tile
-            entity: sensor.main_room_thermostat_outdoor_humidity
+            entity: sensor.outdoor_humidity
             name: Humidity
           - type: tile
-            entity: sensor.main_room_thermostat_outdoor_air_quality
+            entity: sensor.outdoor_air_quality
             name: Air Quality
           - type: tile
-            entity: sensor.main_room_thermostat_outdoor_air_quality_index
+            entity: sensor.outdoor_aqi
             name: AQI
           - type: history-graph
             title: Outdoor Temperature
             hours_to_show: 24
             entities:
-              - entity: sensor.main_room_thermostat_outdoor_temperature
+              - entity: sensor.outdoor_temperature
 
       - title: Attic
         cards:
@@ -335,12 +335,12 @@ views:
             title: Temperature
             hours_to_show: 24
             entities:
-              - entity: sensor.aqara_temp_humidity_sensor_t1_temperature
+              - entity: sensor.attic_temperature
           - type: history-graph
             title: Humidity
             hours_to_show: 24
             entities:
-              - entity: sensor.aqara_temp_humidity_sensor_t1_humidity
+              - entity: sensor.attic_humidity
 
   # Hidden subview — accessed via the "Open Map" button in the Vacuum view
   # (or by URL: /home-yaml/vacuum-map). subview: true keeps it out of the tab

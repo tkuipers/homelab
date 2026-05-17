@@ -8,10 +8,10 @@ automation:
     action:
       - service: light.turn_on
         target:
-          entity_id: light.h3200
+          entity_id: light.back_yard_floodlights
         data:
-          brightness_pct: 100
-          color_temp_kelvin: 2700
+          brightness: 173
+          color_temp_kelvin: 3095
 
   # Fallback in case nobody runs the Good Night script: kill the back yard
   # lights at solar midnight. Template trigger fires once when now() crosses
@@ -27,4 +27,4 @@ automation:
     action:
       - service: light.turn_off
         target:
-          entity_id: light.h3200
+          entity_id: light.back_yard_floodlights

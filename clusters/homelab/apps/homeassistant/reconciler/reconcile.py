@@ -136,12 +136,31 @@ async def reconcile_entities(ha, desired):
     if not desired:
         return
     area_id_by_name = {a["name"]: a["area_id"] for a in await ha.call({"type": "config/area_registry/list"})}
+    existing_ids = {e["entity_id"] for e in await ha.call({"type": "config/entity_registry/list"})}
     for entity_id, spec in desired.items():
-        # spec can be a plain area name string or {area: ..., hidden: ...}
+        # spec can be a plain area name string or {area, hidden, rename_from}
         if isinstance(spec, str):
-            area_name, hidden = spec, None
+            area_name, hidden, rename_from = spec, None, None
         else:
-            area_name, hidden = spec.get("area"), spec.get("hidden")
+            area_name = spec.get("area")
+            hidden = spec.get("hidden")
+            rename_from = spec.get("rename_from")
+
+        # If the target doesn't exist yet but a source entity does, rename it first.
+        # Idempotent: after the rename the target exists and rename_from is a no-op.
+        if rename_from and entity_id not in existing_ids and rename_from in existing_ids:
+            try:
+                await ha.call({
+                    "type": "config/entity_registry/update",
+                    "entity_id": rename_from,
+                    "new_entity_id": entity_id,
+                })
+                print(f"entity rename: {rename_from} -> {entity_id}", flush=True)
+                existing_ids.discard(rename_from)
+                existing_ids.add(entity_id)
+            except RuntimeError as e:
+                print(f"WARN entity rename {rename_from} -> {entity_id}: {e}", flush=True)
+                continue
 
         target_area_id = area_id_by_name.get(area_name) if area_name else None
         if area_name and not target_area_id:

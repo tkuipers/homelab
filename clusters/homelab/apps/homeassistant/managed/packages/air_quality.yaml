@@ -6,13 +6,13 @@ automation:
     alias: "Environment: Outdoor air quality unhealthy"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.main_room_thermostat_outdoor_air_quality_index
+        entity_id: sensor.outdoor_aqi
         above: 100
     action:
       - service: notify.all_phones
         data:
           title: "Poor Outdoor Air Quality"
           message: >
-            AQI is {{ states('sensor.main_room_thermostat_outdoor_air_quality_index') | int }}
-            — {{ states('sensor.main_room_thermostat_outdoor_air_quality') }}.
+            AQI is {{ states('sensor.outdoor_aqi') | int }}
+            — {{ states('sensor.outdoor_air_quality') }}.
             Consider closing windows.

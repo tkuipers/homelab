@@ -13,10 +13,10 @@ script:
       - service: lock.lock
         target:
           entity_id:
-            - lock.aqara_smart_lock_u50
-            - lock.aqara_smart_lock_u50_2
+            - lock.garage_entrance
+            - lock.main_entrance
       - service: light.turn_off
         target:
           entity_id:
-            - light.h3200
-            - light.smart_wi_fi_switch
+            - light.back_yard_floodlights
+            - light.main_bedroom

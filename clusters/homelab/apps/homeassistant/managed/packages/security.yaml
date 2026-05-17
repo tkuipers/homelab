@@ -63,7 +63,7 @@ automation:
     alias: "Security: Auto-lock garage entrance after 5 min unlocked (after 9:30 PM)"
     trigger:
       - platform: state
-        entity_id: lock.aqara_smart_lock_u50
+        entity_id: lock.garage_entrance
         to: "unlocked"
         for: "00:05:00"
     condition:
@@ -72,7 +72,7 @@ automation:
     action:
       - service: lock.lock
         target:
-          entity_id: lock.aqara_smart_lock_u50
+          entity_id: lock.garage_entrance
       - service: notify.all_phones
         data:
           title: "Garage Entrance Locked"
@@ -82,7 +82,7 @@ automation:
     alias: "Security: Auto-lock main entrance after 5 min unlocked (after 9:30 PM)"
     trigger:
       - platform: state
-        entity_id: lock.aqara_smart_lock_u50_2
+        entity_id: lock.main_entrance
         to: "unlocked"
         for: "00:05:00"
     condition:
@@ -91,7 +91,7 @@ automation:
     action:
       - service: lock.lock
         target:
-          entity_id: lock.aqara_smart_lock_u50_2
+          entity_id: lock.main_entrance
       - service: notify.all_phones
         data:
           title: "Main Entrance Locked"
