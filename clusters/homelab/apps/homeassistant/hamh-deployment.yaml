@@ -23,6 +23,11 @@ spec:
       # homeassistant.homeassistant.svc.cluster.local for the HA WebSocket.
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      # Kubernetes injects HAMH_SERVICE_HOST / HAMH_PORT_8482_TCP_* for the
+      # in-namespace `hamh` Service. HAMH treats every HAMH_* env var as a CLI
+      # option and yargs strict-rejects unknown ones, crashing the pod. Disable
+      # the auto-injection here; we pass HA_URL/token explicitly.
+      enableServiceLinks: false
       nodeSelector:
         kubernetes.io/hostname: dell-r620
       containers:
