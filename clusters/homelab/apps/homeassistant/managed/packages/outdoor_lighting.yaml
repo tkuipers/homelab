@@ -1,10 +1,19 @@
+# 10-minute auto-off timer for back-yard motion-style lighting. timer.start
+# restarts a running timer, so re-opening the back door within the window
+# resets the countdown. The "Back door triggers lights" automation calls
+# timer.start; the "timer finished" automation turns the lights back off.
+timer:
+  back_yard_lights_auto_off:
+    name: "Back yard lights auto-off"
+    duration: "00:10:00"
+
 automation:
-  - id: outdoor_lighting_backyard_pre_sunset
-    alias: "Outdoor Lighting: Back yard on 30 min before sunset"
+  - id: outdoor_lighting_backyard_post_sunset
+    alias: "Outdoor Lighting: Back yard on 10 min after sunset"
     trigger:
       - platform: sun
         event: sunset
-        offset: "-00:30:00"
+        offset: "+00:10:00"
     action:
       - service: light.turn_on
         target:
@@ -28,3 +37,42 @@ automation:
       - service: light.turn_off
         target:
           entity_id: light.back_yard_floodlights
+
+  # Back door opens after sunset → fade lights on, start (or restart) the
+  # 10-minute auto-off timer. Re-opening within 10 min restarts the timer.
+  - id: outdoor_lighting_backyard_on_back_door
+    alias: "Outdoor Lighting: Back yard on when back door opens after sunset"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.back_door
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: sun.sun
+        state: below_horizon
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.back_yard_floodlights
+        data:
+          brightness: 173
+          color_temp_kelvin: 3095
+          transition: 3
+      - service: timer.start
+        target:
+          entity_id: timer.back_yard_lights_auto_off
+
+  # When the auto-off timer finishes, fade the lights back off.
+  - id: outdoor_lighting_backyard_off_timer
+    alias: "Outdoor Lighting: Back yard off when auto-off timer finishes"
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.back_yard_lights_auto_off
+    action:
+      - service: light.turn_off
+        target:
+          entity_id: light.back_yard_floodlights
+        data:
+          transition: 3
