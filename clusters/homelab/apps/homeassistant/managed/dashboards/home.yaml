@@ -9,15 +9,23 @@ views:
     icon: mdi:home
     type: sections
     sections:
-      - title: Quick Actions
+      - title: Sun
         cards:
-          - type: button
-            name: Good Night
-            icon: mdi:weather-night
-            icon_height: 60px
-            tap_action:
-              action: call-service
-              service: script.good_night
+          - type: entities
+            show_header_toggle: false
+            entities:
+              - type: attribute
+                entity: sun.sun
+                attribute: next_rising
+                name: Next Sunrise
+                icon: mdi:weather-sunset-up
+                format: time
+              - type: attribute
+                entity: sun.sun
+                attribute: next_setting
+                name: Next Sunset
+                icon: mdi:weather-sunset-down
+                format: time
 
       - title: Entrances
         cards:
@@ -29,6 +37,16 @@ views:
           - type: tile
             entity: lock.main_entrance
             name: Main Entrance
+
+      - title: Quick Actions
+        cards:
+          - type: button
+            name: Good Night
+            icon: mdi:weather-night
+            icon_height: 60px
+            tap_action:
+              action: call-service
+              service: script.good_night
 
       - title: Climate
         cards:
