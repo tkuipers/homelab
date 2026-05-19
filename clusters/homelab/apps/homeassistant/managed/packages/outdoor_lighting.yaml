@@ -1,27 +1,10 @@
-# 10-minute auto-off timer for back-yard motion-style lighting. timer.start
-# restarts a running timer, so re-opening the back door within the window
-# resets the countdown. The "Back door triggers lights" automation calls
-# timer.start; the "timer finished" automation turns the lights back off.
-timer:
-  back_yard_lights_auto_off:
-    name: "Back yard lights auto-off"
-    duration: "00:10:00"
-
-# Ownership flag — true only while the back-door automation is the reason the
-# floodlights are on. If anything else turns them on (sunset, Good Night, the
-# dashboard, voice), this stays off and the auto-off timer becomes a no-op.
-input_boolean:
-  back_yard_lights_door_active:
-    name: "Back yard lights door-active"
-    icon: mdi:door-open
-
 automation:
   - id: outdoor_lighting_backyard_post_sunset
-    alias: "Outdoor Lighting: Back yard on 10 min after sunset"
+    alias: "Outdoor Lighting: Back yard on 30 min after sunset"
     trigger:
       - platform: sun
         event: sunset
-        offset: "+00:10:00"
+        offset: "+00:30:00"
     action:
       - service: light.turn_on
         target:
@@ -30,10 +13,9 @@ automation:
           brightness: 173
           color_temp_kelvin: 3095
 
-  # Fallback in case nobody runs the Good Night script: kill the back yard
-  # lights at solar midnight. Template trigger fires once when now() crosses
-  # sun.sun's next_midnight attribute (which then advances to tomorrow,
-  # resetting the trigger).
+  # Fallback in case Good Night isn't run: kill the back yard lights at solar
+  # midnight. Template trigger fires once when now() crosses sun.sun's
+  # next_midnight attribute (which then advances to tomorrow, resetting the trigger).
   - id: outdoor_lighting_backyard_off_solar_midnight
     alias: "Outdoor Lighting: Back yard off at solar midnight"
     trigger:
@@ -45,86 +27,3 @@ automation:
       - service: light.turn_off
         target:
           entity_id: light.back_yard_floodlights
-
-  # Back door opens after sunset → fade lights on, start (or restart) the
-  # 10-minute auto-off timer. Re-opening within 10 min restarts the timer.
-  # If the lights are already on for some *other* reason (sunset, Good Night
-  # cancellation, dashboard, etc.) the condition skips so we don't take them
-  # over and accidentally kill them when the timer fires.
-  - id: outdoor_lighting_backyard_on_back_door
-    alias: "Outdoor Lighting: Back yard on when back door opens after sunset"
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.back_door
-        to: "on"
-    condition:
-      - condition: state
-        entity_id: sun.sun
-        state: below_horizon
-      - condition: or
-        conditions:
-          - condition: state
-            entity_id: light.back_yard_floodlights
-            state: "off"
-          - condition: state
-            entity_id: input_boolean.back_yard_lights_door_active
-            state: "on"
-    action:
-      - service: light.turn_on
-        target:
-          entity_id: light.back_yard_floodlights
-        data:
-          brightness: 173
-          color_temp_kelvin: 3095
-          transition: 3
-      - service: input_boolean.turn_on
-        target:
-          entity_id: input_boolean.back_yard_lights_door_active
-      - service: timer.start
-        target:
-          entity_id: timer.back_yard_lights_auto_off
-
-  # When the auto-off timer finishes, fade the lights back off — but only
-  # if the door is still the one holding the lights on. If a human or another
-  # automation took over mid-window, the claim was cleared and we do nothing.
-  - id: outdoor_lighting_backyard_off_timer
-    alias: "Outdoor Lighting: Back yard off when auto-off timer finishes"
-    trigger:
-      - platform: event
-        event_type: timer.finished
-        event_data:
-          entity_id: timer.back_yard_lights_auto_off
-    condition:
-      - condition: state
-        entity_id: input_boolean.back_yard_lights_door_active
-        state: "on"
-    action:
-      - service: light.turn_off
-        target:
-          entity_id: light.back_yard_floodlights
-        data:
-          transition: 3
-      - service: input_boolean.turn_off
-        target:
-          entity_id: input_boolean.back_yard_lights_door_active
-
-  # Any other source turning the lights off (Good Night, solar midnight, the
-  # dashboard) releases the door's claim and cancels the pending timer so it
-  # can't fire a stale turn_off later.
-  - id: outdoor_lighting_backyard_release_claim_on_off
-    alias: "Outdoor Lighting: Release door claim when lights turn off"
-    trigger:
-      - platform: state
-        entity_id: light.back_yard_floodlights
-        to: "off"
-    condition:
-      - condition: state
-        entity_id: input_boolean.back_yard_lights_door_active
-        state: "on"
-    action:
-      - service: timer.cancel
-        target:
-          entity_id: timer.back_yard_lights_auto_off
-      - service: input_boolean.turn_off
-        target:
-          entity_id: input_boolean.back_yard_lights_door_active
