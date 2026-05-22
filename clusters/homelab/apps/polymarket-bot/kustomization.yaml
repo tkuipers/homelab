@@ -4,6 +4,7 @@ resources:
   - namespace.yaml
   - ghcr-credentials-external-secret.yaml
   - polymarket-credentials-external-secret.yaml
+  - airvpn-credentials-external-secret.yaml
   # --- Step 1: DB ---
   - postgres-deployment.yaml
   - postgres-service.yaml

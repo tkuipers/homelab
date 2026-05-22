@@ -111,8 +111,12 @@ data:
           domain: tkuipers.ca
           authelia_url: https://auth.tkuipers.ca
           same_site: lax
-          expiration: 1h
-          inactivity: 5m
+          # 24h absolute lifetime, 1h idle timeout. Was 1h/5m — the 5m
+          # inactivity logout was painful on dashboards you check
+          # periodically (polymarket-bot, sonarr, etc.) where you might
+          # leave a tab open for hours.
+          expiration: 24h
+          inactivity: 1h
           remember_me: 1M
       redis:
         host: authelia-redis
