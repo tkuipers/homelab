@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bot-config
+  namespace: polymarket-bot
+  labels:
+    app: polymarket-bot
+data:
+  # Mirror of ~/polymarket-bot/config.yaml. Edit this file (or run kustomize
+  # edit) and ``kubectl rollout restart deployment/bot`` to pick the change
+  # up. The bot reads $BOT_CONFIG from the env; the app-deployment mounts
+  # this ConfigMap at /etc/polymarket-bot/config.yaml and overrides the env
+  # so the in-image config.yaml is shadowed.
+  config.yaml: |
+    # Strategy + risk parameters. Edit this ConfigMap then `kubectl rollout
+    # restart deployment/bot -n polymarket-bot` — the bot reads this file at
+    # startup and captures the values into the scanner/monitor loops.
+    # (No live reload; a pod restart is required for changes to take effect.)
+
+    strategy:
+      # Entry band on the YES ask price
+      yes_ask_min: 0.10
+      yes_ask_max: 0.30
+
+      # Days until close window
+      days_until_close_min: 3
+      days_until_close_max: 21
+
+      # Quality / liquidity filters
+      min_lifetime_volume_usd: 50_000
+      min_24h_volume_usd: 500
+      max_spread: 0.03                  # yes_ask - yes_bid
+      max_last_trade_age_seconds: 3600
+      position_size_max_fraction_of_book: 0.5
+
+      # NOTE: this key is wired through to filters.py but is currently a no-op
+      # because Gamma's /markets endpoint returns category=null on every row.
+      # The crypto exclusion is enforced by the regex pattern below until
+      # filters.py is updated to read events[].ticker instead. Keeping the entry
+      # so the config schema doesn't regress if Gamma ever populates it.
+      excluded_categories:
+        - "crypto"
+      excluded_question_patterns:
+        - "(?i)\\bup or down\\b"
+        - "(?i)next ?(5|15|30) ?min"
+        # Crypto price-target markets. excluded_categories above doesn't work
+        # because Gamma's /markets endpoint returns category=null on every row,
+        # so we catch the price-target wording on question text directly. Fix
+        # the empty-category situation properly via events[].ticker in code.
+        - "(?i)\\b(bitcoin|btc|ethereum|eth|solana|sol|dogecoin|doge|xrp|ripple|cardano|ada|bnb|polkadot|matic|polygon|avalanche|avax|chainlink|link|cosmos|atom|tron|trx|litecoin|ltc|pepe|shib|shiba|hyperliquid|memecoin|altcoin|stablecoin|usdc|usdt|tether|crypto)\\b"
+
+      # Exit rule (hybrid take-profit; no stop-loss by design)
+      take_profit_trigger: 1.50          # yes_bid >= entry * trigger
+      take_profit_sell_fraction: 0.75    # sell this fraction at trigger; hold the rest to resolution
+
+    risk:
+      max_position_size_usd: 1.50
+      max_concurrent_positions: 40000
+      # Hard caps on absolute loss exposure. The effective ceiling is whichever
+      # cap binds first — at $1.50/position the practical bound is bankroll
+      # (~49 simultaneous positions at $74 pUSD), not these numbers.
+      max_daily_deployment_usd: 10000
+      max_total_deployment_usd: 500
+      usdc_reserve_min: 7
+      # Tuned for the strategy's 38.8% per-trade loss rate. At threshold=5, random
+      # variance trips the breaker ~6x per 90 days (false positives). At 12, the
+      # expected false-trip rate is ~0.008 per 90 days — only fires if the edge
+      # has actually broken (loss rate spikes well above 50%). Will be replaced
+      # by the rolling-drawdown breaker spec'd in PLAN.md.
+      consecutive_loss_circuit_breaker: 12
+
+    runtime:
+      scan_interval_seconds: 300         # 5 min
+      monitor_interval_seconds: 60       # 1 min
+      bankroll_snapshot_interval_seconds: 300
+      resolution_sweep_interval_seconds: 300
+      http_timeout_seconds: 20
+
+    trading:
+      # Master switch. The bot ALSO honours bot_state.trading_enabled in the DB;
+      # if either this OR the DB flag is False, the executor is a no-op.
+      # The DB-side flag is the operator-facing toggle (Pause/Resume button).
+      enabled: true

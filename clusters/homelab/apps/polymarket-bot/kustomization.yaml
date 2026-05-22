@@ -9,6 +9,7 @@ resources:
   - postgres-service.yaml
   - postgres-backup-cronjob.yaml
   # --- Step 2: bot + ingress (uncomment after migrating SQLite -> Postgres) ---
+  # - app-config.configmap.yaml
   # - app-deployment.yaml
   # - app-service.yaml
   # - app-ingress.yaml
