@@ -62,6 +62,13 @@ data:
       max_daily_deployment_usd: 10000
       max_total_deployment_usd: 500
       usdc_reserve_min: 7
+      # Smaller ticket for negRisk (categorical-event) markets. Backtest
+      # shows the per-trade edge is meaningfully weaker on negRisk
+      # (~+16% vs ~+37% on pure binary). Still worth trading them so
+      # capital keeps cycling when binary candidates are scarce, but at
+      # a smaller bet and lower priority. $1.01 is just above the
+      # $1.00 viable floor.
+      max_position_size_usd_neg_risk: 1.01
       # Tuned for the strategy's 38.8% per-trade loss rate. At threshold=5, random
       # variance trips the breaker ~6x per 90 days (false positives). At 12, the
       # expected false-trip rate is ~0.008 per 90 days — only fires if the edge
