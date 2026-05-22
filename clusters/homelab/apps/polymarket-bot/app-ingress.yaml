@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bot
+  namespace: polymarket-bot
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Authelia forward-auth — same pattern as sonarr/radarr/homeassistant.
+    nginx.ingress.kubernetes.io/auth-url: http://authelia.authelia.svc.cluster.local/api/authz/auth-request
+    nginx.ingress.kubernetes.io/auth-signin: https://auth.tkuipers.ca/?rd=https://$host$escaped_request_uri
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - polymarket.tkuipers.ca
+      secretName: polymarket-tkuipers-ca-tls
+  rules:
+    - host: polymarket.tkuipers.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: bot
+                port:
+                  number: 8080

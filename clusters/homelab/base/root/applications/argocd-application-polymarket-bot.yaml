@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-polymarket-bot
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: apps
+  source:
+    repoURL: ssh://git@github.com/tkuipers/homelab.git
+    targetRevision: main
+    path: clusters/homelab/apps/polymarket-bot
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: polymarket-bot
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

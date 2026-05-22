@@ -1,0 +1,80 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: polymarket-bot
+  labels:
+    app: polymarket-backup
+spec:
+  schedule: "0 3 * * *"   # daily 03:00 UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: polymarket-backup
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: omen-worker1
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:16
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  TS=$(date +%Y%m%d-%H%M%S)
+                  OUT_DIR=/backups
+                  DAILY="$OUT_DIR/daily"
+                  WEEKLY="$OUT_DIR/weekly"
+                  MONTHLY="$OUT_DIR/monthly"
+                  mkdir -p "$DAILY" "$WEEKLY" "$MONTHLY"
+
+                  FILE="polymarket-bot-${TS}.sql.gz"
+                  echo "Dumping to ${DAILY}/${FILE}"
+                  PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
+                      -h postgres -U "$POSTGRES_USER" "$POSTGRES_DB" \
+                      --no-owner --no-acl | gzip > "${DAILY}/${FILE}"
+
+                  # Promote to weekly on Sunday, monthly on day 1.
+                  DOW=$(date +%u); DOM=$(date +%d)
+                  if [ "$DOW" -eq 7 ]; then cp "${DAILY}/${FILE}" "${WEEKLY}/${FILE}"; fi
+                  if [ "$DOM" -eq "01" ]; then cp "${DAILY}/${FILE}" "${MONTHLY}/${FILE}"; fi
+
+                  # Retention: daily 14, weekly 8, monthly 12.
+                  find "$DAILY"   -maxdepth 1 -type f -name '*.sql.gz' -mtime +14 -delete
+                  find "$WEEKLY"  -maxdepth 1 -type f -name '*.sql.gz' -mtime +56 -delete
+                  find "$MONTHLY" -maxdepth 1 -type f -name '*.sql.gz' -mtime +365 -delete
+
+                  ls -lh "${DAILY}/${FILE}"
+                  echo "Backup complete"
+              env:
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: polymarket-secret
+                      key: postgres-user
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: polymarket-secret
+                      key: postgres-password
+                - name: POSTGRES_DB
+                  valueFrom:
+                    secretKeyRef:
+                      name: polymarket-secret
+                      key: postgres-database
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+          volumes:
+            - name: backups
+              hostPath:
+                path: /var/persist/polymarket-postgres-backups
+                type: DirectoryOrCreate

@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - ghcr-credentials-external-secret.yaml
+  - polymarket-credentials-external-secret.yaml
+  # --- Step 1: DB ---
+  - postgres-deployment.yaml
+  - postgres-service.yaml
+  - postgres-backup-cronjob.yaml
+  # --- Step 2: bot + ingress (uncomment after migrating SQLite -> Postgres) ---
+  # - app-deployment.yaml
+  # - app-service.yaml
+  # - app-ingress.yaml

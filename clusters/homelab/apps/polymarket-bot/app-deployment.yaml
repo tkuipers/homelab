@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bot
+  namespace: polymarket-bot
+  labels:
+    app: polymarket-bot
+spec:
+  # IMPORTANT: replicas must be 1. The bot holds in-memory state for the
+  # circuit-breaker counter and assumes single-process ownership of the DB.
+  # Two replicas WOULD double-trade.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: polymarket-bot
+  template:
+    metadata:
+      labels:
+        app: polymarket-bot
+      annotations:
+        ad.datadoghq.com/bot.logs: '[{"source":"python","service":"polymarket-bot"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: bot
+          # renovate: datasource=docker
+          image: ghcr.io/tkuipers/polymarket-bot:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - secretRef:
+                name: polymarket-secret
+          env:
+            - name: BOT_DB
+              value: /app/data/bot.db   # unused when DATABASE_URL is set, but kept for sanity
+            - name: WEB_PORT
+              value: "8080"
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: polymarket-bot
+            - name: DD_ENV
+              value: production
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        # The bot's only on-disk state is data/bot.db (SQLite). With Postgres
+        # as the backing store this volume is effectively unused at runtime,
+        # but the code still references the path for the seed-demo mode and
+        # initial schema apply, so we keep a small emptyDir.
+        - name: data
+          emptyDir: {}
