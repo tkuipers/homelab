@@ -49,6 +49,13 @@ data:
         # the empty-category situation properly via events[].ticker in code.
         - "(?i)\\b(bitcoin|btc|ethereum|eth|solana|sol|dogecoin|doge|xrp|ripple|cardano|ada|bnb|polkadot|matic|polygon|avalanche|avax|chainlink|link|cosmos|atom|tron|trx|litecoin|ltc|pepe|shib|shiba|hyperliquid|memecoin|altcoin|stablecoin|usdc|usdt|tether|crypto)\\b"
 
+      # Reject negRisk (categorical-event sub-) markets at the filter
+      # layer. v3 backtest shows ~+7% per-trade ROI on this bucket with
+      # a 52% win rate, vs ~+29% / 71% on pure binary — and the spread
+      # tax can push that down toward break-even. Flip to false to
+      # re-include them once the edge improves.
+      exclude_neg_risk: true
+
       # Exit rule (hybrid take-profit; no stop-loss by design)
       take_profit_trigger: 1.50          # yes_bid >= entry * trigger
       take_profit_sell_fraction: 0.75    # sell this fraction at trigger; hold the rest to resolution
