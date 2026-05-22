@@ -3,6 +3,9 @@ kind: Namespace
 metadata:
   name: polymarket-bot
   labels:
-    pod-security.kubernetes.io/enforce: baseline
-    pod-security.kubernetes.io/warn: baseline
-    pod-security.kubernetes.io/audit: baseline
+    # Postgres mounts ``/var/persist/polymarket-postgres`` via hostPath, which
+    # requires the ``privileged`` PSA level (``baseline`` rejects hostPath).
+    # Matches the ``stocks`` namespace which does the same for the same reason.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/audit: privileged
