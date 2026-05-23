@@ -28,7 +28,7 @@ spec:
         # sentinel-bracketed auth_oidc block from the OIDC client secret on
         # every boot (so rotation propagates on pod restart).
         - name: seed-config
-          image: busybox:1.36
+          image: busybox:1.38
           env:
             - name: OIDC_INTEGRATION_VERSION
               value: "1.0.2"
