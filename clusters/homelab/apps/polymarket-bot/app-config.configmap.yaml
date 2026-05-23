@@ -61,7 +61,7 @@ data:
       take_profit_sell_fraction: 0.75    # sell this fraction at trigger; hold the rest to resolution
 
     risk:
-      max_position_size_usd: 2.00
+      max_position_size_usd: 4.00
       max_concurrent_positions: 40000
       # Hard caps on absolute loss exposure. The effective ceiling is whichever
       # cap binds first — at $1.50/position the practical bound is bankroll
