@@ -58,6 +58,11 @@ data:
         # so we catch the price-target wording on question text directly. Fix
         # the empty-category situation properly via events[].ticker in code.
         - "(?i)\\b(bitcoin|btc|ethereum|eth|solana|sol|dogecoin|doge|xrp|ripple|cardano|ada|bnb|polkadot|matic|polygon|avalanche|avax|chainlink|link|cosmos|atom|tron|trx|litecoin|ltc|pepe|shib|shiba|hyperliquid|memecoin|altcoin|stablecoin|usdc|usdt|tether|crypto)\\b"
+        # Sports markets. The v5 backtest showed sports as a +49% capw
+        # artifact of hourly price snapshots papering over rapid intra-
+        # snapshot moves; live they delivered -74% capw. Tennis (Roland
+        # Garros ATP/WTA) is the current dominant offender on Polymarket.
+        - "(?i)\\b(Roland Garros|Wimbledon|Australian Open|French Open|Davis Cup|Grand Slam|ATP|WTA|NBA|NHL|MLB|NFL|MLS|EPL|UEFA|NCAA|FIFA|UFC|Formula 1|Premier League|Champions League|World Cup|Stanley Cup|Super Bowl|World Series|playoff|playoffs|tournament|championship|semi-?final|quarter-?final)\\b"
 
       # Reject negRisk (categorical-event sub-) markets at the filter
       # layer. v3 backtest shows ~+7% per-trade ROI on this bucket with
