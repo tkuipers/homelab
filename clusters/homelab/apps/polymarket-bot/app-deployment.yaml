@@ -26,75 +26,18 @@ spec:
         kubernetes.io/hostname: omen-worker1
       imagePullSecrets:
         - name: ghcr-secret
-      # DNS via the cluster's coredns so the bot can resolve postgres.
-      # polymarket-bot.svc.cluster.local (in-cluster), in addition to
-      # external Polymarket / Polygon-RPC hostnames which gluetun resolves
-      # via the VPN. ``dnsPolicy: ClusterFirst`` is the default but gluetun's
-      # DNS override would otherwise force 1.1.1.1; we tell gluetun to use
-      # coredns so in-cluster resolution keeps working.
       containers:
-        # AirVPN sidecar — same pattern as mediacenter/sabnzbd. Owns the
-        # pod's network namespace via NET_ADMIN. The bot container shares
-        # this network, so all bot traffic egresses through wireguard.
-        - name: gluetun
-          image: qmcgaw/gluetun:latest
-          securityContext:
-            capabilities:
-              add:
-                - NET_ADMIN
-          # Service traffic (nginx-ingress -> :8080) needs to reach the bot
-          # *through* gluetun's network namespace, so we expose the port on
-          # the sidecar where ports actually live.
-          ports:
-            - containerPort: 8080
-              name: http
-              protocol: TCP
-          env:
-            - name: VPN_SERVICE_PROVIDER
-              value: "airvpn"
-            - name: VPN_TYPE
-              value: "wireguard"
-            - name: WIREGUARD_PRIVATE_KEY
-              valueFrom:
-                secretKeyRef: { name: airvpn-credentials, key: private_key }
-            - name: WIREGUARD_PRESHARED_KEY
-              valueFrom:
-                secretKeyRef: { name: airvpn-credentials, key: preshared_key }
-            - name: WIREGUARD_ADDRESSES
-              valueFrom:
-                secretKeyRef: { name: airvpn-credentials, key: addresses }
-            - name: SERVER_COUNTRIES
-              valueFrom:
-                secretKeyRef: { name: airvpn-credentials, key: server_country }
-            # Keep in-cluster traffic local: postgres (10.103.x), coredns
-            # (10.96.0.10), and the rest of the cluster all live under
-            # 10.0.0.0/8. Without this, the bot can't reach its DB.
-            - name: FIREWALL_OUTBOUND_SUBNETS
-              value: "10.0.0.0/8"
-            # Use cluster coredns instead of gluetun's default 1.1.1.1 so
-            # in-cluster hostnames (postgres.polymarket-bot.svc...) still
-            # resolve. coredns forwards external lookups upstream, so
-            # Polymarket / Polygon hostnames still work — just through
-            # coredns first.
-            - name: DNS_ADDRESS
-              value: "10.96.0.10"
-            - name: DOT
-              value: "off"
-            - name: LOG_LEVEL
-              value: "info"
-            - name: TZ
-              value: "America/Los_Angeles"
-          resources:
-            requests:
-              memory: "64Mi"
-              cpu: "20m"
-            limits:
-              memory: "256Mi"
-              cpu: "200m"
         - name: bot
           # renovate: datasource=docker
           image: ghcr.io/tkuipers/polymarket-bot:latest
           imagePullPolicy: Always
+          # Direct port exposure now that the gluetun sidecar is gone.
+          # Service traffic (nginx-ingress -> :8080) lands on this container
+          # directly via kube-proxy.
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
           envFrom:
             - secretRef:
                 name: polymarket-secret
