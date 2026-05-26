@@ -18,12 +18,22 @@ data:
     # (No live reload; a pod restart is required for changes to take effect.)
 
     strategy:
-      # Entry band on the YES ask price
+      # Entry band on the side's ask price. Same band applies to YES and NO
+      # when enable_no_side is True — the v5 "cheap tail" thesis is symmetric.
       yes_ask_min: 0.10
-      yes_ask_max: 0.30
+      yes_ask_max: 0.20
 
-      # Days until close window
-      days_until_close_min: 3
+      # When True, the scanner evaluates each market on both YES and NO,
+      # using the same price band and time window. Per-(market, side) dedup
+      # lets a single market hold one YES leg AND one NO leg concurrently
+      # (the v5 backtest's paired-entry case is profitable: paired markets
+      # were 13/13 net-positive at +175% capw on the paired-only subset).
+      enable_no_side: true
+
+      # Days until close window. The v5 sweep showed the lower bound at 1
+      # (not 3) improves capw — the strongest edge is in markets within a
+      # week of resolution.
+      days_until_close_min: 1
       days_until_close_max: 21
 
       # Quality / liquidity filters
@@ -61,14 +71,17 @@ data:
       take_profit_sell_fraction: 0.75    # sell this fraction at trigger; hold the rest to resolution
 
     risk:
-      max_position_size_usd: 4.00
+      # v5 backtest used $2.00 ticket / $75 total cap / $5 reserve — matching
+      # those here so live behaviour tracks the simulation that produced
+      # +40.8% capw with paired YES+NO entries enabled.
+      max_position_size_usd: 2.00
       max_concurrent_positions: 40000
       # Hard caps on absolute loss exposure. The effective ceiling is whichever
-      # cap binds first — at $1.50/position the practical bound is bankroll
-      # (~49 simultaneous positions at $74 pUSD), not these numbers.
+      # cap binds first — at $2.00/position with $75 total, the practical
+      # bound is ~37 simultaneous positions.
       max_daily_deployment_usd: 10000
-      max_total_deployment_usd: 500
-      usdc_reserve_min: 7
+      max_total_deployment_usd: 75
+      usdc_reserve_min: 5
       # Smaller ticket for negRisk (categorical-event) markets. Backtest
       # shows the per-trade edge is meaningfully weaker on negRisk
       # (~+16% vs ~+37% on pure binary). Still worth trading them so
