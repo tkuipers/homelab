@@ -43,26 +43,31 @@ data:
       max_last_trade_age_seconds: 3600
       position_size_max_fraction_of_book: 0.5
 
-      # NOTE: this key is wired through to filters.py but is currently a no-op
-      # because Gamma's /markets endpoint returns category=null on every row.
-      # The crypto exclusion is enforced by the regex pattern below until
-      # filters.py is updated to read events[].ticker instead. Keeping the entry
-      # so the config schema doesn't regress if Gamma ever populates it.
-      excluded_categories:
-        - "crypto"
+      # Use Polymarket's published taxonomy. Every market has a `feeType`
+      # (politics_fees, sports_fees_v2, crypto_fees_v2, tech_fees,
+      # culture_fees, economics_fees, general_fees, finance_prices_fees,
+      # or null). We exclude sports + crypto buckets at the source. This
+      # replaces the prior regex-based sports/crypto matching, which kept
+      # leaking edge cases like T20 cricket (live -$0.67 on position #184,
+      # 2026-05-26).
+      excluded_fee_types:
+        - "sports_fees_v2"
+        - "crypto_fees_v2"
+      # Belt-and-braces: any market with a non-null `sportsMarketType`
+      # (moneyline / spread / total) is rejected as sports even when its
+      # `feeType` is missing. Catches legacy sports rows that pre-date
+      # the v2 fee schedule.
+      exclude_sports_markets: true
+
+      # category from Gamma is null on every row — kept for forward
+      # compat only.
+      excluded_categories: []
+      # Regex backstop. The feeType filter above is now load-bearing.
+      # Kept narrow for the few intraday gamblety questions Polymarket
+      # sometimes publishes without a sports feeType.
       excluded_question_patterns:
         - "(?i)\\bup or down\\b"
         - "(?i)next ?(5|15|30) ?min"
-        # Crypto price-target markets. excluded_categories above doesn't work
-        # because Gamma's /markets endpoint returns category=null on every row,
-        # so we catch the price-target wording on question text directly. Fix
-        # the empty-category situation properly via events[].ticker in code.
-        - "(?i)\\b(bitcoin|btc|ethereum|eth|solana|sol|dogecoin|doge|xrp|ripple|cardano|ada|bnb|polkadot|matic|polygon|avalanche|avax|chainlink|link|cosmos|atom|tron|trx|litecoin|ltc|pepe|shib|shiba|hyperliquid|memecoin|altcoin|stablecoin|usdc|usdt|tether|crypto)\\b"
-        # Sports markets. The v5 backtest showed sports as a +49% capw
-        # artifact of hourly price snapshots papering over rapid intra-
-        # snapshot moves; live they delivered -74% capw. Tennis (Roland
-        # Garros ATP/WTA) is the current dominant offender on Polymarket.
-        - "(?i)\\b(Roland Garros|Wimbledon|Australian Open|French Open|Davis Cup|Grand Slam|ATP|WTA|NBA|NHL|MLB|NFL|MLS|EPL|UEFA|NCAA|FIFA|UFC|Formula 1|Premier League|Champions League|World Cup|Stanley Cup|Super Bowl|World Series|playoff|playoffs|tournament|championship|semi-?final|quarter-?final)\\b"
 
       # Reject negRisk (categorical-event sub-) markets at the filter
       # layer. v3 backtest shows ~+7% per-trade ROI on this bucket with
