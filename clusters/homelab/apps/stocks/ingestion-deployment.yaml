@@ -38,8 +38,11 @@ spec:
               value: nats://nats:4222
             - name: LLM_GATEWAY_URL
               value: http://llm-gateway:8082
+            # Hourly (was */30): ~38 tickers x 2 yfinance calls per run shares
+            # one egress IP with decision/labeler pricing; Yahoo's informal
+            # budget is ~360 req/hr with IP bans for bursts.
             - name: INGESTION_SCHEDULE_YAHOO_NEWS
-              value: "*/30 * * * *"
+              value: "0 * * * *"
             - name: INGESTION_SCHEDULE_LEADERSHIP
               value: "0 8 * * 1"
             - name: INGESTION_SCHEDULE_PRODUCT_DEMAND
