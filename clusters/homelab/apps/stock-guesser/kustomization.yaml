@@ -13,4 +13,3 @@ resources:
   - data-builder-cronjob.yaml
   - app-deployment.yaml
   - app-service.yaml
-  - ingress.yaml
