@@ -7,6 +7,10 @@ metadata:
     app: stocks-audit-consumer
 spec:
   replicas: 1
+  # Durable NATS consumers: a new pod must not overlap the old, or it hits
+  # "consumer is already bound to a subscription" and silently stops recording.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: stocks-audit-consumer

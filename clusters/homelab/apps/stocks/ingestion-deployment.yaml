@@ -7,6 +7,9 @@ metadata:
     app: stocks-ingestion
 spec:
   replicas: 1
+  # NATS consumer: avoid overlapping pods rebinding the same durable consumer.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: stocks-ingestion
