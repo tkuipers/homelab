@@ -28,7 +28,7 @@ spec:
       containers:
         - name: homepage
           # renovate: datasource=docker
-          image: ghcr.io/tkuipers/tkuipers.ca:2302760
+          image: ghcr.io/tkuipers/tkuipers.ca:da6e9b3
           ports:
             - containerPort: 80
               name: http
