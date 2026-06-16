@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestrator
+  namespace: stocks
+  labels:
+    app: stocks-orchestrator
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: stocks-orchestrator
+  template:
+    metadata:
+      labels:
+        app: stocks-orchestrator
+      annotations:
+        ad.datadoghq.com/orchestrator.logs: '[{"source":"python","service":"stocks-orchestrator"}]'
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: orchestrator
+          # renovate: datasource=docker
+          image: ghcr.io/tkuipers/stock-guesser-orchestrator:latest
+          ports:
+            - containerPort: 8084
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stocks-secret
+                  key: database-url
+            - name: NATS_URL
+              value: nats://nats:4222
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: stocks-orchestrator
+            - name: DD_ENV
+              value: production
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8084
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8084
+            initialDelaySeconds: 40
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"

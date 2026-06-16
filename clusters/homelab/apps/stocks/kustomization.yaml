@@ -30,7 +30,12 @@ resources:
   - llm-gateway-service.yaml
   - decision-deployment.yaml
   - decision-service.yaml
-  - execution-deployment.yaml
-  - execution-service.yaml
+  # Order pipeline (replaces the former monolithic `execution` service):
+  #   orchestrator = approve/route brain · paper-filler = virtual fill hands.
+  # Broker-filler + reconciliation appliance arrive in Phase 2.
+  - orchestrator-deployment.yaml
+  - orchestrator-service.yaml
+  - paper-filler-deployment.yaml
+  - paper-filler-service.yaml
   - training-deployment.yaml
   - training-service.yaml
