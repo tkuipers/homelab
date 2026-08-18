@@ -36,6 +36,16 @@ spec:
     - op: add
       path: /machine/network/hostname
       value: dell-r620
+    # AdGuard (10.0.0.71) runs on this node and DHCP hands it out as BOTH
+    # primary and secondary DNS, which deadlocks a cold boot: kubelet needs DNS
+    # to pull the AdGuard image, and AdGuard is what serves DNS. 8.8.8.8 is the
+    # fallback that breaks the loop. AdGuard stays first so split-horizon
+    # rewrites keep resolving. Mirrors serverclass-worker.yaml.
+    - op: add
+      path: /machine/network/nameservers
+      value:
+        - 10.0.0.71
+        - 8.8.8.8
     - op: add
       path: /cluster/allowSchedulingOnControlPlanes
       value: true
