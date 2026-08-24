@@ -79,11 +79,11 @@ spec:
           mountPath: /config/transcodes
         resources:
           requests:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "2Gi"
+            cpu: "1000m"
           limits:
-            memory: "4Gi"
-            cpu: "2000m"
+            memory: "8Gi"
+            cpu: "6000m"
       volumes:
       - name: config
         hostPath:
