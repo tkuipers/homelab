@@ -44,7 +44,7 @@ spec:
         kubernetes.io/hostname: omen-worker1
       containers:
       - name: authelia
-        image: authelia/authelia:4.39.16
+        image: authelia/authelia:4.39.22
         ports:
         - containerPort: 9091
           name: http
