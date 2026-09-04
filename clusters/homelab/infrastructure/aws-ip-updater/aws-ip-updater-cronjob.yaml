@@ -19,7 +19,7 @@ spec:
           restartPolicy: OnFailure
           containers:
           - name: aws-ip-updater
-            image: amazon/aws-cli:2.15.0
+            image: amazon/aws-cli:2.36.40
             command: ["/bin/bash"]
             args: ["/scripts/update-ip.sh"]
             env:
