@@ -7,6 +7,6 @@ appVersion: "7.60.0"
 
 dependencies:
   - name: datadog
-    version: "3.157.5"
+    version: "3.242.0"
     repository: "https://helm.datadoghq.com"
 
