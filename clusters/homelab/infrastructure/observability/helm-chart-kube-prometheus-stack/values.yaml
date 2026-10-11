@@ -18,6 +18,9 @@ kube-prometheus-stack:
     disabled:
       KubeCPUOvercommit: true
       KubeMemoryOvercommit: true
+      # fires forever on old failed Jobs; replaced by the Grafana rule
+      # "Job failed" (only Jobs started in the last 24h)
+      KubeJobFailed: true
 
   # --- control plane -------------------------------------------------------
   # Talos binds controller-manager/scheduler on 0.0.0.0 (see
