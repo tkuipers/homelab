@@ -29,6 +29,11 @@ ingress-nginx:
       strict-validate-path-type: "false"
       use-forwarded-headers: "true"
       compute-full-forwarded-for: "true"
+      # Default is one worker per core (48 on dell-r620). Peak traffic is <10 req/s,
+      # and every worker re-resolves ExternalName backends (resume S3) in Lua each
+      # time the 1-5s TTL expires; 48 workers made ~20 DNS queries/s and logged each
+      # lost UDP packet as "lua udp socket read timed out".
+      worker-processes: "4"
 
       # JSON access logs -> Alloy turns every key into a Loki field
       # ("msg" becomes the log line). See observability/helm-chart-alloy.
