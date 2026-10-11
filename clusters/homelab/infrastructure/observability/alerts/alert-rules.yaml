@@ -2587,7 +2587,7 @@ data:
         labels:
           severity: warning
           namespace: homelab-agent
-          notify: relay
+          notify: agent-self
         annotations:
           summary: 'Homelab agent: {{ $labels.component }} is failing its health check'
           description: Settings > Health in https://agent.tkuipers.ca shows details; the agent dashboard has the timeline.
@@ -2640,7 +2640,7 @@ data:
         labels:
           severity: warning
           namespace: homelab-agent
-          notify: relay
+          notify: agent-self
         annotations:
           summary: MCP server {{ $labels.server }} isn't answering the agent's probe
           description: Test it at https://agent.tkuipers.ca/#/mcp
@@ -2693,7 +2693,7 @@ data:
         labels:
           severity: warning
           namespace: homelab-agent
-          notify: relay
+          notify: agent-self
         annotations:
           summary: The homelab agent has been signed out of Claude for 30 minutes
           description: Sign in at https://agent.tkuipers.ca/#/auth
@@ -2746,7 +2746,7 @@ data:
         labels:
           severity: warning
           namespace: homelab-agent
-          notify: relay
+          notify: agent-self
         annotations:
           summary: A conversation has waited over 30 minutes for a slot
           description: 'All slots busy: see https://agent.tkuipers.ca (Working now).'
@@ -2799,7 +2799,7 @@ data:
         labels:
           severity: warning
           namespace: homelab-agent
-          notify: relay
+          notify: agent-self
         annotations:
           summary: The homelab agent's daily scan hasn't finished for {{ humanizeDuration $values.B.Value }}
           description: 'Agent web UI: https://agent.tkuipers.ca (Claude signed in? runs stuck?)'
@@ -2849,3 +2849,9 @@ data:
           - '='
           - relay
         repeat_interval: 6h
+      - receiver: homelab-agent
+        object_matchers:
+        - - notify
+          - '='
+          - agent-self
+        repeat_interval: 1h

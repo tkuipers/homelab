@@ -19,9 +19,11 @@ under Alerting > Alert rules (data source managed).
 
 Notifications (second key of the same ConfigMap): every alert goes to the
 homelab agent (clusters/homelab/apps/homelab-agent), which investigates and
-texts Tyler only when it needs him. Alerts about the agent itself (label
-notify=relay, group "Homelab agent") go to its SMS relay instead, so they
-arrive even when the agent is down. The webhook token comes from the env var
+texts Tyler only when it needs him. That includes alerts about the agent's
+own checks (group "Homelab agent", label notify=agent-self): it handles them
+too, re-notified hourly while firing (it tracks outside outages on their status
+pages). Only "agent down" (notify=relay) goes to the SMS relay, because then
+nothing else can act on it. The webhook token comes from the env var
 AGENT_WEBHOOK_TOKEN (Grafana interpolates $VARS in provisioning files).
 """
 import os
@@ -291,26 +293,32 @@ def _relay(r):
     return r
 
 
-# About the agent itself: texted by the relay, not handled by the agent.
+def _self(r):
+    r["labels"]["notify"] = "agent-self"
+    return r
+
+
+# About the agent itself. Handled by the agent (which texts Tyler only if he must act), except
+# "agent down", which only the relay can text.
 AGENT = [
     _relay(deploy_down("agent-down", "Homelab agent down", "homelab-agent", "homelab-agent")),
-    _relay(rule("agent-component-down", "Homelab agent part down",
+    _self(rule("agent-component-down", "Homelab agent part down",
                 'min by (component) (homelab_agent_component_up)', "lt", 1, for_="10m", static_ns="homelab-agent",
                 summary="Homelab agent: {{ $labels.component }} is failing its health check",
                 description="Settings > Health in https://agent.tkuipers.ca shows details; the agent dashboard has the timeline.")),
-    _relay(rule("agent-mcp-down", "Homelab agent MCP server down",
+    _self(rule("agent-mcp-down", "Homelab agent MCP server down",
                 'min by (server) (homelab_agent_mcp_up)', "lt", 1, for_="15m", static_ns="homelab-agent", severity="warning",
                 summary="MCP server {{ $labels.server }} isn't answering the agent's probe",
                 description="Test it at https://agent.tkuipers.ca/#/mcp")),
-    _relay(rule("agent-signed-out", "Homelab agent not signed in to Claude",
+    _self(rule("agent-signed-out", "Homelab agent not signed in to Claude",
                 'max(homelab_agent_signed_in)', "lt", 1, for_="30m", static_ns="homelab-agent",
                 summary="The homelab agent has been signed out of Claude for 30 minutes",
                 description="Sign in at https://agent.tkuipers.ca/#/auth")),
-    _relay(rule("agent-queue-stuck", "Homelab agent queue stuck",
+    _self(rule("agent-queue-stuck", "Homelab agent queue stuck",
                 'max(homelab_agent_oldest_queued_seconds)', "gt", 1800, for_="5m", static_ns="homelab-agent", severity="warning",
                 summary="A conversation has waited over 30 minutes for a slot",
                 description="All slots busy: see https://agent.tkuipers.ca (Working now).")),
-    _relay(rule("agent-scan-overdue", "Homelab agent daily scan overdue",
+    _self(rule("agent-scan-overdue", "Homelab agent daily scan overdue",
                 'time() - max(homelab_agent_last_scan_timestamp_seconds)', "gt", 30 * 3600, for_="30m",
                 static_ns="homelab-agent", severity="warning",
                 summary="The homelab agent's daily scan hasn't finished for {{ humanizeDuration $values.B.Value }}",
@@ -332,7 +340,10 @@ NOTIFICATIONS = {
         "orgId": 1, "receiver": "homelab-agent",
         "group_by": ["grafana_folder", "alertname"],
         "group_wait": "30s", "group_interval": "5m", "repeat_interval": "12h",
-        "routes": [{"receiver": "homelab-agent-relay", "object_matchers": [["notify", "=", "relay"]], "repeat_interval": "6h"}],
+        "routes": [
+            {"receiver": "homelab-agent-relay", "object_matchers": [["notify", "=", "relay"]], "repeat_interval": "6h"},
+            {"receiver": "homelab-agent", "object_matchers": [["notify", "=", "agent-self"]], "repeat_interval": "1h"},
+        ],
     }],
 }
 
