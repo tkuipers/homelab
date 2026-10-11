@@ -23,6 +23,16 @@ alloy:
       runAsUser: 0
       privileged: false
     # (the chart already injects K8S_NODE_NAME, used by k8sattributes)
+    # A config hot-reload once deadlocked Alloy (HTTP server hung, nothing
+    # shipped). Restart it if the HTTP endpoint stops answering.
+    livenessProbe:
+      httpGet:
+        path: /-/healthy
+        port: 12345
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 4
     extraPorts:
       - name: otlp-grpc
         port: 4317
