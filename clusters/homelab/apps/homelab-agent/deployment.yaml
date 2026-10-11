@@ -35,6 +35,22 @@ spec:
           type: RuntimeDefault
         fsGroup: 1000
       initContainers:
+        # local-path volumes start out world-writable and owned by root: make /data the
+        # agent's alone (it holds the Claude token, gh login and the worktrees)
+        - name: data-perms
+          image: ghcr.io/tkuipers/homelab-agent:latest
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+              add: [CHOWN, FOWNER]
+          command: [sh, -ec, "chown 1000:1000 /data && chmod 0700 /data"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
         # Pod firewall (flannel can't enforce NetworkPolicies): only the egress proxy's user
         # (1337) may leave the cluster. The agent and every command it runs reach the
         # internet only through the proxy, which only allows hosts on the allow-list
