@@ -588,7 +588,7 @@ prometheus-blackbox-exporter:
         target_namespace: authelia
         target_service: authelia-redis
     - name: int-argocd-argocd-server
-      url: https://argocd-server.argocd.svc/healthz
+      url: http://argocd-server.argocd.svc/healthz
       module: http_2xx
       additionalMetricsRelabels:
         probe: internal

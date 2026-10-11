@@ -236,6 +236,11 @@ HOMELAB = [
 ]
 
 
+# Rules that were removed from this file. Grafana provisioning does not
+# delete a rule just because it disappeared from the file.
+RETIRED_UIDS = ["hl-probe-down"]
+
+
 def _literal(dumper, data):
     if "\n" in data:
         return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
@@ -251,6 +256,7 @@ def main():
             {"orgId": 1, "name": "Ported from Datadog", "folder": "Alerts", "interval": "1m", "rules": DATADOG_PORTS},
             {"orgId": 1, "name": "Homelab", "folder": "Alerts", "interval": "1m", "rules": HOMELAB},
         ],
+        "deleteRules": [{"orgId": 1, "uid": u} for u in RETIRED_UIDS],
     }
     body = yaml.safe_dump(doc, sort_keys=False, width=1000)
     cm = {

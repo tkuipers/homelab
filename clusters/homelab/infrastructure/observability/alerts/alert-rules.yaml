@@ -2281,3 +2281,6 @@ data:
           summary: Loki has received no logs in 10 minutes
           description: ''
         isPaused: false
+    deleteRules:
+    - orgId: 1
+      uid: hl-probe-down
