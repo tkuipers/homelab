@@ -11,6 +11,11 @@ resources:
   - argocd-application-external-dns.yaml
   - argocd-application-aws-ip-updater.yaml
   - argocd-application-datadog.yaml
+  - argocd-application-observability.yaml
+  - argocd-application-kube-prometheus-stack.yaml
+  - argocd-application-loki.yaml
+  - argocd-application-tempo.yaml
+  - argocd-application-alloy.yaml
   - argocd-application-authelia.yaml
   - argocd-application-nvidia-device-plugin.yaml
   - argocd-application-adguard-home.yaml

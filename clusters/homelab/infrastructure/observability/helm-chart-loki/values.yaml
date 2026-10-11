@@ -1,0 +1,119 @@
+# Loki - log storage for the homelab observability stack.
+# Single binary on dell-r620, filesystem storage on a hostPath PV
+# (see ../storage-pvs.yaml). Logs arrive from Alloy over OTLP, so every parsed
+# field lands as structured metadata and the log line is just the message.
+loki:
+  deploymentMode: SingleBinary
+  fullnameOverride: loki
+
+  loki:
+    auth_enabled: false
+    # hostPath volumes are root owned; fsGroup does not apply to hostPath.
+    podSecurityContext:
+      runAsUser: 0
+      runAsGroup: 0
+      runAsNonRoot: false
+      fsGroup: 0
+    commonConfig:
+      replication_factor: 1
+    storage:
+      type: filesystem
+    schemaConfig:
+      configs:
+        - from: "2026-10-01"
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+    ingester:
+      chunk_encoding: snappy
+    pattern_ingester:
+      enabled: true
+    limits_config:
+      # Size budget is 100Gi (PV). Retention is time based in Loki; this value
+      # is derived from the measured ingest rate (see the Loki dashboard
+      # "storage" row and the LokiDiskBudget alert).
+      retention_period: 30d
+      allow_structured_metadata: true
+      volume_enabled: true
+      discover_log_levels: true
+      max_structured_metadata_entries_count: 256
+      max_structured_metadata_size: 128KB
+      ingestion_rate_mb: 32
+      ingestion_burst_size_mb: 64
+      per_stream_rate_limit: 16MB
+      per_stream_rate_limit_burst: 32MB
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+      max_query_series: 10000
+      max_entries_limit_per_query: 10000
+      query_timeout: 5m
+      split_queries_by_interval: 1h
+      otlp_config:
+        resource_attributes:
+          attributes_config:
+            # Index labels (low cardinality). Everything else from the
+            # resource (pod name, uid, restart count, ...) becomes structured
+            # metadata automatically.
+            - action: index_label
+              attributes:
+                - k8s.node.name
+    compactor:
+      retention_enabled: true
+      delete_request_store: filesystem
+      compaction_interval: 10m
+      retention_delete_delay: 2h
+    querier:
+      max_concurrent: 8
+    server:
+      grpc_server_max_recv_msg_size: 16777216
+      grpc_server_max_send_msg_size: 16777216
+
+  singleBinary:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: dell-r620
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        memory: 8Gi
+    persistence:
+      enabled: true
+      storageClass: observability-hostpath
+      size: 100Gi
+      whenScaled: Retain
+      whenDeleted: Retain
+      enableStatefulSetAutoDeletePVC: false
+    extraEnv:
+      - name: GOMEMLIMIT
+        value: 7GiB
+
+  # Not used in single binary mode
+  backend:
+    replicas: 0
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+  gateway:
+    enabled: false
+  chunksCache:
+    enabled: false
+  resultsCache:
+    enabled: false
+  lokiCanary:
+    enabled: false
+  test:
+    enabled: false
+
+  monitoring:
+    serviceMonitor:
+      enabled: true
+    dashboards:
+      enabled: false
+    rules:
+      enabled: false

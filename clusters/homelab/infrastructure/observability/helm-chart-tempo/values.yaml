@@ -1,0 +1,50 @@
+# Tempo - trace storage. Traces arrive via Alloy (OTLP). Today the main
+# producer is ingress-nginx (one span per request through the ingress).
+tempo:
+  fullnameOverride: tempo
+
+  tempo:
+    reportingEnabled: false
+    # 8Gi budget (PV). ~5 days of ingress traces with plenty of headroom.
+    retention: 120h
+    metricsGenerator:
+      enabled: true
+      remoteWriteUrl: "http://kps-prometheus.observability.svc:9090/api/v1/write"
+    overrides:
+      defaults:
+        metrics_generator:
+          processors:
+            - service-graphs
+            - span-metrics
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+          http:
+            endpoint: "0.0.0.0:4318"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 2Gi
+
+  # hostPath volume is root owned; fsGroup does not apply to hostPath.
+  securityContext:
+    runAsUser: 0
+    runAsGroup: 0
+    fsGroup: 0
+    runAsNonRoot: false
+
+  persistence:
+    enabled: true
+    enableStatefulSetAutoDeletePVC: false
+    storageClassName: observability-hostpath
+    size: 8Gi
+
+  nodeSelector:
+    kubernetes.io/hostname: dell-r620
+
+  serviceMonitor:
+    enabled: true

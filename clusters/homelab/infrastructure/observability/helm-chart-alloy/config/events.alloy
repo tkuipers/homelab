@@ -1,0 +1,90 @@
+// =============================================================================
+// Alloy cluster agent (single replica): Kubernetes events -> Loki
+//
+// Events land in Loki with service_name="kubernetes-events" and the event's
+// namespace as k8s_namespace_name, so they show up next to the service logs:
+//   {service_name="kubernetes-events", k8s_namespace_name="mediacenter"} | type="Warning"
+// =============================================================================
+
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+loki.source.kubernetes_events "cluster" {
+	log_format = "json"
+	forward_to = [loki.relabel.events.receiver]
+}
+
+loki.relabel "events" {
+	rule {
+		source_labels = ["namespace"]
+		target_label  = "k8s_namespace_name"
+	}
+
+	rule {
+		regex  = "^(namespace|job|instance)$"
+		action = "labeldrop"
+	}
+	forward_to = [loki.process.events.receiver]
+}
+
+loki.process "events" {
+	stage.json {
+		expressions = {
+			msg                 = "msg",
+			reason              = "reason",
+			type                = "type",
+			kind                = "kind",
+			name                = "name",
+			count               = "count",
+			action              = "action",
+			sourcecomponent     = "sourcecomponent",
+			sourcehost          = "sourcehost",
+			reportingcontroller = "reportingcontroller",
+			reportinginstance   = "reportinginstance",
+			objectAPIversion    = "objectAPIversion",
+		}
+	}
+
+	stage.template {
+		source   = "level"
+		template = `{{ if eq .type "Warning" }}warn{{ else }}info{{ end }}`
+	}
+
+	stage.static_labels {
+		values = {
+			service_name     = "kubernetes-events",
+			k8s_cluster_name = "homelab",
+		}
+	}
+
+	stage.structured_metadata {
+		values = {
+			level               = "",
+			reason              = "",
+			type                = "",
+			kind                = "",
+			name                = "",
+			count               = "",
+			action              = "",
+			sourcecomponent     = "",
+			sourcehost          = "",
+			reportingcontroller = "",
+			reportinginstance   = "",
+			objectAPIversion    = "",
+		}
+	}
+
+	stage.output {
+		source = "msg"
+	}
+
+	forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+	endpoint {
+		url = "http://loki.observability.svc:3100/loki/api/v1/push"
+	}
+}

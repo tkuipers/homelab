@@ -1,0 +1,16 @@
+apiVersion: v2
+name: alloy
+description: Umbrella chart for Grafana Alloy (node log/trace collector + cluster events)
+type: application
+version: 1.0.0
+
+dependencies:
+  # DaemonSet: container logs from /var/log/pods + OTLP receiver (traces/logs/metrics)
+  - name: alloy
+    version: "1.13.1"
+    repository: "https://grafana.github.io/helm-charts"
+  # Single replica: Kubernetes events (must not run per node, or events duplicate)
+  - name: alloy
+    alias: alloy-events
+    version: "1.13.1"
+    repository: "https://grafana.github.io/helm-charts"

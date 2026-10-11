@@ -1,0 +1,242 @@
+# kube-prometheus-stack: metrics (Prometheus), alert routing (Alertmanager),
+# UI (Grafana), and the standard exporters (node-exporter, kube-state-metrics).
+# Release name is "kps" (set on the ArgoCD Application).
+kube-prometheus-stack:
+  fullnameOverride: kps
+  cleanPrometheusOperatorObjectNames: true
+
+  crds:
+    enabled: true
+
+  defaultRules:
+    create: true
+    rules:
+      # Talos does not expose etcd / kube-proxy metrics outside the node
+      etcd: false
+      kubeProxy: false
+
+  # --- control plane -------------------------------------------------------
+  # Talos binds controller-manager/scheduler on 0.0.0.0 (see
+  # tooling/patches/controlplane-metrics.yaml); they serve self-signed TLS.
+  kubeControllerManager:
+    enabled: true
+    service:
+      selector:
+        k8s-app: kube-controller-manager
+    serviceMonitor:
+      https: true
+      insecureSkipVerify: true
+  kubeScheduler:
+    enabled: true
+    service:
+      selector:
+        k8s-app: kube-scheduler
+    serviceMonitor:
+      https: true
+      insecureSkipVerify: true
+  kubeEtcd:
+    enabled: false
+  kubeProxy:
+    enabled: false
+
+  kube-state-metrics:
+    metricLabelsAllowlist:
+      - pods=[app,app.kubernetes.io/name]
+      - deployments=[app,app.kubernetes.io/name]
+
+  # --- prometheus ----------------------------------------------------------
+  prometheus:
+    prometheusSpec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      # 40Gi hostPath PV; retentionSize is enforced by Prometheus itself.
+      retention: 90d
+      retentionSize: 36GB
+      scrapeInterval: 30s
+      evaluationInterval: 30s
+      enableRemoteWriteReceiver: true   # Tempo metrics-generator (span metrics / service graph)
+      enableFeatures:
+        - exemplar-storage
+      # Pick up ServiceMonitors/PodMonitors/Rules from every namespace,
+      # regardless of labels.
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+      probeSelectorNilUsesHelmValues: false
+      scrapeConfigSelectorNilUsesHelmValues: false
+      # hostPath volume is root owned; fsGroup does not apply to hostPath.
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        runAsNonRoot: false
+        fsGroup: 0
+      resources:
+        requests:
+          cpu: 500m
+          memory: 2Gi
+        limits:
+          memory: 8Gi
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: observability-hostpath
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 40Gi
+
+  alertmanager:
+    alertmanagerSpec:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
+
+  prometheusOperator:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+  # --- grafana -------------------------------------------------------------
+  grafana:
+    testFramework:
+      enabled: false
+    nodeSelector:
+      kubernetes.io/hostname: dell-r620
+    deploymentStrategy:
+      type: Recreate
+    persistence:
+      enabled: true
+      type: pvc
+      storageClassName: observability-hostpath
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+
+    # Temp secrets (created by hand, see tooling/scripts/setup-credentials/
+    # setup-observability-credentials.sh to move them into 1Password).
+    admin:
+      existingSecret: grafana-admin
+      userKey: admin-user
+      passwordKey: admin-password
+    envValueFrom:
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
+        secretKeyRef:
+          name: grafana-oidc
+          key: client-secret
+
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      hosts:
+        - logs.tkuipers.ca
+      tls:
+        - secretName: logs-tkuipers-ca-tls
+          hosts:
+            - logs.tkuipers.ca
+
+    grafana.ini:
+      server:
+        domain: logs.tkuipers.ca
+        root_url: https://logs.tkuipers.ca
+      analytics:
+        reporting_enabled: false
+        check_for_updates: false
+      users:
+        default_theme: dark
+      auth:
+        # Local admin login stays available at /login?disableAutoLogin
+        oauth_auto_login: true
+        signout_redirect_url: https://auth.tkuipers.ca/logout
+      auth.generic_oauth:
+        enabled: true
+        name: Authelia
+        icon: signin
+        client_id: grafana
+        scopes: openid profile email groups
+        empty_scopes: false
+        auth_url: https://auth.tkuipers.ca/api/oidc/authorization
+        token_url: https://auth.tkuipers.ca/api/oidc/token
+        api_url: https://auth.tkuipers.ca/api/oidc/userinfo
+        login_attribute_path: preferred_username
+        groups_attribute_path: groups
+        name_attribute_path: name
+        email_attribute_path: email
+        use_pkce: true
+        auth_style: InHeader
+        allow_sign_up: true
+        auto_login: true
+        role_attribute_path: contains(groups[*], 'admins') && 'Admin' || 'Viewer'
+        role_attribute_strict: false
+        allow_assign_grafana_admin: true
+        skip_org_role_sync: false
+      unified_alerting:
+        enabled: true
+
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
+        searchNamespace: ALL
+        folderAnnotation: grafana_folder
+        # folders for the kube-prometheus-stack built-in dashboards
+        annotations:
+          grafana_folder: Kubernetes
+        provider:
+          foldersFromFilesStructure: true
+          allowUiUpdates: false
+      datasources:
+        enabled: true
+        defaultDatasourceEnabled: true
+        isDefaultDatasource: true
+        uid: prometheus
+      alerts:
+        enabled: true
+        label: grafana_alert
+        labelValue: "1"
+        searchNamespace: ALL
+
+    additionalDataSources:
+      - name: Loki
+        uid: loki
+        type: loki
+        access: proxy
+        url: http://loki.observability.svc:3100
+        jsonData:
+          maxLines: 5000
+          timeout: 300
+          derivedFields:
+            - name: TraceID
+              matcherType: label
+              matcherRegex: trace_id
+              datasourceUid: tempo
+              url: "$${__value.raw}"
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://tempo.observability.svc:3200
+        jsonData:
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: -5m
+            spanEndTimeShift: 5m
+            filterByTraceID: true
+          serviceMap:
+            datasourceUid: prometheus
+          nodeGraph:
+            enabled: true
+          lokiSearch:
+            datasourceUid: loki

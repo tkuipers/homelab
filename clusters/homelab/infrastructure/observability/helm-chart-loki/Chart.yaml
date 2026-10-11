@@ -1,0 +1,10 @@
+apiVersion: v2
+name: loki
+description: Umbrella chart for Loki (single binary, filesystem storage)
+type: application
+version: 1.0.0
+
+dependencies:
+  - name: loki
+    version: "7.3.0"
+    repository: "https://grafana.github.io/helm-charts"

@@ -1,0 +1,203 @@
+// =============================================================================
+// Alloy node agent (DaemonSet)
+//
+//  logs:   /var/log/pods/** (every container on this node)
+//            -> k8s metadata -> parsing (log-parsing.alloy) -> Loki (OTLP)
+//  otlp:   :4317 grpc / :4318 http  (traces -> Tempo, logs -> Loki,
+//                                    metrics -> Prometheus remote write)
+//
+// Loki stores every log attribute as structured metadata, so the parsed
+// fields are queryable without a parser stage, e.g.
+//   {k8s_namespace_name="mediacenter"} | status >= 500
+// =============================================================================
+
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+// Checkpoints (file offsets) and the on-disk export queue survive restarts.
+otelcol.storage.file "state" {
+	directory = "/var/lib/alloy/storage"
+}
+
+// ---------------------------------------------------------------- pod logs --
+
+otelcol.receiver.filelog "pods" {
+	include           = ["/var/log/pods/*/*/*.log"]
+	start_at          = "end"
+	include_file_path = true
+	max_log_size      = "1MiB"
+	storage           = otelcol.storage.file.state.handler
+
+	operators = [
+		// CRI format, joins partial lines, sets k8s.namespace.name /
+		// k8s.pod.name / k8s.pod.uid / k8s.container.name from the file path.
+		{type = "container", add_metadata_from_filepath = true},
+		// Multi-line: stack traces / tracebacks are glued onto the line before.
+		{
+			type               = "recombine",
+			combine_field      = "body",
+			source_identifier  = `attributes["log.file.path"]`,
+			is_first_entry     = `body matches "^\\S" and not (body matches "^(Traceback |During handling|The above exception|[A-Za-z_][\\w.]*(Error|Exception|Warning)(: |$)|Caused by:)")`,
+			combine_with       = "\n",
+			max_log_lines      = 500,
+			force_flush_period = "1s",
+		},
+		{type = "remove", field = `attributes["log.file.path"]`},
+		{type = "remove", field = `attributes["log.file.name"]`},
+		{type = "remove", field = `attributes["logtag"]`},
+	]
+
+	output {
+		logs = [otelcol.processor.k8sattributes.default.input]
+	}
+}
+
+// ------------------------------------------------------------- k8s metadata --
+
+otelcol.processor.k8sattributes "default" {
+	extract {
+		metadata = [
+			"k8s.namespace.name",
+			"k8s.pod.name",
+			"k8s.pod.uid",
+			"k8s.node.name",
+			"k8s.deployment.name",
+			"k8s.statefulset.name",
+			"k8s.daemonset.name",
+			"k8s.cronjob.name",
+			"k8s.job.name",
+		]
+
+		label {
+			from     = "pod"
+			key      = "app"
+			tag_name = "app"
+		}
+
+		label {
+			from     = "pod"
+			key      = "app.kubernetes.io/name"
+			tag_name = "app.kubernetes.io/name"
+		}
+	}
+
+	pod_association {
+		source {
+			from = "resource_attribute"
+			name = "k8s.pod.uid"
+		}
+	}
+
+	pod_association {
+		source {
+			from = "connection"
+		}
+	}
+
+	filter {
+		node = sys.env("K8S_NODE_NAME")
+	}
+
+	output {
+		logs   = [otelcol.processor.transform.resource.input]
+		traces = [otelcol.processor.transform.resource.input]
+	}
+}
+
+// service.name = owning workload (cronjob > deployment > statefulset >
+// daemonset > job > container), so multi-container pods share one service and
+// the container label tells them apart.
+otelcol.processor.transform "resource" {
+	error_mode = "ignore"
+
+	log_statements {
+		context    = "resource"
+		statements = [
+			`set(attributes["k8s.cluster.name"], "homelab")`,
+			`set(attributes["service.namespace"], attributes["k8s.namespace.name"]) where attributes["k8s.namespace.name"] != nil`,
+			`set(attributes["service.name"], attributes["k8s.container.name"]) where attributes["service.name"] == nil and attributes["k8s.container.name"] != nil`,
+			`set(attributes["service.name"], attributes["k8s.job.name"]) where attributes["k8s.job.name"] != nil`,
+			`set(attributes["service.name"], attributes["k8s.daemonset.name"]) where attributes["k8s.daemonset.name"] != nil`,
+			`set(attributes["service.name"], attributes["k8s.statefulset.name"]) where attributes["k8s.statefulset.name"] != nil`,
+			`set(attributes["service.name"], attributes["k8s.deployment.name"]) where attributes["k8s.deployment.name"] != nil`,
+			`set(attributes["service.name"], attributes["k8s.cronjob.name"]) where attributes["k8s.cronjob.name"] != nil`,
+		]
+	}
+
+	trace_statements {
+		context    = "resource"
+		statements = [
+			`set(attributes["k8s.cluster.name"], "homelab")`,
+		]
+	}
+
+	output {
+		logs   = [otelcol.processor.transform.logs.input]
+		traces = [otelcol.processor.batch.default.input]
+	}
+}
+
+// ------------------------------------------------------------------- OTLP --
+
+otelcol.receiver.otlp "default" {
+	grpc {
+		endpoint = "0.0.0.0:4317"
+	}
+
+	http {
+		endpoint = "0.0.0.0:4318"
+	}
+
+	output {
+		traces  = [otelcol.processor.k8sattributes.default.input]
+		logs    = [otelcol.processor.batch.default.input]
+		metrics = [otelcol.processor.batch.default.input]
+	}
+}
+
+// --------------------------------------------------------------- exporters --
+
+otelcol.processor.batch "default" {
+	timeout         = "2s"
+	send_batch_size = 2048
+
+	output {
+		logs    = [otelcol.exporter.otlphttp.loki.input]
+		traces  = [otelcol.exporter.otlp.tempo.input]
+		metrics = [otelcol.exporter.prometheus.default.input]
+	}
+}
+
+otelcol.exporter.otlphttp "loki" {
+	client {
+		endpoint = "http://loki.observability.svc:3100/otlp"
+	}
+
+	sending_queue {
+		enabled    = true
+		queue_size = 5000
+		storage    = otelcol.storage.file.state.handler
+	}
+}
+
+otelcol.exporter.otlp "tempo" {
+	client {
+		endpoint = "tempo.observability.svc:4317"
+
+		tls {
+			insecure = true
+		}
+	}
+}
+
+otelcol.exporter.prometheus "default" {
+	forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+	endpoint {
+		url = "http://kps-prometheus.observability.svc:9090/api/v1/write"
+	}
+}

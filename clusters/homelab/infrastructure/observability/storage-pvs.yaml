@@ -1,0 +1,112 @@
+# Static hostPath PVs for the observability stack.
+#
+# Same storage pattern as the rest of the cluster (/var/persist/<name> on a
+# pinned node), but wrapped in PVs so the upstream charts can keep using their
+# normal volumeClaimTemplates. Each PV is pre-bound to its chart PVC via
+# claimRef; nodeAffinity pins the consuming pod to dell-r620.
+#
+# hostPath does not enforce capacity — retention settings in each component
+# keep usage inside these numbers (total budget ~150Gi).
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: observability-loki
+  labels:
+    app.kubernetes.io/part-of: observability
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: observability-hostpath
+  claimRef:
+    namespace: observability
+    name: storage-loki-0
+  hostPath:
+    path: /var/persist/observability-loki
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: ["dell-r620"]
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: observability-prometheus
+  labels:
+    app.kubernetes.io/part-of: observability
+spec:
+  capacity:
+    storage: 40Gi
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: observability-hostpath
+  claimRef:
+    namespace: observability
+    name: prometheus-kps-db-prometheus-kps-0
+  hostPath:
+    path: /var/persist/observability-prometheus
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: ["dell-r620"]
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: observability-tempo
+  labels:
+    app.kubernetes.io/part-of: observability
+spec:
+  capacity:
+    storage: 8Gi
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: observability-hostpath
+  claimRef:
+    namespace: observability
+    name: storage-tempo-0
+  hostPath:
+    path: /var/persist/observability-tempo
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: ["dell-r620"]
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: observability-grafana
+  labels:
+    app.kubernetes.io/part-of: observability
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: observability-hostpath
+  claimRef:
+    namespace: observability
+    name: kps-grafana
+  hostPath:
+    path: /var/persist/observability-grafana
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: ["dell-r620"]

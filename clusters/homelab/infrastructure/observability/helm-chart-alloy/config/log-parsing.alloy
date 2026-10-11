@@ -1,0 +1,179 @@
+// =============================================================================
+// Log parsing (OTTL). Runs on every container log line.
+//
+// Goal: the log line in Loki is the *message*; everything else becomes a
+// field (structured metadata) and the level lands in severity_text, which
+// Loki exposes as detected_level.
+//
+//   1. JSON           -> all keys become fields, msg/message/event/... -> line
+//   2. logfmt         -> same
+//   3. klog           -> k8s components (I1011 12:00:00.000 1 file.go:1] "msg" k=v)
+//   4. access logs    -> nginx (JSON, see ingress-nginx values), combined,
+//                        uvicorn; method/path/status/... fields + level by status
+//   5. known app formats (arr/NLog, jellyfin, HA, postgres, mysql, redis, ...)
+//   6. anything else  -> raw line, best-effort level detection
+//
+// The parsers are regex driven and tested against real samples from every
+// container in the cluster (see tooling/observability/README.md).
+// =============================================================================
+otelcol.processor.transform "logs" {
+	error_mode = "ignore"
+
+	log_statements {
+		context    = "log"
+		statements = [
+			// ---- normalise body -------------------------------------------------
+			`set(body, Concat([body], "")) where not IsString(body)`,
+			`replace_pattern(body, "\\x1b\\[[0-9;]*[A-Za-z]", "")`,
+
+			// ---- JSON ----------------------------------------------------------------
+			`set(attributes["log.format"], "json") where IsMatch(body, "(?s)^\\s*\\{.*\\}\\s*$")`,
+			`merge_maps(attributes, ParseJSON(body), "insert") where attributes["log.format"] == "json"`,
+
+			// ---- logfmt (argocd, external-dns, local-path, ...) ---------------------
+			`set(attributes["log.format"], "logfmt") where attributes["log.format"] == nil and IsMatch(body, "^(time|ts|t|level|lvl)=\\S")`,
+			`merge_maps(attributes, ParseKeyValue(body), "insert") where attributes["log.format"] == "logfmt"`,
+			`merge_maps(attributes, ExtractPatterns(body, "level=(?P<level>\\w+)"), "insert") where attributes["log.format"] == "logfmt" and attributes["level"] == nil`,
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)msg=\"(?P<msg>(?:[^\"\\\\]|\\\\.)*)\""), "insert") where attributes["log.format"] == "logfmt" and attributes["msg"] == nil`,
+
+			// ---- klog (kubernetes components) ------------------------------------
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^(?P<klog_sev>[IWEF])\\d{4} \\d{2}:\\d{2}:\\d{2}\\.\\d+\\s+\\d+ (?P<caller>[^\\]]+)\\] (?P<klog_rest>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "klog") where attributes["klog_sev"] != nil`,
+			`merge_maps(attributes, ExtractPatterns(attributes["klog_rest"], "^\"(?P<msg>(?:[^\"\\\\]|\\\\.)*)\"\\s*(?P<klog_kv>.*)$"), "insert") where attributes["log.format"] == "klog"`,
+			`merge_maps(attributes, ParseKeyValue(attributes["klog_kv"]), "insert") where attributes["klog_kv"] != nil and attributes["klog_kv"] != ""`,
+			`set(attributes["msg"], attributes["klog_rest"]) where attributes["log.format"] == "klog" and attributes["msg"] == nil`,
+			`set(attributes["level"], attributes["klog_sev"]) where attributes["log.format"] == "klog"`,
+			`delete_matching_keys(attributes, "^klog_(rest|kv|sev)$")`,
+
+			// ---- access logs: combined/common (nginx default, many web servers) ---
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^(?P<client_ip>\\S+) \\S+ (?P<remote_user>\\S+) \\[(?P<time_local>[^\\]]+)\\] \"(?P<method>[A-Z]+) (?P<path>\\S+) (?P<protocol>[^\"]+)\" (?P<status>\\d{3}) (?P<bytes_sent>\\d+|-)(?: \"(?P<referer>[^\"]*)\" \"(?P<user_agent>[^\"]*)\")?"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "access_combined") where attributes["log.format"] == nil and attributes["status"] != nil`,
+			// uvicorn access: INFO:     10.244.1.1:46346 - "GET /readyz HTTP/1.1" 200 OK
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^(?P<level>[A-Z]+):\\s+(?P<client_addr>\\S+) - \"(?P<method>[A-Z]+) (?P<path>\\S+) (?P<protocol>HTTP/[\\d.]+)\" (?P<status>\\d{3})"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "access_uvicorn") where attributes["log.format"] == nil and attributes["status"] != nil`,
+
+			// ---- common app formats -------------------------------------------------
+			// *arr (NLog): [Info] RssSyncService: message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\[(?P<level>Trace|Debug|Info|Warn|Error|Fatal)\\] (?P<logger>[\\w.]+): (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "nlog") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// jellyfin (serilog): [21:24:11] [INF] [35] Logger: message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\[[\\d:.]+\\] \\[(?P<level>[A-Z]{3})\\] \\[(?P<thread>\\d+)\\] (?P<logger>[^:\\s]+): (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "serilog") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// kavita: [Kavita] [2026-10-10 16:00:12.485 -07:00  25] [Warning] Logger message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\[\\w+\\] \\[[^\\]]+\\] \\[(?P<level>\\w+)\\] (?P<logger>\\S+) (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "serilog") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// postgres: 2026-10-11 04:51:03.021 UTC [218932] FATAL:  message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}-\\d{2}-\\d{2} [\\d:.]+ \\w+ \\[(?P<pid>\\d+)\\] (?P<level>[A-Z]+):\\s+(?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "postgres") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// python logging w/ thread (home-assistant, matter-server)
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}-\\d{2}-\\d{2} [\\d:.,]+ (?:\\((?P<thread>[^)]+)\\) )?(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL) (?:\\((?P<thread2>[^)]+)\\) )?\\[(?P<logger>[^\\]]+)\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["thread"], attributes["thread2"]) where attributes["thread2"] != nil`,
+			`delete_key(attributes, "thread2")`,
+			`set(attributes["log.format"], "python") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// sabnzbd: 2026-10-10 21:22:57,942::INFO::[postproc:146] message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}-\\d{2}-\\d{2} [\\d:,]+::(?P<level>[A-Z]+)::\\[(?P<logger>[^\\]]+)\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "python") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// bazarr: 2026-10-10 19:51:40,358 - root   (7f8b) :  INFO (get_providers:213) - message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}-\\d{2}-\\d{2} [\\d:,]+ - (?P<logger>\\S+)\\s+\\((?P<thread>\\w+)\\) :\\s+(?P<level>[A-Z]+) \\((?P<caller>[^)]+)\\) - (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "python") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// mysql: 2026-03-14T15:21:15Z 0 [Warning] [MY-013360] [Server] message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\S+Z \\d+ \\[(?P<level>\\w+)\\] \\[(?P<error_code>MY-\\d+)\\] \\[(?P<subsystem>\\w+)\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "mysql") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// redis: 1:M 29 Jul 2026 02:24:55.696 * message   (. debug, - verbose, * notice, # warning)
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d+:[XCSM] \\d{2} \\w{3} \\d{4} [\\d:.]+ (?P<redis_level>[.*#-]) (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["level"], "debug") where attributes["redis_level"] == "." or attributes["redis_level"] == "-"`,
+			`set(attributes["level"], "info") where attributes["redis_level"] == "*"`,
+			`set(attributes["level"], "warn") where attributes["redis_level"] == "#"`,
+			`delete_key(attributes, "redis_level")`,
+			`set(attributes["log.format"], "redis") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// zap console (exportarr): 2026-10-11T04:50:39.390Z	INFO	message	{"url": "..."}
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\S+\\t(?P<level>[A-Z]+)\\t(?P<msg>[^\\t]*)(?:\\t(?P<zap_fields>\\{.*\\}))?$"), "insert") where attributes["log.format"] == nil`,
+			`merge_maps(attributes, ParseJSON(attributes["zap_fields"]), "insert") where attributes["zap_fields"] != nil`,
+			`delete_key(attributes, "zap_fields")`,
+			`set(attributes["log.format"], "zap_console") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// jellyseerr: 2026-10-11T04:50:00.028Z [info][Jellyfin Sync]: message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\S+ \\[(?P<level>\\w+)\\]\\[(?P<logger>[^\\]]+)\\]: (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "winston") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// gluetun: 2026-10-10T21:50:50-07:00 INFO [firewall] message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}-\\d{2}-\\d{2}T\\S+ (?P<level>[A-Z]+) \\[(?P<logger>[^\\]]+)\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "gluetun") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// adguard / go log w/ level: 2026/10/11 04:50:02.632400 [error] dnsproxy: message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}/\\d{2}/\\d{2} [\\d:.]+ \\[(?P<level>\\w+)\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "golog") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// nats: [1] 2026/04/04 21:10:27.955624 [INF] message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\[\\d+\\] \\S+ \\S+ \\[(?P<level>[A-Z]{3})\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "nats") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// generic "ts LEVEL logger message" (hamh / matterbridge)
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}-\\d{2}-\\d{2}[ T][\\d:.,]+Z? (?P<level>TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|FATAL|CRITICAL)\\s+(?P<logger>\\S+)\\s+(?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "ts_level_logger") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// rust tracing (anki): 2026-10-11T01:11:47.358383Z  INFO span{..}: message k=v
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}-\\d{2}-\\d{2}T\\S+Z\\s+(?P<level>TRACE|DEBUG|INFO|WARN|ERROR) (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "rust_tracing") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// coredns / bracketed level: [ERROR] plugin/errors: ...
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\[(?P<level>DEBUG|INFO|WARNING|WARN|ERROR|FATAL)\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "bracket_level") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// uvicorn / python default: INFO:     message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL):\\s+(?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "python_simple") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+
+			// JSON access logs (nginx json "request" field, app request logs without a message)
+			`merge_maps(attributes, ExtractPatterns(attributes["request"], "^(?P<method>[A-Z]+) (?P<path>\\S+) (?P<protocol>HTTP/[\\d.]+)$"), "insert") where attributes["log.format"] == "json" and IsString(attributes["request"])`,
+			`set(attributes["status"], attributes["status_code"]) where attributes["status"] == nil and attributes["status_code"] != nil`,
+			`set(attributes["log.format"], "access_json") where attributes["log.format"] == "json" and attributes["method"] != nil and attributes["path"] != nil and attributes["status"] != nil and (attributes["msg"] == nil and attributes["message"] == nil or attributes["event"] == "http_request")`,
+			`delete_key(attributes, "event") where attributes["log.format"] == "access_json" and attributes["event"] == "http_request"`,
+			`set(attributes["log.format"], "access_nginx") where attributes["log.format"] == "json" and attributes["ingress"] != nil and attributes["upstream_addr"] != nil`,
+
+			// ---- message: pick the message field, everything else stays as attributes
+			`set(attributes["log.msg_key"], "msg") where IsString(attributes["msg"])`,
+			`set(attributes["log.msg_key"], "message") where attributes["log.msg_key"] == nil and IsString(attributes["message"])`,
+			`set(attributes["log.msg_key"], "log_message") where attributes["log.msg_key"] == nil and IsString(attributes["log_message"])`,
+			`set(attributes["log.msg_key"], "event") where attributes["log.msg_key"] == nil and IsString(attributes["event"])`,
+			`set(attributes["log.msg_key"], "MESSAGE") where attributes["log.msg_key"] == nil and IsString(attributes["MESSAGE"])`,
+			`set(body, attributes["msg"]) where attributes["log.msg_key"] == "msg"`,
+			`set(body, attributes["message"]) where attributes["log.msg_key"] == "message"`,
+			`set(body, attributes["log_message"]) where attributes["log.msg_key"] == "log_message"`,
+			`set(body, attributes["event"]) where attributes["log.msg_key"] == "event"`,
+			`set(body, attributes["MESSAGE"]) where attributes["log.msg_key"] == "MESSAGE"`,
+			`delete_key(attributes, attributes["log.msg_key"]) where attributes["log.msg_key"] != nil`,
+			`delete_key(attributes, "log.msg_key")`,
+
+			// access logs get a readable synthetic message
+			`set(body, Concat([attributes["method"], attributes["path"], attributes["status"]], " ")) where IsMatch(attributes["log.format"], "^access_(combined|uvicorn|json)$")`,
+
+			// access logs: level from HTTP status
+			`set(severity_text, "error") where IsMatch(attributes["log.format"], "^access_") and Int(attributes["status"]) >= 500`,
+			`set(severity_text, "warn") where severity_text == "" and IsMatch(attributes["log.format"], "^access_") and Int(attributes["status"]) >= 400`,
+			`set(severity_text, "info") where severity_text == "" and IsMatch(attributes["log.format"], "^access_")`,
+
+			// ---- level -------------------------------------------------------------
+			`set(severity_text, attributes["level"]) where IsString(attributes["level"])`,
+			`set(severity_text, attributes["levelname"]) where severity_text == "" and IsString(attributes["levelname"])`,
+			`set(severity_text, attributes["lvl"]) where severity_text == "" and IsString(attributes["lvl"])`,
+			`set(severity_text, attributes["severity"]) where severity_text == "" and IsString(attributes["severity"])`,
+			`delete_matching_keys(attributes, "^(level|levelname|lvl|severity)$") where severity_text != ""`,
+			`merge_maps(attributes, ExtractPatterns(body, "^\\((?P<guessed_level>[DIWEF])\\) "), "insert") where severity_text == ""`,
+			// best effort for anything still unparsed: first level-ish token near the start
+			`merge_maps(attributes, ExtractPatterns(body, "(?i)^.{0,60}?(?:^|[\\s\\[(|:])(?P<guessed_level>trace|debug|dbg|info|inf|information|notice|warn|warning|wrn|error|err|eror|fatal|ftl|crit|critical|panic|severe)(?:$|[\\s\\]):|])"), "insert") where severity_text == ""`,
+			`set(severity_text, attributes["guessed_level"]) where severity_text == "" and attributes["guessed_level"] != nil`,
+			`delete_key(attributes, "guessed_level")`,
+			`set(severity_text, ConvertCase(severity_text, "lower")) where severity_text != ""`,
+			`set(severity_text, "info") where IsMatch(severity_text, "^(i|inf|information|notice|log|detail|hint|statement|system|note)$")`,
+			`set(severity_text, "warn") where IsMatch(severity_text, "^(w|wrn|warning)$")`,
+			`set(severity_text, "error") where IsMatch(severity_text, "^(e|err|eror|severe)$")`,
+			`set(severity_text, "debug") where IsMatch(severity_text, "^(d|dbg|verbose|vrb)$")`,
+			`set(severity_text, "fatal") where IsMatch(severity_text, "^(f|ftl|panic|emerg|alert|crit|critical|dpanic)$")`,
+			`set(severity_text, "trace") where IsMatch(severity_text, "^(t|trc)$")`,
+			`set(severity_number, SEVERITY_NUMBER_TRACE) where severity_text == "trace"`,
+			`set(severity_number, SEVERITY_NUMBER_DEBUG) where severity_text == "debug"`,
+			`set(severity_number, SEVERITY_NUMBER_INFO) where severity_text == "info"`,
+			`set(severity_number, SEVERITY_NUMBER_WARN) where severity_text == "warn"`,
+			`set(severity_number, SEVERITY_NUMBER_ERROR) where severity_text == "error"`,
+			`set(severity_number, SEVERITY_NUMBER_FATAL) where severity_text == "fatal"`,
+			`set(attributes["log.format"], "raw") where attributes["log.format"] == nil`,
+		]
+	}
+
+	output {
+		logs = [otelcol.processor.batch.default.input]
+	}
+}

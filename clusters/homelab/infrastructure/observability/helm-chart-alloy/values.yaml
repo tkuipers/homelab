@@ -1,0 +1,103 @@
+# Two Alloy releases from one umbrella chart (see Chart.yaml):
+#   alloy        - DaemonSet, tails every container log on the node and
+#                  receives OTLP (config/node.alloy + config/log-parsing.alloy)
+#   alloy-events - Deployment (1 replica), Kubernetes events (config/events.alloy)
+# Config files are rendered into ConfigMaps by templates/config.yaml.
+
+alloy:
+  fullnameOverride: alloy
+  alloy:
+    configMap:
+      create: false
+      name: alloy-config
+      key: config.alloy
+    stabilityLevel: public-preview
+    enableReporting: false
+    # read /var/log/pods
+    mounts:
+      varlog: true
+      extra:
+        - name: state
+          mountPath: /var/lib/alloy
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    extraEnv:
+      - name: K8S_NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
+    extraPorts:
+      - name: otlp-grpc
+        port: 4317
+        targetPort: 4317
+        protocol: TCP
+      - name: otlp-http
+        port: 4318
+        targetPort: 4318
+        protocol: TCP
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+  controller:
+    type: daemonset
+    volumes:
+      extra:
+        # file offsets + export queue, survives pod restarts
+        - name: state
+          hostPath:
+            path: /var/persist/observability-alloy
+            type: DirectoryOrCreate
+  rbac:
+    create: true
+    rules:
+      - apiGroups: ["", "discovery.k8s.io", "networking.k8s.io"]
+        resources: ["endpoints", "endpointslices", "ingresses", "pods", "services", "namespaces", "nodes"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apps"]
+        resources: ["replicasets", "deployments", "statefulsets", "daemonsets"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["batch"]
+        resources: ["jobs", "cronjobs"]
+        verbs: ["get", "list", "watch"]
+    clusterRules:
+      - apiGroups: [""]
+        resources: ["nodes", "nodes/pods", "nodes/metrics", "namespaces", "pods"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["apps"]
+        resources: ["replicasets"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: ["batch"]
+        resources: ["jobs"]
+        verbs: ["get", "list", "watch"]
+      - nonResourceURLs: ["/metrics"]
+        verbs: ["get"]
+  serviceMonitor:
+    enabled: true
+
+alloy-events:
+  fullnameOverride: alloy-events
+  crds:
+    create: false
+  alloy:
+    configMap:
+      create: false
+      name: alloy-events-config
+      key: config.alloy
+    enableReporting: false
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+  controller:
+    type: deployment
+    replicas: 1
+  rbac:
+    create: true
+  serviceMonitor:
+    enabled: true
