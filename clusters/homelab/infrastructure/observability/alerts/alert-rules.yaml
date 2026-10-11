@@ -761,7 +761,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: (sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[10m])) / sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests[10m]) > 0.01))
+            expr: (sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[5m])) / sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests[5m]) > 0.01))
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -793,7 +793,7 @@ data:
                 - 0.1
         noDataState: OK
         execErrState: Error
-        for: 5m
+        for: 10m
         labels:
           severity: warning
           namespace: '{{ $$labels.exported_namespace }}'
