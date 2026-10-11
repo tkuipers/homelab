@@ -41,7 +41,7 @@ NAMESPACE="observability"
 AUTHELIA_CONFIGMAP="$REPO_ROOT/clusters/homelab/infrastructure/authelia/configmap.yaml"
 OBS_KUSTOMIZATION="$REPO_ROOT/clusters/homelab/infrastructure/observability/kustomization.yaml"
 TEMP_SECRETS_DIR="${TEMP_SECRETS_DIR:-$HOME/tmp/observability-temp-secrets}"
-AUTHELIA_IMAGE="authelia/authelia:4.39.16"
+AUTHELIA_IMAGE="authelia/authelia:4.39.28"
 
 MODE="store"
 ROTATE=false

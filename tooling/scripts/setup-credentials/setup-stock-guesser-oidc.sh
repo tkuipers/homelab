@@ -22,7 +22,7 @@ hash_client_secret() {
         authelia crypto hash generate argon2 --salt-size 16 --password "$secret" \
             | grep -oP '\$argon2id\$[^\s]+'
     else
-        docker run --rm authelia/authelia:4.39.16 \
+        docker run --rm authelia/authelia:4.39.28 \
             authelia crypto hash generate argon2 --salt-size 16 --password "$secret" \
             | grep -oP '\$argon2id\$[^\s]+'
     fi
@@ -58,7 +58,7 @@ log_success "Generated client secret"
 
 if ! command -v authelia &>/dev/null; then
     log_info "Pulling authelia docker image for hashing..."
-    docker pull authelia/authelia:4.39.16 >/dev/null 2>&1
+    docker pull authelia/authelia:4.39.28 >/dev/null 2>&1
 fi
 
 log_info "Hashing with argon2id (this takes a few seconds)..."
