@@ -149,6 +149,11 @@ spec:
               value: localhost,127.0.0.1,.svc,.cluster.local,10.96.0.0/12,10.244.0.0/16
             - name: NODE_USE_ENV_PROXY
               value: "1"
+            - name: NODE_OPTIONS
+              value: --disable-warning=UNDICI-EHPA
+            # ssh finds ~/.ssh via the passwd entry, not $HOME: point it at the config that routes it through the proxy
+            - name: GIT_SSH_COMMAND
+              value: ssh -F /data/home/.ssh/config
             - name: SCAN_TIME
               value: "06:00"
             - name: SCAN_TZ
