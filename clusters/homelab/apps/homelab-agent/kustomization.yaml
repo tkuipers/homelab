@@ -11,3 +11,6 @@ resources:
   - relay-deployment.yaml
   - service.yaml
   - ingress.yaml
+images:
+  - name: ghcr.io/tkuipers/homelab-agent
+    digest: sha256:c3f081cfc3c9658f53e1c53c63150c09f519636332e1248fd58f4b914eddfa77
