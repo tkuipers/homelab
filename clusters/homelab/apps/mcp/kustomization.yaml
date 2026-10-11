@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - ghcr-credentials-external-secret.yaml
+  - google-workspace.yaml
+# pinned by homelab-agent's CI (deploy job)
+images:
+  - name: ghcr.io/tkuipers/homelab-agent
+    newTag: latest
+  - name: ghcr.io/tkuipers/workspace-mcp
+    newTag: 1.29.0

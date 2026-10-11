@@ -180,6 +180,8 @@ spec:
             # ssh finds ~/.ssh via the passwd entry, not $HOME: point it at the config that routes it through the proxy
             - name: GIT_SSH_COMMAND
               value: ssh -F /data/home/.ssh/config
+            - name: GMAIL_MCP_URL
+              value: http://google-mcp.mcp.svc/mcp
             - name: SCAN_TIME
               value: "06:00"
             - name: SCAN_TZ
