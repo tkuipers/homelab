@@ -12,7 +12,11 @@ UI: **https://logs.tkuipers.ca** (Authelia SSO; local admin at `/login?disableAu
 2. Jump to the service's dashboard (*Services* dropdown at the top of every
    dashboard, or the list at the bottom of the overview). Every service has:
    - **Status**: ready replicas, restarts, error logs (1h), OOM kills,
-     ingress 5xx ratio, external probe (DNS+ingress+TLS+Authelia), TLS expiry
+     ingress 5xx ratio, **health check (in-cluster)** = the app's own health
+     endpoint answers, **public URL reachable** = DNS+ingress+TLS+Authelia
+     (behind Authelia this stops at the login redirect, so it does *not*
+     prove the app works), TLS expiry. "no logs"/"no traffic"/"no pods" means
+     exactly that - not zero.
    - **Failures**: logs by level, restarts, ingress status classes, the
      service's own access-log status codes, Kubernetes events by reason
    - **Traffic & latency** (if it has an ingress), **Resources** (CPU/mem vs
@@ -29,16 +33,24 @@ UI: **https://logs.tkuipers.ca** (Authelia SSO; local admin at `/login?disableAu
    ```
 4. Traces: every request through ingress-nginx is a span in Tempo; ingress
    log lines carry `trace_id`, which links to the trace (Loki derived field).
+5. Stocks: *Stocks - overview* has a **Pipeline activity** row (ingestion
+   runs, decisions, JetStream consumer backlog/redeliveries, Postgres) -
+   pods can be Ready while the pipeline is stuck.
 
 ## Pieces
 
 | Component | Chart dir / ArgoCD app | What |
 |-----------|------------------------|------|
-| kube-prometheus-stack (release `kps`) | `helm-chart-kube-prometheus-stack` / `infrastructure-kube-prometheus-stack` | Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics, blackbox exporter (probes of every `*.tkuipers.ca` host) |
+| kube-prometheus-stack (release `kps`) | `helm-chart-kube-prometheus-stack` / `infrastructure-kube-prometheus-stack` | Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics, blackbox exporter (`probe=external`: every `*.tkuipers.ca` host; `probe=internal`: each app's health endpoint / DB port via its Service) |
 | Loki | `helm-chart-loki` / `infrastructure-loki` | logs, single binary, filesystem; OTLP ingestion |
 | Tempo | `helm-chart-tempo` / `infrastructure-tempo` | traces + span metrics/service graph |
 | Alloy | `helm-chart-alloy` / `infrastructure-alloy` | DaemonSet: tails `/var/log/pods`, parses, ships to Loki; OTLP receiver (`alloy.observability.svc:4317/4318`). `alloy-events`: Kubernetes events → Loki |
 | this dir (kustomize) | `infrastructure-observability` | namespace, storage, ServiceMonitors/PodMonitors, dashboards, alert rules, (ExternalSecrets) |
+
+Exporters living next to the apps: exportarr (sonarr/radarr/readarr/prowlarr),
+postgres-exporter (stocks, polymarket-bot), prometheus-nats-exporter (stocks,
+JetStream lag), Jellyfin's built-in /metrics. Scrape configs:
+`monitors/servicemonitors.yaml`.
 
 ### Log pipeline / parsing
 `helm-chart-alloy/config/node.alloy` (collection, k8s metadata, export) and
@@ -50,6 +62,9 @@ Jellyfin/Kavita (Serilog), Home Assistant/Python logging, sabnzbd, bazarr,
 Postgres, MySQL, Redis, NATS, gluetun, zap console, Rust tracing, CoreDNS.
 Anything else is kept raw with a best-effort level. Multi-line stack traces
 are joined. `service_name` = owning workload; `log_format` says which parser hit.
+Successful kubelet health checks (`GET /healthz` 2xx from the pod gateway /
+kube-probe) are dropped; failing ones are kept. Access-log `path` has no
+query string (`query` is its own field).
 
 To change a parser: edit `log-parsing.alloy`, test locally with the alloy
 binary against sample CRI files (`alloy run --stability.level=public-preview`),
@@ -71,8 +86,13 @@ New service: add a `Svc(...)` line to `CATALOG` in the generator, re-run,
 commit. Grafana's sidecar loads the ConfigMaps (label `grafana_dashboard`,
 folder from annotation `grafana_folder`). Hand edits in the UI are not saved.
 Alert rules are Grafana-managed (folder *Alerts*); the kube-prometheus-stack
-default rules appear next to them. **No contact point is configured yet** -
-alerts are visible in Grafana only.
+default rules appear next to them (KubeCPU/MemoryOvercommit disabled).
+**No contact point is configured yet** - alerts are visible in Grafana only.
+To get paged: add a contact point (ntfy / Pushover / Discord / email) and a
+notification policy for `severity=critical` in Grafana, and point the kps
+Alertmanager `Watchdog` at a dead-man's switch (e.g. healthchecks.io) - the
+whole stack runs on dell-r620, so that is the only way to hear about that
+node dying.
 
 ### Verification
 ```
@@ -96,3 +116,7 @@ them to 1Password and switches to ExternalSecrets (`secrets/`).
   periodic poll logs "restricted database access" - the sidecar's reload API
   call is what applies dashboard changes.
 - etcd and kube-proxy metrics are not scraped (Talos binds them to localhost).
+- Talos machine/kernel logs (`dmesg`, kubelet, etcd) are not shipped; kernel
+  OOM kills are only visible as `node_vmstat_oom_kill` (alerted).
+- Alloy hot-reloads its config; one reload deadlocked it (no logs shipped).
+  It now has a liveness probe, and "A node stopped shipping logs" alerts.
