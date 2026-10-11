@@ -75,14 +75,17 @@ def rule(uid, title, expr, op, threshold, for_="5m", ds="prometheus", severity="
 
 
 def _target_labels(ns, svc, static_ns):
+    # Grafana interpolates $VARS in provisioning files, rule labels included
+    # (annotations are exempt): "$labels" must be written "$$labels" here.
     out = {}
     if static_ns:
         out["namespace"] = static_ns
     elif ns:
-        out["namespace"] = "{{ $labels.%s }}" % ns
+        out["namespace"] = "{{ $$labels.%s }}" % ns
     if svc:
         # svc may be a ready-made template (e.g. derived from a pod name)
-        out["service"] = svc if "{{" in svc else "{{ $labels.%s }}" % svc
+        tmpl = svc if "{{" in svc else "{{ $labels.%s }}" % svc
+        out["service"] = tmpl.replace("$labels", "$$labels")
     return out
 
 

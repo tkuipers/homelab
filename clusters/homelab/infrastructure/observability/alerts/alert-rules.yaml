@@ -638,8 +638,8 @@ data:
         for: 3m
         labels:
           severity: critical
-          namespace: '{{ $labels.target_namespace }}'
-          service: '{{ $labels.target_service }}'
+          namespace: '{{ $$labels.target_namespace }}'
+          service: '{{ $$labels.target_service }}'
         annotations:
           summary: '{{ $labels.target_namespace }}/{{ $labels.target_service }} does not answer its health check'
           description: 'In-cluster probe of the app itself ({{ $labels.instance }}) via its Service. Open the service dashboard: Kubernetes events, restarts and logs. No data = the blackbox exporter (observability/blackbox) is down.'
@@ -691,8 +691,8 @@ data:
         for: 5m
         labels:
           severity: critical
-          namespace: '{{ $labels.target_namespace }}'
-          service: '{{ $labels.target_service }}'
+          namespace: '{{ $$labels.target_namespace }}'
+          service: '{{ $$labels.target_service }}'
         annotations:
           summary: '{{ $labels.instance }} is not reachable (DNS / ingress / TLS / Authelia)'
           description: 'The public hostname fails while the app''s own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), ingress-nginx, cert-manager or Authelia. Each host must answer like its class (blackbox module): http_public = 2xx after redirects, http_authelia = 302 to auth.tkuipers.ca; a 404 usually means the Ingress is gone.'
@@ -796,8 +796,8 @@ data:
         for: 5m
         labels:
           severity: warning
-          namespace: '{{ $labels.exported_namespace }}'
-          service: '{{ $labels.ingress }}'
+          namespace: '{{ $$labels.exported_namespace }}'
+          service: '{{ $$labels.ingress }}'
         annotations:
           summary: '{{ $labels.exported_namespace }}/{{ $labels.ingress }}: more than 10% 5xx'
           description: Ingress NGINX dashboard > 'Top 5xx paths' shows which paths fail; the service dashboard shows its logs.
@@ -849,8 +849,8 @@ data:
         for: 5m
         labels:
           severity: critical
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $labels.pod }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $$labels.pod }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is crash looping'
           description: ''
@@ -902,8 +902,8 @@ data:
         for: 0s
         labels:
           severity: warning
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $labels.pod }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $$labels.pod }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) was OOM killed'
           description: Memory panel on the service dashboard shows usage vs limit.
@@ -955,8 +955,8 @@ data:
         for: 15m
         labels:
           severity: warning
-          namespace: '{{ $labels.k8s_namespace_name }}'
-          service: '{{ $labels.service_name }}'
+          namespace: '{{ $$labels.k8s_namespace_name }}'
+          service: '{{ $$labels.service_name }}'
         annotations:
           summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }} logged {{ $values.B }} errors in 10m (>3x the same time yesterday)'
           description: A sudden change. Steady failures are caught by 'Errors logged steadily'. Open the service dashboard > Logs and filter level=error.
@@ -1008,8 +1008,8 @@ data:
         for: 2h
         labels:
           severity: warning
-          namespace: '{{ $labels.k8s_namespace_name }}'
-          service: '{{ $labels.service_name }}'
+          namespace: '{{ $$labels.k8s_namespace_name }}'
+          service: '{{ $$labels.service_name }}'
         annotations:
           summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }} has logged more than 20 errors an hour for 2h ({{ $values.B }} in the last hour)'
           description: Something is failing continuously (a dependency, credentials, a region block...) even though the pod looks healthy. Service dashboard > Logs, level=error. If the errors are expected noise, fix the level at the source or in helm-chart-alloy/config/log-parsing.alloy (level corrections) rather than silencing.
@@ -1061,8 +1061,8 @@ data:
         for: 15m
         labels:
           severity: warning
-          namespace: '{{ $labels.k8s_namespace_name }}'
-          service: '{{ $labels.service_name }}'
+          namespace: '{{ $$labels.k8s_namespace_name }}'
+          service: '{{ $$labels.service_name }}'
         annotations:
           summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }}: gluetun restarted the VPN {{ $values.B }} times in 30m'
           description: The VPN tunnel fails its health check, so the app behind it has no working network although the pod is Ready. gluetun logs say why (DNS, auth, server).
@@ -1166,8 +1166,8 @@ data:
         for: 10m
         labels:
           severity: warning
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ $labels.cronjob }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ $$labels.cronjob }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.cronjob }}: no successful run for more than two schedule intervals'
           description: Value = seconds overdue. Check the CronJob dashboard (last success, failed jobs, logs).
@@ -1219,8 +1219,8 @@ data:
         for: 1h
         labels:
           severity: warning
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ $labels.cronjob }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ $$labels.cronjob }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.cronjob }} exists for >2 days and never completed successfully'
           description: ''
@@ -1272,8 +1272,8 @@ data:
         for: 0s
         labels:
           severity: warning
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ reReplaceAll "-[0-9]+$" "" $labels.job_name }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ reReplaceAll "-[0-9]+$" "" $$labels.job_name }}'
         annotations:
           summary: Job {{ $labels.namespace }}/{{ $labels.job_name }} failed (started in the last 24h)
           description: 'Logs of the job pod are in Loki even after the pod is gone: {k8s_namespace_name="{{ $labels.namespace }}"} |= "" with k8s_pod_name=~"{{ $labels.job_name }}-.*".'
@@ -1325,8 +1325,8 @@ data:
         for: 15m
         labels:
           severity: warning
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ $labels.deployment }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ $$labels.deployment }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.deployment }} has unavailable replicas for 15m'
           description: ''
@@ -1378,8 +1378,8 @@ data:
         for: 15m
         labels:
           severity: warning
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ $labels.daemonset }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ $$labels.daemonset }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.daemonset }}: {{ $values.B }} pod(s) not ready (alloy = a node is not shipping logs)'
           description: ''
@@ -1431,8 +1431,8 @@ data:
         for: 15m
         labels:
           severity: critical
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ $labels.statefulset }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ $$labels.statefulset }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.statefulset }} has replicas not ready (Loki/Prometheus/Tempo/Alertmanager/Argo CD controller)'
           description: ''
@@ -1588,7 +1588,7 @@ data:
         for: 1h
         labels:
           severity: warning
-          namespace: '{{ $labels.exported_namespace }}'
+          namespace: '{{ $$labels.exported_namespace }}'
         annotations:
           summary: Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} is not Ready
           description: ''
@@ -1640,7 +1640,7 @@ data:
         for: 1h
         labels:
           severity: warning
-          namespace: '{{ $labels.exported_namespace }}'
+          namespace: '{{ $$labels.exported_namespace }}'
         annotations:
           summary: Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} expires in {{ $values.B }} days (renewal should have happened at 30d)
           description: ''
@@ -1692,8 +1692,8 @@ data:
         for: 3m
         labels:
           severity: critical
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ $labels.postgres }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ $$labels.postgres }}'
         annotations:
           summary: Postgres in {{ $labels.namespace }} is not answering the exporter
           description: ''
@@ -2059,7 +2059,7 @@ data:
         for: 30m
         labels:
           severity: warning
-          namespace: '{{ $labels.exported_namespace }}'
+          namespace: '{{ $$labels.exported_namespace }}'
         annotations:
           summary: ExternalSecret {{ $labels.exported_namespace }}/{{ $labels.name }} is not Ready
           description: Usually the 1Password item/field is missing. See the External Secrets Operator dashboard.
@@ -2111,8 +2111,8 @@ data:
         for: 1h
         labels:
           severity: warning
-          namespace: '{{ $labels.namespace }}'
-          service: '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $labels.pod }}'
+          namespace: '{{ $$labels.namespace }}'
+          service: '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $$labels.pod }}'
         annotations:
           summary: '{{ $labels.pod }}: {{ $labels.message }}'
           description: The app's own health check (System > Status), check {{ $labels.source }}. 'Update available' notices are ignored.
@@ -2320,7 +2320,7 @@ data:
         for: 15m
         labels:
           severity: warning
-          namespace: '{{ $labels.namespace }}'
+          namespace: '{{ $$labels.namespace }}'
         annotations:
           summary: Scrape target {{ $labels.namespace }}/{{ $labels.job }} is down
           description: ''
