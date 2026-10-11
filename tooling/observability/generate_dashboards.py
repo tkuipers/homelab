@@ -625,6 +625,8 @@ CATALOG: List[Svc] = [
     S("homelab-agent", "homelab-agent", "Homelab agent", ingress=["homelab-agent"], probe="homelab-agent", folder="Apps",
       extras=[agent_panels], description="Claude Code agent: daily scans, alert response, SMS. https://agent.tkuipers.ca"),
     S("homelab-agent", "homelab-agent-relay", "Homelab agent SMS relay", probe="homelab-agent-relay", folder="Apps", quiet=True),
+    S("homelab-agent", "homelab-agent-postgres", "Homelab agent Postgres", folder="Apps", extras=[postgres_panels]),
+    S("homelab-agent", "homelab-agent-postgres-backup", "Homelab agent Postgres backup (CronJob)", kind="cronjob", folder="Apps"),
     S("homepage", "homepage", "Homepage (tkuipers.ca)", ingress=["homepage", "resume-proxy"], probe="homepage", access_logs=True, folder="Apps"),
 
     S("mediacenter", "jellyfin", "Jellyfin", ingress=["jellyfin"], probe="jellyfin", folder="Media", extras=[jellyfin_panels]),

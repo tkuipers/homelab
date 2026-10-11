@@ -99,6 +99,18 @@ configMapGenerator:
     options:
       annotations:
         grafana_folder: "Apps"
+  - name: dash-apps-svc-homelab-agent-homelab-agent-postgres
+    files:
+      - apps--svc-homelab-agent-homelab-agent-postgres.json
+    options:
+      annotations:
+        grafana_folder: "Apps"
+  - name: dash-apps-svc-homelab-agent-homelab-agent-85477d1e
+    files:
+      - apps--svc-homelab-agent-homelab-agent-85477d1e.json
+    options:
+      annotations:
+        grafana_folder: "Apps"
   - name: dash-apps-svc-homepage-homepage
     files:
       - apps--svc-homepage-homepage.json

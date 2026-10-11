@@ -154,12 +154,12 @@ metadata:
   namespace: observability
 spec:
   namespaceSelector:
-    matchNames: [stocks, polymarket-bot]
+    matchNames: [stocks, polymarket-bot, homelab-agent]
   selector:
     matchExpressions:
       - key: app
         operator: In
-        values: [stocks-postgres, polymarket-postgres, stocks-nats]
+        values: [stocks-postgres, polymarket-postgres, stocks-nats, homelab-agent-postgres]
   podMetricsEndpoints:
     - port: metrics
       interval: 30s

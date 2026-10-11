@@ -6,6 +6,7 @@ resources:
   - external-secret.yaml
   - rbac.yaml
   - pvc.yaml
+  - postgres.yaml
   - deployment.yaml
   - relay-deployment.yaml
   - service.yaml

@@ -140,6 +140,14 @@ spec:
               value: git@github.com:tkuipers/homelab.git
             - name: SSH_AUTH_SOCK
               value: /ssh/agent.sock
+            - name: PGHOST
+              value: homelab-agent-postgres
+            - name: PGUSER
+              value: agent
+            - name: PGDATABASE
+              value: agent
+            - name: PGPASSWORD
+              valueFrom: {secretKeyRef: {name: homelab-agent-postgres, key: password}}
             # everything leaves through the egress sidecar; in-cluster traffic goes direct
             - name: HTTPS_PROXY
               value: http://127.0.0.1:3128

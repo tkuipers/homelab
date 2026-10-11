@@ -1,0 +1,191 @@
+# The agent's database: conversations, transcripts, personas, notes, settings.
+# The password is generated once by External Secrets (nobody needs to know it)
+# and kept as long as the Secret exists; backups in postgres-backup-cronjob.yaml.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: homelab-agent-postgres
+  namespace: homelab-agent
+spec:
+  length: 32
+  digits: 6
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: homelab-agent-postgres
+  namespace: homelab-agent
+spec:
+  refreshInterval: "0"   # generate once, never rotate (the database keeps the first password)
+  target:
+    name: homelab-agent-postgres
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: homelab-agent-postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homelab-agent-postgres
+  namespace: homelab-agent
+  labels:
+    app: homelab-agent-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: homelab-agent-postgres
+  template:
+    metadata:
+      labels:
+        app: homelab-agent-postgres
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_USER
+              value: agent
+            - name: POSTGRES_DB
+              value: agent
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: homelab-agent-postgres
+                  key: password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 50m
+            limits:
+              memory: 512Mi
+        # Prometheus metrics; scraped by the "app-exporters" PodMonitor in infrastructure/observability
+        - name: postgres-exporter
+          image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+          env:
+            - name: DATA_SOURCE_URI
+              value: localhost:5432/agent?sslmode=disable
+            - name: DATA_SOURCE_USER
+              value: agent
+            - name: DATA_SOURCE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: homelab-agent-postgres
+                  key: password
+          ports:
+            - containerPort: 9187
+              name: metrics
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 10m
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: data
+          hostPath:
+            path: /var/persist/homelab-agent-postgres
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homelab-agent-postgres
+  namespace: homelab-agent
+  labels:
+    app: homelab-agent-postgres
+spec:
+  selector:
+    app: homelab-agent-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: homelab-agent-postgres-backup
+  namespace: homelab-agent
+  labels:
+    app: homelab-agent-postgres-backup
+spec:
+  schedule: "15 3 * * *"   # daily 03:15 UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: homelab-agent-postgres-backup
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: dell-r620
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:16
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  # pipefail: a failing dump must fail the Job, not leave an empty .gz
+                  set -euo pipefail
+                  TS=$(date +%Y%m%d-%H%M%S)
+                  DAILY=/backups/daily; WEEKLY=/backups/weekly; MONTHLY=/backups/monthly
+                  mkdir -p "$DAILY" "$WEEKLY" "$MONTHLY"
+                  FILE="homelab-agent-${TS}.sql.gz"
+                  PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -h homelab-agent-postgres -U agent agent --no-owner --no-acl | gzip > "${DAILY}/${FILE}"
+                  DOW=$(date +%u); DOM=$(date +%d)
+                  if [ "$DOW" -eq 7 ]; then cp "${DAILY}/${FILE}" "${WEEKLY}/${FILE}"; fi
+                  if [ "$DOM" -eq "01" ]; then cp "${DAILY}/${FILE}" "${MONTHLY}/${FILE}"; fi
+                  find "$DAILY"   -maxdepth 1 -type f -name '*.sql.gz' -mtime +14 -delete
+                  find "$WEEKLY"  -maxdepth 1 -type f -name '*.sql.gz' -mtime +56 -delete
+                  find "$MONTHLY" -maxdepth 1 -type f -name '*.sql.gz' -mtime +365 -delete
+                  ls -lh "${DAILY}/${FILE}"
+              env:
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: homelab-agent-postgres
+                      key: password
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+          volumes:
+            - name: backups
+              hostPath:
+                path: /var/persist/homelab-agent-postgres-backups
