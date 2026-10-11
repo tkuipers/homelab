@@ -20,7 +20,9 @@ loki:
       type: filesystem
     schemaConfig:
       configs:
-        - from: "2026-10-01"
+        # must predate any log line we might ingest (backfill); entries older
+        # than the schema start fail the whole push
+        - from: "2024-01-01"
           store: tsdb
           object_store: filesystem
           schema: v13

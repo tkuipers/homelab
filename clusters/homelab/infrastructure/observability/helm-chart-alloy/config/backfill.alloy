@@ -10,7 +10,7 @@
 // =============================================================================
 
 otelcol.storage.file "backfill" {
-	directory = "/var/lib/alloy/storage-backfill"
+	directory = "/var/lib/alloy/storage-backfill-2"
 }
 
 otelcol.receiver.filelog "backfill" {
