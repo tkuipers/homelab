@@ -31,7 +31,7 @@ otelcol.processor.transform "logs" {
 			`merge_maps(attributes, ParseJSON(body), "insert") where attributes["log.format"] == "json"`,
 
 			// ---- logfmt (argocd, external-dns, local-path, ...) ---------------------
-			`set(attributes["log.format"], "logfmt") where attributes["log.format"] == nil and IsMatch(body, "^(time|ts|t|level|lvl)=\\S")`,
+			`set(attributes["log.format"], "logfmt") where attributes["log.format"] == nil and IsMatch(body, "^(time|ts|t|level|lvl|logger|caller|component|msg|severity)=\\S")`,
 			`merge_maps(attributes, ParseKeyValue(body), "insert") where attributes["log.format"] == "logfmt"`,
 			`merge_maps(attributes, ExtractPatterns(body, "level=(?P<level>\\w+)"), "insert") where attributes["log.format"] == "logfmt" and attributes["level"] == nil`,
 			`merge_maps(attributes, ExtractPatterns(body, "(?s)msg=\"(?P<msg>(?:[^\"\\\\]|\\\\.)*)\""), "insert") where attributes["log.format"] == "logfmt" and attributes["msg"] == nil`,
@@ -156,7 +156,7 @@ otelcol.processor.transform "logs" {
 			`delete_matching_keys(attributes, "^(level|levelname|lvl|severity)$") where severity_text != ""`,
 			`merge_maps(attributes, ExtractPatterns(body, "^\\((?P<guessed_level>[DIWEF])\\) "), "insert") where severity_text == ""`,
 			// best effort for anything still unparsed: first level-ish token near the start
-			`merge_maps(attributes, ExtractPatterns(body, "(?i)^.{0,60}?(?:^|[\\s\\[(|:])(?P<guessed_level>trace|debug|dbg|info|inf|information|notice|warn|warning|wrn|error|err|eror|fatal|ftl|crit|critical|panic|severe)(?:$|[\\s\\]):|])"), "insert") where severity_text == ""`,
+			`merge_maps(attributes, ExtractPatterns(body, "(?i)^.{0,60}?(?:^|[\\s\\[(|:])(?P<guessed_level>trace|debug|dbg|info|inf|information|notice|note|warn|warning|wrn|error|err|eror|fatal|ftl|crit|critical|panic|severe)(?:$|[\\s\\]):|])"), "insert") where severity_text == ""`,
 			`set(severity_text, attributes["guessed_level"]) where severity_text == "" and attributes["guessed_level"] != nil`,
 			`delete_key(attributes, "guessed_level")`,
 			`set(severity_text, ConvertCase(severity_text, "lower")) where severity_text != ""`,

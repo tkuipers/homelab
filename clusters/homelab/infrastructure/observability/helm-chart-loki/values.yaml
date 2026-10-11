@@ -74,6 +74,8 @@ loki:
     querier:
       max_concurrent: 8
     server:
+      # info logs every query (hundreds of thousands of lines/h) - keep it quiet
+      log_level: warn
       grpc_server_max_recv_msg_size: 16777216
       grpc_server_max_send_msg_size: 16777216
 

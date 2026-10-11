@@ -136,8 +136,21 @@ otelcol.processor.transform "resource" {
 	}
 
 	output {
-		logs   = [otelcol.processor.transform.logs.input]
+		logs   = [otelcol.processor.filter.empty.input]
 		traces = [otelcol.processor.batch.default.input]
+	}
+}
+
+// blank lines carry no information
+otelcol.processor.filter "empty" {
+	error_mode = "ignore"
+
+	logs {
+		log_record = [`IsString(body) and IsMatch(body, "^\\s*$")`]
+	}
+
+	output {
+		logs = [otelcol.processor.transform.logs.input]
 	}
 }
 
