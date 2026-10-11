@@ -58,7 +58,7 @@ class Svc:
 
 
 def pod_re(s: Svc) -> str:
-    n = re.escape(s.name).replace("\\-", "-")
+    n = s.name
     return {
         "deployment": f"{n}-[a-z0-9]{{6,10}}-[a-z0-9]{{5}}",
         "statefulset": f"{n}-[0-9]+",
@@ -263,8 +263,9 @@ def health_stat(b: Board, s: Svc):
     ns, n = s.ns, s.name
     pct = [{"color": "red", "value": None}, {"color": "orange", "value": 0.5}, {"color": "green", "value": 1}]
     if s.kind == "deployment":
-        b.stat("Ready replicas", f'sum(kube_deployment_status_replicas_available{{namespace="{ns}", deployment="{n}"}}) / sum(kube_deployment_spec_replicas{{namespace="{ns}", deployment="{n}"}})',
-               unit="percentunit", thresholds=pct, desc="available / desired replicas")
+        b.stat("Ready replicas", f'(sum(kube_deployment_status_replicas_available{{namespace="{ns}", deployment="{n}"}}) / (sum(kube_deployment_spec_replicas{{namespace="{ns}", deployment="{n}"}}) > 0)) or (sum(kube_deployment_spec_replicas{{namespace="{ns}", deployment="{n}"}}) * 0 - 1)',
+               unit="percentunit", thresholds=pct, desc="available / desired replicas",
+               mappings=[{"type": "value", "options": {"-1": {"text": "scaled to 0", "color": "blue"}}}])
     elif s.kind == "statefulset":
         b.stat("Ready replicas", f'sum(kube_statefulset_status_replicas_ready{{namespace="{ns}", statefulset="{n}"}}) / sum(kube_statefulset_replicas{{namespace="{ns}", statefulset="{n}"}})',
                unit="percentunit", thresholds=pct)
@@ -278,7 +279,7 @@ def health_stat(b: Board, s: Svc):
         b.stat("Since last success", f'time() - max(kube_cronjob_status_last_successful_time{{namespace="{ns}", cronjob="{n}"}})',
                unit="s", desc="time since the last successful run",
                thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 2 * 86400}, {"color": "red", "value": 7 * 86400}])
-        b.stat("Failed jobs (kept history)", f'sum(kube_job_status_failed{{namespace="{ns}", job_name=~"{re.escape(n)}-[0-9]+"}}) or vector(0)',
+        b.stat("Failed jobs (kept history)", f'sum(kube_job_status_failed{{namespace="{ns}", job_name=~"{n}-[0-9]+"}}) or vector(0)',
                thresholds=RED_IF_ABOVE_0, desc="failed Jobs still present (history limit)")
         b.stat("Suspended", f'max(kube_cronjob_spec_suspend{{namespace="{ns}", cronjob="{n}"}})',
                mappings=[{"type": "value", "options": {"0": {"text": "no", "color": "green"}, "1": {"text": "SUSPENDED", "color": "orange"}}}])
@@ -326,7 +327,7 @@ def standard(s: Svc) -> Board:
 
     # ---- failures ---------------------------------------------------------
     b.row("Failures")
-    b.ts("Logs by level", [(f'sum by (detected_level) (count_over_time({sel} [$__auto]))', "{{detected_level}}")],
+    b.ts("Logs by level", [(f'sum by (detected_level) (count_over_time({sel} [$__auto])) or vector(0)', "{{detected_level}}")],
          ds=LOKI, bars=True, stack=True, overrides=level_overrides(),
          desc="log lines per interval, split by detected level")
     b.ts("Container restarts", [(f'sum by (container) (increase(kube_pod_container_status_restarts_total{{{kp}}}[10m])) or vector(0)', "{{container}}")],
@@ -341,9 +342,9 @@ def standard(s: Svc) -> Board:
              [(f'sum by (status) (count_over_time({sel} | status=~".+" [$__auto]))', "{{status}}")],
              ds=LOKI, bars=True, stack=True,
              desc="per-request access log lines emitted by the service itself (includes internal traffic and health checks)")
-    b.logs("Kubernetes events", f'{{service_name="kubernetes-events", k8s_namespace_name="{s.ns}"}} | name=~"{s.name}.*"',
-           w=12 if not (s.ingress or s.access_logs) else 24, h=8, time_from="7d", max_lines=100,
-           desc="events for this workload's objects (last 7d)")
+    b.ts("Kubernetes events by reason", [(f'sum by (type, reason) (count_over_time({{service_name="kubernetes-events", k8s_namespace_name="{s.ns}"}} | name=~"{s.name}.*" [$__auto])) or vector(0)', "{{type}} {{reason}}")],
+         ds=LOKI, bars=True, stack=True, w=12 if not (s.ingress or s.access_logs) else 24,
+         desc="Kubernetes events for this workload's objects (Warning = BackOff, Unhealthy, FailedScheduling, ...). The raw events are in the namespace overview and in Explore: {service_name=\"kubernetes-events\"}")
 
     # ---- traffic ----------------------------------------------------------
     if s.ingress:
@@ -355,11 +356,9 @@ def standard(s: Svc) -> Board:
             (f'histogram_quantile(0.5, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p50"),
             (f'histogram_quantile(0.95, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p95"),
             (f'histogram_quantile(0.99, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p99"),
-        ], unit="s", w=8)
-        if s.probe:
-            b.ts("External probe duration", [(f'max(probe_duration_seconds{{target_namespace="{s.ns}", target_service="{s.probe}"}})', "probe")], unit="s", w=8)
-        else:
-            b.ts("Upstream response time p95", [(f'histogram_quantile(0.95, sum by (le) (rate(nginx_ingress_controller_response_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p95")], unit="s", w=8)
+        ] + ([(f'max(probe_duration_seconds{{target_namespace="{s.ns}", target_service="{s.probe}"}})', "external probe (end-to-end)")] if s.probe else []),
+             unit="s", w=8, desc="ingress request duration percentiles (requests stopped by Authelia have none) and the synthetic end-to-end probe")
+        b.ts("Bandwidth out", [(f'sum(rate(nginx_ingress_controller_response_size_sum{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])) or vector(0)', "bytes/s")], unit="Bps", w=8)
     elif s.probe:
         b.row("External probe")
         b.ts("External probe duration", [(f'max(probe_duration_seconds{{target_namespace="{s.ns}", target_service="{s.probe}"}})', "probe")], unit="s")
@@ -390,8 +389,8 @@ def standard(s: Svc) -> Board:
 
     # ---- logs -------------------------------------------------------------
     b.row("Logs")
-    b.logs("Logs", f'{sel} | detected_level=~"$level" |~ "(?i)$search"', h=16, time_from="7d",
-           desc="last 7 days, newest first. Filter with the level/search variables; expand a line for all parsed fields")
+    b.logs("Logs", f'{sel} | detected_level=~"$level" |~ "(?i)$search"', h=16, time_from="30d",
+           desc="newest first, whole retention (30d) so quiet services still show their last lines. Filter with the level/search variables; expand a line for all parsed fields")
     return b
 
 
@@ -544,7 +543,7 @@ def node_panels(b: Board, s: Svc):
     b.ts("Disk I/O utilisation", [('rate(node_disk_io_time_seconds_total[$__rate_interval])', "{{instance}} {{device}}")], unit="percentunit")
     b.ts("Network receive", [('sum by (instance) (rate(node_network_receive_bytes_total{device!~"lo|veth.*|cni.*|flannel.*"}[$__rate_interval]))', "{{instance}}")], unit="Bps")
     b.ts("Network transmit", [('sum by (instance) (rate(node_network_transmit_bytes_total{device!~"lo|veth.*|cni.*|flannel.*"}[$__rate_interval]))', "{{instance}}")], unit="Bps")
-    b.ts("Load (1m) per core", [('node_load1 / count by (instance) (node_cpu_seconds_total{mode="idle"})', "{{instance}}")])
+    b.ts("Load (1m) per core", [('node_load1 / on (instance) group_left () count by (instance) (node_cpu_seconds_total{mode="idle"})', "{{instance}}")])
     b.ts("Pods per node", [('count by (node) (kube_pod_info)', "{{node}}")])
 
 
@@ -576,7 +575,7 @@ CATALOG: List[Svc] = [
     S("mediacenter", "transmission", "Transmission (+gluetun VPN)", ingress=["transmission"], probe="transmission", folder="Media"),
     S("mediacenter", "transmission-cleanup", "Transmission cleanup (CronJob)", kind="cronjob", folder="Media"),
 
-    S("polymarket-bot", "bot", "Polymarket bot", ingress=["bot"], probe="bot", access_logs=True, folder="Polymarket"),
+    S("polymarket-bot", "bot", "Polymarket bot", ingress=["bot"], probe="bot", folder="Polymarket"),
     S("polymarket-bot", "postgres", "Polymarket Postgres", folder="Polymarket", extras=[postgres_panels]),
     S("polymarket-bot", "postgres-backup", "Polymarket Postgres backup (CronJob)", kind="cronjob", folder="Polymarket"),
 
@@ -588,9 +587,8 @@ CATALOG: List[Svc] = [
 
     S("stocks", "api", "Stocks API", ingress=["api"], probe="api", access_logs=True, folder="Stocks"),
     S("stocks", "console", "Stocks console", ingress=["console"], probe="console", access_logs=True, folder="Stocks"),
-    S("stocks", "audit-consumer", "Stocks audit consumer", access_logs=True, folder="Stocks"),
+    S("stocks", "audit-consumer", "Stocks audit consumer", folder="Stocks"),
     S("stocks", "decision", "Stocks decision", access_logs=True, folder="Stocks"),
-    S("stocks", "execution", "Stocks execution", access_logs=True, folder="Stocks"),
     S("stocks", "ingestion", "Stocks ingestion", access_logs=True, folder="Stocks"),
     S("stocks", "llm-gateway", "Stocks LLM gateway", access_logs=True, folder="Stocks"),
     S("stocks", "orchestrator", "Stocks orchestrator", access_logs=True, folder="Stocks"),
@@ -680,7 +678,7 @@ def overview() -> Board:
     ], w=12, h=9, desc="containers waiting (CrashLoopBackOff, ImagePullBackOff, ...)",
         transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True, "Value": True}}}])
     b.row("Failure rates")
-    b.ts("Error-level log lines by service", [('topk(15, sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+"} | detected_level=~"error|fatal|critical" [$__auto])))', "{{k8s_namespace_name}}/{{service_name}}")],
+    b.ts("Error-level log lines by service", [('topk(15, sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+"} | detected_level=~"error|fatal|critical" [$__auto]))) or vector(0)', "{{k8s_namespace_name}}/{{service_name}}")],
          ds=LOKI, bars=True, stack=True, w=12)
     b.ts("Ingress 5xx / s by ingress", [('sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[$__rate_interval])) or vector(0)', "{{exported_namespace}}/{{ingress}}")], unit="reqps", w=12)
     b.ts("Container restarts by pod", [('sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total[10m])) > 0 or vector(0)', "{{namespace}}/{{pod}}")], bars=True, w=12)
@@ -708,13 +706,13 @@ def namespace_overview(ns: str, title: str, folder: str) -> Board:
     ], w=12, h=10, transformations=[{"id": "merge", "options": {}},
                                     {"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value #A": "ready", "Value #B": "desired"}}}])
     b.ts("Restarts by pod", [(f'sum by (pod) (increase(kube_pod_container_status_restarts_total{{namespace="{ns}"}}[10m])) or vector(0)', "{{pod}}")], bars=True, w=12, h=10)
-    b.ts("Error logs by service", [(f'sum by (service_name) (count_over_time({{k8s_namespace_name="{ns}"}} | detected_level=~"error|fatal|critical" [$__auto]))', "{{service_name}}")], ds=LOKI, bars=True, stack=True)
+    b.ts("Error logs by service", [(f'sum by (service_name) (count_over_time({{k8s_namespace_name="{ns}"}} | detected_level=~"error|fatal|critical" [$__auto])) or vector(0)', "{{service_name}}")], ds=LOKI, bars=True, stack=True)
     b.ts("Logs by level", [(f'sum by (detected_level) (count_over_time({{k8s_namespace_name="{ns}"}} [$__auto]))', "{{detected_level}}")], ds=LOKI, bars=True, stack=True, overrides=level_overrides())
     b.ts("CPU by pod", [(f'sum by (pod) (rate(container_cpu_usage_seconds_total{{namespace="{ns}", container!=""}}[$__rate_interval]))', "{{pod}}")])
     b.ts("Memory by pod", [(f'sum by (pod) (container_memory_working_set_bytes{{namespace="{ns}", container!=""}})', "{{pod}}")], unit="bytes")
     b.row("Logs")
-    b.logs("Warnings & errors", f'{{k8s_namespace_name="{ns}"}} | detected_level=~"warn|error|fatal|critical" |~ "(?i)$search"', h=12, time_from="7d")
-    b.logs("Kubernetes events", f'{{service_name="kubernetes-events", k8s_namespace_name="{ns}"}}', h=10, time_from="7d")
+    b.logs("Warnings & errors", f'{{k8s_namespace_name="{ns}"}} | detected_level=~"warn|error|fatal|critical" |~ "(?i)$search"', h=12, time_from="30d")
+    b.logs("Kubernetes events", f'{{service_name="kubernetes-events", k8s_namespace_name="{ns}"}}', h=10, time_from="30d")
     return b
 
 

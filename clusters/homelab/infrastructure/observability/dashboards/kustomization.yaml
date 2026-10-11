@@ -225,12 +225,6 @@ configMapGenerator:
     options:
       annotations:
         grafana_folder: "Stocks"
-  - name: dash-stocks-svc-stocks-execution
-    files:
-      - stocks--svc-stocks-execution.json
-    options:
-      annotations:
-        grafana_folder: "Stocks"
   - name: dash-stocks-svc-stocks-ingestion
     files:
       - stocks--svc-stocks-ingestion.json

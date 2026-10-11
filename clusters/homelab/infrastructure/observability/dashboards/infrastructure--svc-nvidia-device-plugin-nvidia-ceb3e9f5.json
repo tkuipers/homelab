@@ -496,7 +496,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "sum by (detected_level) (count_over_time({k8s_namespace_name=\"nvidia-device-plugin\", service_name=\"nvidia-device-plugin\"} [$__auto]))",
+     "expr": "sum by (detected_level) (count_over_time({k8s_namespace_name=\"nvidia-device-plugin\", service_name=\"nvidia-device-plugin\"} [$__auto])) or vector(0)",
      "legendFormat": "{{detected_level}}",
      "queryType": "range",
      "refId": "A"
@@ -568,7 +568,25 @@
     "type": "loki",
     "uid": "loki"
    },
-   "description": "events for this workload's objects (last 7d)",
+   "description": "Kubernetes events for this workload's objects (Warning = BackOff, Unhealthy, FailedScheduling, ...). The raw events are in the namespace overview and in Explore: {service_name=\"kubernetes-events\"}",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
    "gridPos": {
     "h": 8,
     "w": 12,
@@ -577,14 +595,15 @@
    },
    "id": 9,
    "options": {
-    "dedupStrategy": "none",
-    "enableLogDetails": true,
-    "prettifyLogMessage": false,
-    "showCommonLabels": false,
-    "showLabels": false,
-    "showTime": true,
-    "sortOrder": "Descending",
-    "wrapLogMessage": true
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
    },
    "targets": [
     {
@@ -592,16 +611,14 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "{service_name=\"kubernetes-events\", k8s_namespace_name=\"nvidia-device-plugin\"} | name=~\"nvidia-device-plugin.*\"",
-     "legendFormat": "",
-     "maxLines": 100,
+     "expr": "sum by (type, reason) (count_over_time({service_name=\"kubernetes-events\", k8s_namespace_name=\"nvidia-device-plugin\"} | name=~\"nvidia-device-plugin.*\" [$__auto])) or vector(0)",
+     "legendFormat": "{{type}} {{reason}}",
      "queryType": "range",
      "refId": "A"
     }
    ],
-   "timeFrom": "7d",
-   "title": "Kubernetes events",
-   "type": "logs"
+   "title": "Kubernetes events by reason",
+   "type": "timeseries"
   },
   {
    "collapsed": false,
@@ -970,7 +987,7 @@
     "type": "loki",
     "uid": "loki"
    },
-   "description": "last 7 days, newest first. Filter with the level/search variables; expand a line for all parsed fields",
+   "description": "newest first, whole retention (30d) so quiet services still show their last lines. Filter with the level/search variables; expand a line for all parsed fields",
    "gridPos": {
     "h": 16,
     "w": 24,
@@ -1001,7 +1018,7 @@
      "refId": "A"
     }
    ],
-   "timeFrom": "7d",
+   "timeFrom": "30d",
    "title": "Logs",
    "type": "logs"
   }

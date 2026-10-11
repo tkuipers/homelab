@@ -53,7 +53,17 @@
      "color": {
       "mode": "thresholds"
      },
-     "mappings": [],
+     "mappings": [
+      {
+       "options": {
+        "-1": {
+         "color": "blue",
+         "text": "scaled to 0"
+        }
+       },
+       "type": "value"
+      }
+     ],
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -101,7 +111,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(kube_deployment_status_replicas_available{namespace=\"homepage\", deployment=\"homepage\"}) / sum(kube_deployment_spec_replicas{namespace=\"homepage\", deployment=\"homepage\"})",
+     "expr": "(sum(kube_deployment_status_replicas_available{namespace=\"homepage\", deployment=\"homepage\"}) / (sum(kube_deployment_spec_replicas{namespace=\"homepage\", deployment=\"homepage\"}) > 0)) or (sum(kube_deployment_spec_replicas{namespace=\"homepage\", deployment=\"homepage\"}) * 0 - 1)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -714,7 +724,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "sum by (detected_level) (count_over_time({k8s_namespace_name=\"homepage\", service_name=\"homepage\"} [$__auto]))",
+     "expr": "sum by (detected_level) (count_over_time({k8s_namespace_name=\"homepage\", service_name=\"homepage\"} [$__auto])) or vector(0)",
      "legendFormat": "{{detected_level}}",
      "queryType": "range",
      "refId": "A"
@@ -962,7 +972,25 @@
     "type": "loki",
     "uid": "loki"
    },
-   "description": "events for this workload's objects (last 7d)",
+   "description": "Kubernetes events for this workload's objects (Warning = BackOff, Unhealthy, FailedScheduling, ...). The raw events are in the namespace overview and in Explore: {service_name=\"kubernetes-events\"}",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
    "gridPos": {
     "h": 8,
     "w": 24,
@@ -971,14 +999,15 @@
    },
    "id": 14,
    "options": {
-    "dedupStrategy": "none",
-    "enableLogDetails": true,
-    "prettifyLogMessage": false,
-    "showCommonLabels": false,
-    "showLabels": false,
-    "showTime": true,
-    "sortOrder": "Descending",
-    "wrapLogMessage": true
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
    },
    "targets": [
     {
@@ -986,16 +1015,14 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "{service_name=\"kubernetes-events\", k8s_namespace_name=\"homepage\"} | name=~\"homepage.*\"",
-     "legendFormat": "",
-     "maxLines": 100,
+     "expr": "sum by (type, reason) (count_over_time({service_name=\"kubernetes-events\", k8s_namespace_name=\"homepage\"} | name=~\"homepage.*\" [$__auto])) or vector(0)",
+     "legendFormat": "{{type}} {{reason}}",
      "queryType": "range",
      "refId": "A"
     }
    ],
-   "timeFrom": "7d",
-   "title": "Kubernetes events",
-   "type": "logs"
+   "title": "Kubernetes events by reason",
+   "type": "timeseries"
   },
   {
    "collapsed": false,
@@ -1073,7 +1100,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "",
+   "description": "ingress request duration percentiles (requests stopped by Authelia have none) and the synthetic end-to-end probe",
    "fieldConfig": {
     "defaults": {
      "custom": {
@@ -1143,6 +1170,17 @@
      "legendFormat": "p99",
      "range": true,
      "refId": "C"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(probe_duration_seconds{target_namespace=\"homepage\", target_service=\"homepage\"})",
+     "instant": false,
+     "legendFormat": "external probe (end-to-end)",
+     "range": true,
+     "refId": "D"
     }
    ],
    "title": "Latency (ingress -> response)",
@@ -1168,7 +1206,7 @@
       }
      },
      "min": 0,
-     "unit": "s"
+     "unit": "Bps"
     },
     "overrides": []
    },
@@ -1196,14 +1234,14 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "max(probe_duration_seconds{target_namespace=\"homepage\", target_service=\"homepage\"})",
+     "expr": "sum(rate(nginx_ingress_controller_response_size_sum{exported_namespace=\"homepage\", ingress=~\"homepage|resume-proxy\"}[$__rate_interval])) or vector(0)",
      "instant": false,
-     "legendFormat": "probe",
+     "legendFormat": "bytes/s",
      "range": true,
      "refId": "A"
     }
    ],
-   "title": "External probe duration",
+   "title": "Bandwidth out",
    "type": "timeseries"
   },
   {
@@ -1573,7 +1611,7 @@
     "type": "loki",
     "uid": "loki"
    },
-   "description": "last 7 days, newest first. Filter with the level/search variables; expand a line for all parsed fields",
+   "description": "newest first, whole retention (30d) so quiet services still show their last lines. Filter with the level/search variables; expand a line for all parsed fields",
    "gridPos": {
     "h": 16,
     "w": 24,
@@ -1604,7 +1642,7 @@
      "refId": "A"
     }
    ],
-   "timeFrom": "7d",
+   "timeFrom": "30d",
    "title": "Logs",
    "type": "logs"
   }

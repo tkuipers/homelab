@@ -598,7 +598,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "topk(15, sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~\".+\"} | detected_level=~\"error|fatal|critical\" [$__auto])))",
+     "expr": "topk(15, sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~\".+\"} | detected_level=~\"error|fatal|critical\" [$__auto]))) or vector(0)",
      "legendFormat": "{{k8s_namespace_name}}/{{service_name}}",
      "queryType": "range",
      "refId": "A"
@@ -1305,7 +1305,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "node_load1 / count by (instance) (node_cpu_seconds_total{mode=\"idle\"})",
+     "expr": "node_load1 / on (instance) group_left () count by (instance) (node_cpu_seconds_total{mode=\"idle\"})",
      "instant": false,
      "legendFormat": "{{instance}}",
      "range": true,

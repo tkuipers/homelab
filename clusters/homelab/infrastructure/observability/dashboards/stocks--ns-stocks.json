@@ -216,7 +216,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "sum by (service_name) (count_over_time({k8s_namespace_name=\"stocks\"} | detected_level=~\"error|fatal|critical\" [$__auto]))",
+     "expr": "sum by (service_name) (count_over_time({k8s_namespace_name=\"stocks\"} | detected_level=~\"error|fatal|critical\" [$__auto])) or vector(0)",
      "legendFormat": "{{service_name}}",
      "queryType": "range",
      "refId": "A"
@@ -568,7 +568,7 @@
      "refId": "A"
     }
    ],
-   "timeFrom": "7d",
+   "timeFrom": "30d",
    "title": "Warnings & errors",
    "type": "logs"
   },
@@ -608,7 +608,7 @@
      "refId": "A"
     }
    ],
-   "timeFrom": "7d",
+   "timeFrom": "30d",
    "title": "Kubernetes events",
    "type": "logs"
   }
