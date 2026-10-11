@@ -8,3 +8,5 @@ resources:
   - storage-pvs.yaml
   # Scrape configs for things not covered by their own charts
   - monitors/servicemonitors.yaml
+  # Grafana dashboards (generated: tooling/observability/generate_dashboards.py)
+  - dashboards

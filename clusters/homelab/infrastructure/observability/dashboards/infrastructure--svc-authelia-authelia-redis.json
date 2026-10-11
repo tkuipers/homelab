@@ -1,0 +1,1055 @@
+{
+ "description": "deployment authelia/authelia-redis",
+ "editable": true,
+ "graphTooltip": 1,
+ "links": [
+  {
+   "icon": "dashboard",
+   "keepTime": true,
+   "title": "Homelab overview",
+   "type": "link",
+   "url": "/d/homelab-overview"
+  },
+  {
+   "asDropdown": true,
+   "includeVars": false,
+   "keepTime": true,
+   "tags": [
+    "service"
+   ],
+   "title": "Services",
+   "type": "dashboards"
+  },
+  {
+   "icon": "doc",
+   "targetBlank": true,
+   "title": "Explore logs",
+   "type": "link",
+   "url": "/a/grafana-lokiexplore-app/explore"
+  }
+ ],
+ "panels": [
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "id": 1,
+   "panels": [],
+   "title": "Status",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "available / desired replicas",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.5
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 1
+   },
+   "id": 2,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(kube_deployment_status_replicas_available{namespace=\"authelia\", deployment=\"authelia-redis\"}) / sum(kube_deployment_spec_replicas{namespace=\"authelia\", deployment=\"authelia-redis\"})",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Ready replicas",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "decimals": 0,
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 10
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 1
+   },
+   "id": 3,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\"}[24h])) or vector(0)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Restarts (24h)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "log lines at error level or worse in the last hour",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 50
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 8,
+    "y": 1
+   },
+   "id": 4,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum(count_over_time({k8s_namespace_name=\"authelia\", service_name=\"authelia-redis\"} | detected_level=~\"error|fatal|critical\" [1h])) or vector(0)",
+     "legendFormat": "",
+     "queryType": "instant",
+     "refId": "A"
+    }
+   ],
+   "title": "Error logs (1h)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "containers whose last termination was an OOM kill",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 12,
+    "y": 1
+   },
+   "id": 5,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(kube_pod_container_status_last_terminated_reason{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\", reason=\"OOMKilled\"}) or vector(0)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "OOMKilled (last termination)",
+   "type": "stat"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 5
+   },
+   "id": 6,
+   "panels": [],
+   "title": "Failures",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "log lines per interval, split by detected level",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "fatal"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "dark-red",
+         "mode": "fixed"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "critical"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "dark-red",
+         "mode": "fixed"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "error"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "red",
+         "mode": "fixed"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "warn"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "orange",
+         "mode": "fixed"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "info"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "green",
+         "mode": "fixed"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "debug"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "blue",
+         "mode": "fixed"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "trace"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "purple",
+         "mode": "fixed"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "unknown"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "text",
+         "mode": "fixed"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 6
+   },
+   "id": 7,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum by (detected_level) (count_over_time({k8s_namespace_name=\"authelia\", service_name=\"authelia-redis\"} [$__auto]))",
+     "legendFormat": "{{detected_level}}",
+     "queryType": "range",
+     "refId": "A"
+    }
+   ],
+   "title": "Logs by level",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "restarts per 10m window",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 6
+   },
+   "id": 8,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (container) (increase(kube_pod_container_status_restarts_total{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\"}[10m])) or vector(0)",
+     "instant": false,
+     "legendFormat": "{{container}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Container restarts",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "events for this workload's objects (last 7d)",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 14
+   },
+   "id": 9,
+   "options": {
+    "dedupStrategy": "none",
+    "enableLogDetails": true,
+    "prettifyLogMessage": false,
+    "showCommonLabels": false,
+    "showLabels": false,
+    "showTime": true,
+    "sortOrder": "Descending",
+    "wrapLogMessage": true
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "{service_name=\"kubernetes-events\", k8s_namespace_name=\"authelia\"} | name=~\"authelia-redis.*\"",
+     "legendFormat": "",
+     "maxLines": 100,
+     "queryType": "range",
+     "refId": "A"
+    }
+   ],
+   "timeFrom": "7d",
+   "title": "Kubernetes events",
+   "type": "logs"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 22
+   },
+   "id": 10,
+   "panels": [],
+   "title": "Resources",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "limit"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "red",
+         "mode": "fixed"
+        }
+       },
+       {
+        "id": "custom.lineStyle",
+        "value": {
+         "dash": [
+          10,
+          10
+         ],
+         "fill": "dash"
+        }
+       },
+       {
+        "id": "custom.fillOpacity",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "request"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "yellow",
+         "mode": "fixed"
+        }
+       },
+       {
+        "id": "custom.lineStyle",
+        "value": {
+         "dash": [
+          4,
+          4
+         ],
+         "fill": "dash"
+        }
+       },
+       {
+        "id": "custom.fillOpacity",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 23
+   },
+   "id": 11,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\", container!=\"\", container!=\"POD\"}[$__rate_interval]))",
+     "instant": false,
+     "legendFormat": "{{container}}",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(kube_pod_container_resource_requests{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\", resource=\"cpu\"})",
+     "instant": false,
+     "legendFormat": "request",
+     "range": true,
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(kube_pod_container_resource_limits{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\", resource=\"cpu\"})",
+     "instant": false,
+     "legendFormat": "limit",
+     "range": true,
+     "refId": "C"
+    }
+   ],
+   "title": "CPU (cores)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "bytes"
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "limit"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "red",
+         "mode": "fixed"
+        }
+       },
+       {
+        "id": "custom.lineStyle",
+        "value": {
+         "dash": [
+          10,
+          10
+         ],
+         "fill": "dash"
+        }
+       },
+       {
+        "id": "custom.fillOpacity",
+        "value": 0
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "request"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "fixedColor": "yellow",
+         "mode": "fixed"
+        }
+       },
+       {
+        "id": "custom.lineStyle",
+        "value": {
+         "dash": [
+          4,
+          4
+         ],
+         "fill": "dash"
+        }
+       },
+       {
+        "id": "custom.fillOpacity",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 23
+   },
+   "id": 12,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (container) (container_memory_working_set_bytes{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\", container!=\"\", container!=\"POD\"})",
+     "instant": false,
+     "legendFormat": "{{container}}",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(kube_pod_container_resource_requests{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\", resource=\"memory\"})",
+     "instant": false,
+     "legendFormat": "request",
+     "range": true,
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(kube_pod_container_resource_limits{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\", resource=\"memory\"})",
+     "instant": false,
+     "legendFormat": "limit",
+     "range": true,
+     "refId": "C"
+    }
+   ],
+   "title": "Memory (working set)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "share of CPU periods throttled by the CPU limit (0 if no limit)",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 23
+   },
+   "id": 13,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (container) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\", container!=\"\"}[$__rate_interval])) / sum by (container) (rate(container_cpu_cfs_periods_total{namespace=\"authelia\", pod=~\"authelia-redis-[a-z0-9]{6,10}-[a-z0-9]{5}\", container!=\"\"}[$__rate_interval])) or vector(0)",
+     "instant": false,
+     "legendFormat": "{{container}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "CPU throttling",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 31
+   },
+   "id": 14,
+   "panels": [],
+   "title": "Logs",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "last 7 days, newest first. Filter with the level/search variables; expand a line for all parsed fields",
+   "gridPos": {
+    "h": 16,
+    "w": 24,
+    "x": 0,
+    "y": 32
+   },
+   "id": 15,
+   "options": {
+    "dedupStrategy": "none",
+    "enableLogDetails": true,
+    "prettifyLogMessage": false,
+    "showCommonLabels": false,
+    "showLabels": false,
+    "showTime": true,
+    "sortOrder": "Descending",
+    "wrapLogMessage": true
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "{k8s_namespace_name=\"authelia\", service_name=\"authelia-redis\"} | detected_level=~\"$level\" |~ \"(?i)$search\"",
+     "legendFormat": "",
+     "maxLines": 500,
+     "queryType": "range",
+     "refId": "A"
+    }
+   ],
+   "timeFrom": "7d",
+   "title": "Logs",
+   "type": "logs"
+  }
+ ],
+ "refresh": "1m",
+ "schemaVersion": 39,
+ "tags": [
+  "homelab",
+  "service",
+  "authelia"
+ ],
+ "templating": {
+  "list": [
+   {
+    "allValue": ".*",
+    "current": {
+     "selected": true,
+     "text": [
+      "All"
+     ],
+     "value": [
+      "$__all"
+     ]
+    },
+    "includeAll": true,
+    "label": "Log level",
+    "multi": true,
+    "name": "level",
+    "query": "fatal,critical,error,warn,info,debug,trace,unknown",
+    "type": "custom"
+   },
+   {
+    "current": {
+     "text": "",
+     "value": ""
+    },
+    "label": "Search (regex)",
+    "name": "search",
+    "query": "",
+    "type": "textbox"
+   }
+  ]
+ },
+ "time": {
+  "from": "now-24h",
+  "to": "now"
+ },
+ "timezone": "browser",
+ "title": "Authelia Redis",
+ "uid": "svc-authelia-authelia-redis"
+}

@@ -19,7 +19,6 @@ spec:
           - argocd-repo-server
           - argocd-applicationset-controller
           - argocd-notifications-controller-metrics
-          - argocd-dex-server
   endpoints:
     - port: metrics
       interval: 30s
