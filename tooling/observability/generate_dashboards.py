@@ -215,8 +215,7 @@ class Board:
              "options": {"viewMode": "list", "groupMode": "default", "maxItems": 50,
                          "sortOrder": 1, "dashboardAlerts": False, "alertInstanceLabelFilter": "",
                          "stateFilter": {"firing": True, "pending": True, "noData": False,
-                                         "normal": False, "error": True},
-                         "datasource": "Prometheus"}}
+                                         "normal": False, "error": True}}}
         return self._add(p, w, h)
 
     def add_level_search_vars(self):
@@ -461,6 +460,13 @@ def arr(app):
     return fn
 
 
+def adguard_panels(b: Board, s: Svc):
+    b.ts("Probes: LAN DNS (10.0.0.71:53) and web UI", [('min by (instance) (probe_success{probe="internal", target_namespace="adguard-home"})', "{{instance}}")],
+         desc="1 = up, 0 = down. dns_a = resolves github.com through the LoadBalancer IP the LAN uses; 0 = LAN DNS is broken")
+    b.ts("Upstream failures by upstream", [(f'sum by (upstream) (count_over_time({loki_sel(s)} |= "exchange failed" | regexp "upstream=(?P<upstream>[^ ]+)" [$__auto])) or vector(0)', "{{upstream}}")],
+         ds=LOKI, bars=True, desc="queries AdGuard could not forward; with parallel upstreams a single failing upstream is harmless, all failing = DNS outage")
+
+
 def authelia_panels(b: Board, s: Svc):
     b.ts("Authentication attempts", [('sum by (success, type) (increase(authelia_authn[$__rate_interval]))', "success={{success}} {{type}}")], bars=True)
     b.ts("Authorization decisions", [('sum by (type) (increase(authelia_authz[$__rate_interval]))', "{{type}}")], bars=True)
@@ -538,7 +544,7 @@ def ingress_global(b: Board, s: Svc):
 def coredns_panels(b: Board, s: Svc):
     b.ts("DNS requests by rcode", [('sum by (rcode) (rate(coredns_dns_responses_total[$__rate_interval]))', "{{rcode}}")], unit="reqps")
     b.ts("DNS latency p95", [('histogram_quantile(0.95, sum by (le) (rate(coredns_dns_request_duration_seconds_bucket[$__rate_interval])))', "p95")], unit="s")
-    b.ts("Forward errors / SERVFAIL", [('sum(rate(coredns_dns_responses_total{rcode="SERVFAIL"}[$__rate_interval])) or vector(0)', "SERVFAIL"), ('sum(rate(coredns_forward_healthcheck_failures_total[$__rate_interval])) or vector(0)', "forward healthcheck failures")], unit="reqps")
+    b.ts("Forward errors / SERVFAIL", [('sum(rate(coredns_dns_responses_total{rcode="SERVFAIL"}[$__rate_interval])) or vector(0)', "SERVFAIL"), ('sum(rate(coredns_proxy_healthcheck_failures_total[$__rate_interval])) or vector(0)', "forward healthcheck failures")], unit="reqps")
 
 
 def apiserver_panels(b: Board, s: Svc):
@@ -635,7 +641,7 @@ CATALOG: List[Svc] = [
     S("stocks", "postgres-backup", "Stocks Postgres backup (CronJob)", kind="cronjob", folder="Stocks"),
 
     # --- infrastructure ----------------------------------------------------
-    S("adguard-home", "adguard-home", "AdGuard Home (DNS)", ingress=["adguard-home"], probe="adguard-home", folder="Infrastructure"),
+    S("adguard-home", "adguard-home", "AdGuard Home (DNS)", ingress=["adguard-home"], probe="adguard-home", folder="Infrastructure", extras=[adguard_panels]),
     S("authelia", "authelia", "Authelia (SSO)", ingress=["authelia"], probe="authelia", folder="Infrastructure", extras=[authelia_panels]),
     S("authelia", "authelia-redis", "Authelia Redis", folder="Infrastructure"),
     S("aws-ip-updater", "aws-ip-updater", "AWS dynamic DNS updater (CronJob)", kind="cronjob", folder="Infrastructure"),
@@ -724,7 +730,7 @@ def overview() -> Board:
     b.table("CronJobs: time since last success", [('sort_desc(time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))', "")], w=12,
             transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "seconds since success"}}}],
             overrides=[{"matcher": {"id": "byName", "options": "seconds since success"}, "properties": [{"id": "unit", "value": "s"}]}])
-    b.table("Failed Jobs", [('max by (namespace, job_name) (kube_job_status_failed > 0) or on() vector(0)', "")], w=12,
+    b.table("Failed Jobs (started in the last 7d)", [('max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 7 * 86400) or on() vector(0)', "")], w=12,
             transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "failed pods"}}}])
     b.row("Cluster")
     node_panels(b, None)

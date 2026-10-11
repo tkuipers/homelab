@@ -28,7 +28,8 @@ spec:
                 - /bin/sh
                 - -c
                 - |
-                  set -eu
+                  # pipefail: a failing dump must fail the Job, not leave an empty .gz
+                  set -euo pipefail
                   
                   # Install mysql-client and aws-cli
                   apk add --no-cache mysql-client aws-cli > /dev/null

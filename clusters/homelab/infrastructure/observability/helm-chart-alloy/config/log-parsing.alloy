@@ -164,12 +164,14 @@ otelcol.processor.transform "logs" {
 			`set(severity_text, attributes["levelname"]) where severity_text == "" and IsString(attributes["levelname"])`,
 			`set(severity_text, attributes["lvl"]) where severity_text == "" and IsString(attributes["lvl"])`,
 			`set(severity_text, attributes["severity"]) where severity_text == "" and IsString(attributes["severity"])`,
-			`delete_matching_keys(attributes, "^(level|levelname|lvl|severity)$") where severity_text != ""`,
 			`merge_maps(attributes, ExtractPatterns(body, "^\\((?P<guessed_level>[DIWEF])\\) "), "insert") where severity_text == ""`,
 			// best effort for anything still unparsed: first level-ish token near the start
 			`merge_maps(attributes, ExtractPatterns(body, "(?i)^.{0,60}?(?:^|[\\s\\[(|:])(?P<guessed_level>trace|debug|dbg|info|inf|information|notice|note|warn|warning|wrn|error|err|eror|fatal|ftl|crit|critical|panic|severe)(?:$|[\\s\\]):|])"), "insert") where severity_text == ""`,
 			`set(severity_text, attributes["guessed_level"]) where severity_text == "" and attributes["guessed_level"] != nil`,
 			`delete_key(attributes, "guessed_level")`,
+			// after the guesses: a leftover (e.g. numeric, op-connect "level":3) level
+			// attribute would otherwise win over severity_text in Loki's detected_level
+			`delete_matching_keys(attributes, "^(level|levelname|lvl|severity)$") where severity_text != ""`,
 			`set(severity_text, ConvertCase(severity_text, "lower")) where severity_text != ""`,
 			`set(severity_text, "info") where IsMatch(severity_text, "^(i|inf|information|notice|log|detail|hint|statement|system|note)$")`,
 			`set(severity_text, "warn") where IsMatch(severity_text, "^(w|wrn|warning)$")`,
@@ -177,6 +179,21 @@ otelcol.processor.transform "logs" {
 			`set(severity_text, "debug") where IsMatch(severity_text, "^(d|dbg|verbose|vrb)$")`,
 			`set(severity_text, "fatal") where IsMatch(severity_text, "^(f|ftl|panic|emerg|alert|crit|critical|dpanic)$")`,
 			`set(severity_text, "trace") where IsMatch(severity_text, "^(t|trc)$")`,
+
+			// ---- level corrections for known misleveled lines --------------------
+			// gluetun logs a dead VPN tunnel as WARN; it is an outage
+			`set(severity_text, "error") where attributes["log.format"] == "gluetun" and IsMatch(body, "restarting VPN")`,
+			// argocd-repo-server renders without chart dependencies first, logs the
+			// failure at error, then runs helm dependency build and succeeds
+			`set(severity_text, "warn") where resource.attributes["k8s.container.name"] == "argocd-repo-server" and IsMatch(body, "You may need to run .helm dependency build.")`,
+			// nginx logs every 404 for a missing file (scanners: wp-login.php ...) at error
+			`set(severity_text, "warn") where attributes["log.format"] == "nginx_error" and IsMatch(body, "^open\\(\\) .* failed \\(2: No such file or directory\\)")`,
+			// TEMPORARY (remove after 2026-12-10, when 60d retention has aged them out):
+			// stale index refs left by the 2026-10-11 migration delete request make
+			// queries touching 2026-10-11 <06:04Z log "failed to load chunk ... no such
+			// file or directory". Known and harmless; kept as warn instead of error so
+			// they do not drown real Loki errors. See observability README > Gotchas.
+			`set(severity_text, "warn") where resource.attributes["k8s.container.name"] == "loki" and IsString(attributes["err"]) and IsMatch(attributes["err"], "failed to load chunk .*no such file or directory")`,
 			`set(severity_number, SEVERITY_NUMBER_TRACE) where severity_text == "trace"`,
 			`set(severity_number, SEVERITY_NUMBER_DEBUG) where severity_text == "debug"`,
 			`set(severity_number, SEVERITY_NUMBER_INFO) where severity_text == "info"`,

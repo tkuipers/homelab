@@ -61,6 +61,7 @@ data:
         for: 5m
         labels:
           severity: critical
+          namespace: homepage
         annotations:
           summary: homepage/homepage has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
@@ -112,6 +113,7 @@ data:
         for: 5m
         labels:
           severity: critical
+          namespace: homepage
         annotations:
           summary: More than 10% of homepage requests return 5xx
           description: 'Ported monitor: nginx 5xx / total * 100 > 10 over 5m. Source is now the ingress-nginx metrics.'
@@ -163,6 +165,7 @@ data:
         for: 5m
         labels:
           severity: critical
+          namespace: argocd
         annotations:
           summary: argocd/argocd-server has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
@@ -214,6 +217,7 @@ data:
         for: 10m
         labels:
           severity: warning
+          namespace: argocd
         annotations:
           summary: More than 2 Argo CD applications are OutOfSync for 10m
           description: Ported monitor (critical > 2, warning > 1). See Argo CD dashboard > 'Applications not Synced/Healthy'.
@@ -265,6 +269,7 @@ data:
         for: 5m
         labels:
           severity: critical
+          namespace: ingress-nginx
         annotations:
           summary: ingress-nginx/infrastructure-ingress-nginx-controller has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
@@ -316,6 +321,7 @@ data:
         for: 5m
         labels:
           severity: critical
+          namespace: cert-manager
         annotations:
           summary: cert-manager/infrastructure-cert-manager has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
@@ -367,6 +373,7 @@ data:
         for: 5m
         labels:
           severity: critical
+          namespace: stock-guesser
         annotations:
           summary: stock-guesser/stock-guesser-app has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
@@ -418,6 +425,7 @@ data:
         for: 5m
         labels:
           severity: critical
+          namespace: stock-guesser
         annotations:
           summary: stock-guesser/mysql has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
@@ -469,6 +477,7 @@ data:
         for: 5m
         labels:
           severity: warning
+          namespace: stock-guesser
         annotations:
           summary: Stock Guesser app is failing its probes
           description: Ported from the APM latency monitor (avg request duration > 10s). There is no APM anymore; probe failures/timeouts are the replacement signal.
@@ -485,7 +494,7 @@ data:
           datasourceUid: loki
           model:
             refId: A
-            expr: 100 * (sum(count_over_time({k8s_namespace_name="stock-guesser", service_name="stock-guesser-app"} | status >= 500 [5m])) or vector(0)) / sum(count_over_time({k8s_namespace_name="stock-guesser", service_name="stock-guesser-app"} | status != "" [5m]))
+            expr: 100 * (sum(count_over_time({k8s_namespace_name="stock-guesser", service_name="stock-guesser-app"} | status >= 500 | path !~ "/(readyz|healthz|livez|health)/?" [5m])) or vector(0)) / sum(count_over_time({k8s_namespace_name="stock-guesser", service_name="stock-guesser-app"} | status != "" | path !~ "/(readyz|healthz|livez|health)/?" [5m]))
             queryType: instant
             intervalMs: 60000
             maxDataPoints: 43200
@@ -520,9 +529,10 @@ data:
         for: 5m
         labels:
           severity: warning
+          namespace: stock-guesser
         annotations:
           summary: More than 20% of Stock Guesser requests fail (5xx)
-          description: Ported from the APM error-rate monitor (errors/hits > 20%). Now computed from the app's access logs in Loki.
+          description: Ported from the APM error-rate monitor (errors/hits > 20%). Now computed from the app's access logs in Loki (probe/health requests excluded).
           dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-stock-guesser-app
         isPaused: false
       - uid: dd-stock-guesser-training-failures
@@ -571,6 +581,7 @@ data:
         for: 0s
         labels:
           severity: warning
+          namespace: stock-guesser
         annotations:
           summary: A stock-guesser-training Job failed
           description: Ported monitor (failed training Job within 1d).
@@ -622,14 +633,17 @@ data:
                 type: lt
                 params:
                 - 1
-        noDataState: OK
+        noDataState: Alerting
         execErrState: Error
         for: 3m
         labels:
           severity: critical
+          namespace: '{{ $labels.target_namespace }}'
+          service: '{{ $labels.target_service }}'
         annotations:
           summary: '{{ $labels.target_namespace }}/{{ $labels.target_service }} does not answer its health check'
-          description: 'In-cluster probe of the app itself ({{ $labels.instance }}) via its Service. Open the service dashboard: Kubernetes events, restarts and logs.'
+          description: 'In-cluster probe of the app itself ({{ $labels.instance }}) via its Service. Open the service dashboard: Kubernetes events, restarts and logs. No data = the blackbox exporter (observability/blackbox) is down.'
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.target_namespace }}
         isPaused: false
       - uid: hl-public-url-down
         title: Public URL unreachable
@@ -672,14 +686,17 @@ data:
                 type: lt
                 params:
                 - 1
-        noDataState: OK
+        noDataState: Alerting
         execErrState: Error
         for: 5m
         labels:
           severity: critical
+          namespace: '{{ $labels.target_namespace }}'
+          service: '{{ $labels.target_service }}'
         annotations:
           summary: '{{ $labels.instance }} is not reachable (DNS / ingress / TLS / Authelia)'
-          description: The public hostname fails while the app's own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), ingress-nginx, cert-manager or Authelia.
+          description: 'The public hostname fails while the app''s own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), ingress-nginx, cert-manager or Authelia. Each host must answer like its class (blackbox module): http_public = 2xx after redirects, http_authelia = 302 to auth.tkuipers.ca; a 404 usually means the Ingress is gone.'
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.target_namespace }}
         isPaused: false
       - uid: hl-authelia-failed-logins
         title: 'Authelia: many failed logins'
@@ -727,9 +744,11 @@ data:
         for: 0s
         labels:
           severity: warning
+          namespace: authelia
         annotations:
           summary: '{{ $values.B }} failed Authelia logins in 15m'
           description: Brute force or a broken auth backend. Authelia dashboard > 'Failed logins / bans'.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=authelia
         isPaused: false
       - uid: hl-ingress-5xx
         title: Ingress 5xx ratio high
@@ -777,9 +796,12 @@ data:
         for: 5m
         labels:
           severity: warning
+          namespace: '{{ $labels.exported_namespace }}'
+          service: '{{ $labels.ingress }}'
         annotations:
           summary: '{{ $labels.exported_namespace }}/{{ $labels.ingress }}: more than 10% 5xx'
           description: Ingress NGINX dashboard > 'Top 5xx paths' shows which paths fail; the service dashboard shows its logs.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.exported_namespace }}
         isPaused: false
       - uid: hl-crashloop
         title: Container crash looping
@@ -827,9 +849,12 @@ data:
         for: 5m
         labels:
           severity: critical
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $labels.pod }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is crash looping'
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-oomkilled
         title: Container OOMKilled
@@ -877,9 +902,12 @@ data:
         for: 0s
         labels:
           severity: warning
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $labels.pod }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) was OOM killed'
           description: Memory panel on the service dashboard shows usage vs limit.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-error-log-spike
         title: Error log spike
@@ -924,12 +952,121 @@ data:
                 - 0
         noDataState: OK
         execErrState: Error
-        for: 10m
+        for: 15m
         labels:
           severity: warning
+          namespace: '{{ $labels.k8s_namespace_name }}'
+          service: '{{ $labels.service_name }}'
         annotations:
           summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }} logged {{ $values.B }} errors in 10m (>3x the same time yesterday)'
-          description: Open the service dashboard > Logs and filter level=error.
+          description: A sudden change. Steady failures are caught by 'Errors logged steadily'. Open the service dashboard > Logs and filter level=error.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.k8s_namespace_name }}
+        isPaused: false
+      - uid: hl-error-log-sustained
+        title: Errors logged steadily
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: loki
+          model:
+            refId: A
+            expr: sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [1h]))
+            queryType: instant
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 20
+        noDataState: OK
+        execErrState: Error
+        for: 2h
+        labels:
+          severity: warning
+          namespace: '{{ $labels.k8s_namespace_name }}'
+          service: '{{ $labels.service_name }}'
+        annotations:
+          summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }} has logged more than 20 errors an hour for 2h ({{ $values.B }} in the last hour)'
+          description: Something is failing continuously (a dependency, credentials, a region block...) even though the pod looks healthy. Service dashboard > Logs, level=error. If the errors are expected noise, fix the level at the source or in helm-chart-alloy/config/log-parsing.alloy (level corrections) rather than silencing.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.k8s_namespace_name }}
+        isPaused: false
+      - uid: hl-vpn-unhealthy
+        title: VPN tunnel unhealthy
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: loki
+          model:
+            refId: A
+            expr: sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+"} | k8s_container_name="gluetun" |= "restarting VPN" [30m]))
+            queryType: instant
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 2
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+          namespace: '{{ $labels.k8s_namespace_name }}'
+          service: '{{ $labels.service_name }}'
+        annotations:
+          summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }}: gluetun restarted the VPN {{ $values.B }} times in 30m'
+          description: The VPN tunnel fails its health check, so the app behind it has no working network although the pod is Ready. gluetun logs say why (DNS, auth, server).
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.k8s_namespace_name }}
         isPaused: false
       - uid: hl-cert-expiring
         title: TLS certificate expiring
@@ -977,9 +1114,11 @@ data:
         for: 1h
         labels:
           severity: warning
+          namespace: cert-manager
         annotations:
           summary: Certificate for {{ $labels.instance }} expires in < 14 days
           description: cert-manager should renew at 30 days; check the cert-manager dashboard and its logs.
+          dashboard: https://logs.tkuipers.ca/d/svc-cert-manager-infrastructure-71e44504
         isPaused: false
       - uid: hl-cronjob-stale
         title: CronJob missed its schedule
@@ -1027,9 +1166,12 @@ data:
         for: 10m
         labels:
           severity: warning
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ $labels.cronjob }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.cronjob }}: no successful run for more than two schedule intervals'
           description: Value = seconds overdue. Check the CronJob dashboard (last success, failed jobs, logs).
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-cronjob-never-succeeded
         title: CronJob has never succeeded
@@ -1077,9 +1219,12 @@ data:
         for: 1h
         labels:
           severity: warning
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ $labels.cronjob }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.cronjob }} exists for >2 days and never completed successfully'
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-job-failed
         title: Job failed
@@ -1127,9 +1272,12 @@ data:
         for: 0s
         labels:
           severity: warning
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ reReplaceAll "-[0-9]+$" "" $labels.job_name }}'
         annotations:
           summary: Job {{ $labels.namespace }}/{{ $labels.job_name }} failed (started in the last 24h)
           description: 'Logs of the job pod are in Loki even after the pod is gone: {k8s_namespace_name="{{ $labels.namespace }}"} |= "" with k8s_pod_name=~"{{ $labels.job_name }}-.*".'
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-workload-unavailable
         title: Deployment has unavailable replicas
@@ -1177,9 +1325,12 @@ data:
         for: 15m
         labels:
           severity: warning
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ $labels.deployment }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.deployment }} has unavailable replicas for 15m'
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-daemonset-not-ready
         title: DaemonSet pods not ready
@@ -1227,9 +1378,12 @@ data:
         for: 15m
         labels:
           severity: warning
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ $labels.daemonset }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.daemonset }}: {{ $values.B }} pod(s) not ready (alloy = a node is not shipping logs)'
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-statefulset-not-ready
         title: StatefulSet replicas not ready
@@ -1277,9 +1431,12 @@ data:
         for: 15m
         labels:
           severity: critical
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ $labels.statefulset }}'
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.statefulset }} has replicas not ready (Loki/Prometheus/Tempo/Alertmanager/Argo CD controller)'
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-node-disk-forecast
         title: Node filesystem will fill within 24h
@@ -1327,9 +1484,11 @@ data:
         for: 30m
         labels:
           severity: critical
+          namespace: kube-system
         annotations:
           summary: '{{ $labels.instance }} {{ $labels.mountpoint }} will be full within a day at the current rate'
           description: dell-r620 /var holds media, Loki, Prometheus and containerd; kubelet starts evicting at ~90%.
+          dashboard: https://logs.tkuipers.ca/d/svc-observability-kps-prometheu-a00c43a4
         isPaused: false
       - uid: hl-kernel-oom
         title: Kernel OOM kill on node
@@ -1377,9 +1536,11 @@ data:
         for: 0s
         labels:
           severity: warning
+          namespace: kube-system
         annotations:
           summary: The kernel OOM-killed a process on {{ $labels.instance }}
           description: Also catches child processes (e.g. ffmpeg) that container OOM metrics miss. Check node memory and the restarts on the overview.
+          dashboard: https://logs.tkuipers.ca/d/svc-observability-kps-prometheu-a00c43a4
         isPaused: false
       - uid: hl-cert-not-ready
         title: cert-manager certificate not ready
@@ -1427,9 +1588,11 @@ data:
         for: 1h
         labels:
           severity: warning
+          namespace: '{{ $labels.exported_namespace }}'
         annotations:
           summary: Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} is not Ready
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.exported_namespace }}
         isPaused: false
       - uid: hl-cert-expiring-cm
         title: cert-manager certificate expiring
@@ -1477,9 +1640,11 @@ data:
         for: 1h
         labels:
           severity: warning
+          namespace: '{{ $labels.exported_namespace }}'
         annotations:
           summary: Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} expires in {{ $values.B }} days (renewal should have happened at 30d)
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.exported_namespace }}
         isPaused: false
       - uid: hl-postgres-down
         title: Postgres down
@@ -1522,14 +1687,17 @@ data:
                 type: lt
                 params:
                 - 1
-        noDataState: OK
+        noDataState: Alerting
         execErrState: Error
         for: 3m
         labels:
           severity: critical
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ $labels.postgres }}'
         annotations:
           summary: Postgres in {{ $labels.namespace }} is not answering the exporter
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-stocks-ingestion-stalled
         title: Stocks ingestion stalled
@@ -1577,9 +1745,12 @@ data:
         for: 15m
         labels:
           severity: warning
+          namespace: stocks
+          service: '{{ "ingestion" }}'
         annotations:
           summary: Stocks ingestion has not completed a pipeline run in 3h (normally hourly)
           description: Stocks overview > Pipeline activity. Ingestion logs (geo_risk_*_failed etc.) usually say why.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=stocks
         isPaused: false
       - uid: hl-stocks-decisions-stalled
         title: Stocks decisions stalled
@@ -1627,9 +1798,12 @@ data:
         for: 30m
         labels:
           severity: warning
+          namespace: stocks
+          service: '{{ "decision" }}'
         annotations:
           summary: The stocks decision service made no prediction in 26h
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=stocks
         isPaused: false
       - uid: hl-jetstream-backlog
         title: NATS JetStream consumer backlog
@@ -1677,9 +1851,11 @@ data:
         for: 30m
         labels:
           severity: warning
+          namespace: stocks
         annotations:
           summary: '{{ $labels.consumer_name }} on stream {{ $labels.stream_name }} has {{ $values.B }} unprocessed messages'
           description: The consumer is down or stuck - check the service that owns it (stocks overview > Pipeline activity).
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=stocks
         isPaused: false
       - uid: hl-jetstream-redeliveries
         title: NATS JetStream redeliveries
@@ -1727,9 +1903,11 @@ data:
         for: 0s
         labels:
           severity: warning
+          namespace: stocks
         annotations:
           summary: '{{ $labels.consumer_name }} keeps failing to ack messages on {{ $labels.stream_name }}'
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=stocks
         isPaused: false
       - uid: hl-node-disk
         title: Node filesystem almost full
@@ -1777,9 +1955,11 @@ data:
         for: 15m
         labels:
           severity: critical
+          namespace: kube-system
         annotations:
           summary: '{{ $labels.instance }} {{ $labels.mountpoint }} is more than 85% full'
           description: ''
+          dashboard: https://logs.tkuipers.ca/d/svc-observability-kps-prometheu-a00c43a4
         isPaused: false
       - uid: hl-argocd-degraded
         title: Argo CD application degraded
@@ -1827,9 +2007,11 @@ data:
         for: 15m
         labels:
           severity: warning
+          namespace: argocd
         annotations:
           summary: Argo CD app {{ $labels.name }} is {{ $labels.health_status }}
           description: ''
+          dashboard: https://logs.tkuipers.ca/d/svc-argocd-argocd-server
         isPaused: false
       - uid: hl-externalsecret-failing
         title: ExternalSecret not syncing
@@ -1877,9 +2059,11 @@ data:
         for: 30m
         labels:
           severity: warning
+          namespace: '{{ $labels.exported_namespace }}'
         annotations:
           summary: ExternalSecret {{ $labels.exported_namespace }}/{{ $labels.name }} is not Ready
           description: Usually the 1Password item/field is missing. See the External Secrets Operator dashboard.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.exported_namespace }}
         isPaused: false
       - uid: hl-arr-health
         title: '*arr health check failing'
@@ -1892,7 +2076,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: max by (job) (sonarr_system_health_issues or radarr_system_health_issues or readarr_system_health_issues or prowlarr_system_health_issues)
+            expr: max by (namespace, pod, source, message) ({__name__=~"(sonarr|radarr|readarr|prowlarr)_system_health_issues", source!="UpdateCheck"} > 0)
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -1927,9 +2111,12 @@ data:
         for: 1h
         labels:
           severity: warning
+          namespace: '{{ $labels.namespace }}'
+          service: '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $labels.pod }}'
         annotations:
-          summary: '{{ $labels.job }} reports health issues (System > Status)'
-          description: ''
+          summary: '{{ $labels.pod }}: {{ $labels.message }}'
+          description: The app's own health check (System > Status), check {{ $labels.source }}. 'Update available' notices are ignored.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-logs-dropped
         title: Logs are being dropped
@@ -1977,9 +2164,11 @@ data:
         for: 10m
         labels:
           severity: critical
+          namespace: observability
         annotations:
           summary: Alloy cannot ship logs to Loki
           description: Check the Loki and Alloy dashboards (Observability folder).
+          dashboard: https://logs.tkuipers.ca/d/svc-observability-alloy
         isPaused: false
       - uid: hl-alloy-node-silent
         title: A node stopped shipping logs
@@ -2027,9 +2216,11 @@ data:
         for: 10m
         labels:
           severity: critical
+          namespace: observability
         annotations:
           summary: Alloy on {{ $labels.instance }} has not sent logs to Loki for 10m
           description: ''
+          dashboard: https://logs.tkuipers.ca/d/svc-observability-alloy
         isPaused: false
       - uid: hl-loki-discarding
         title: Loki is discarding log lines
@@ -2077,9 +2268,11 @@ data:
         for: 15m
         labels:
           severity: warning
+          namespace: observability
         annotations:
           summary: Loki discards lines ({{ $labels.reason }}) - logs are being lost
           description: too_far_behind = out-of-order delivery; rate_limited = raise limits in helm-chart-loki; line_too_long etc. Check the Loki dashboard.
+          dashboard: https://logs.tkuipers.ca/d/svc-observability-loki
         isPaused: false
       - uid: hl-scrape-down
         title: Prometheus target down
@@ -2127,9 +2320,11 @@ data:
         for: 15m
         labels:
           severity: warning
+          namespace: '{{ $labels.namespace }}'
         annotations:
           summary: Scrape target {{ $labels.namespace }}/{{ $labels.job }} is down
           description: ''
+          dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.namespace }}
         isPaused: false
       - uid: hl-loki-storage-budget
         title: Loki storage budget at risk
@@ -2177,9 +2372,11 @@ data:
         for: 1h
         labels:
           severity: warning
+          namespace: observability
         annotations:
           summary: Loki would store ~{{ $values.B }} GB over its 60d retention (volume is 100Gi)
           description: Find the noisy service on the Prometheus/observability dashboard ('Loki ingest by namespace') and lower its log level or drop the lines in Alloy, or lower retention_period in helm-chart-loki/values.yaml.
+          dashboard: https://logs.tkuipers.ca/d/svc-observability-loki
         isPaused: false
       - uid: hl-prometheus-tsdb-full
         title: Prometheus TSDB near its size limit
@@ -2227,9 +2424,11 @@ data:
         for: 1h
         labels:
           severity: warning
+          namespace: observability
         annotations:
           summary: Prometheus storage is at its 36GB retentionSize (oldest data is being dropped early)
           description: ''
+          dashboard: https://logs.tkuipers.ca/d/svc-observability-prometheus-kps
         isPaused: false
       - uid: hl-loki-no-logs
         title: No logs arriving in Loki
@@ -2277,9 +2476,11 @@ data:
         for: 10m
         labels:
           severity: critical
+          namespace: observability
         annotations:
           summary: Loki has received no logs in 10 minutes
           description: ''
+          dashboard: https://logs.tkuipers.ca/d/svc-observability-loki
         isPaused: false
     deleteRules:
     - orgId: 1

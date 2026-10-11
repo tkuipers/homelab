@@ -41,7 +41,7 @@ UI: **https://logs.tkuipers.ca** (Authelia SSO; local admin at `/login?disableAu
 
 | Component | Chart dir / ArgoCD app | What |
 |-----------|------------------------|------|
-| kube-prometheus-stack (release `kps`) | `helm-chart-kube-prometheus-stack` / `infrastructure-kube-prometheus-stack` | Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics, blackbox exporter (`probe=external`: every `*.tkuipers.ca` host; `probe=internal`: each app's health endpoint / DB port via its Service) |
+| kube-prometheus-stack (release `kps`) | `helm-chart-kube-prometheus-stack` / `infrastructure-kube-prometheus-stack` | Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics, blackbox exporter (`probe=external`: every `*.tkuipers.ca` host, strict per class - `http_public` 2xx, `http_authelia` 302 to auth.tkuipers.ca, ...; `probe=internal`: each app's health endpoint / DB port via its Service, AdGuard LAN DNS via `dns_a`) |
 | Loki | `helm-chart-loki` / `infrastructure-loki` | logs, single binary, filesystem; OTLP ingestion |
 | Tempo | `helm-chart-tempo` / `infrastructure-tempo` | traces + span metrics/service graph |
 | Alloy | `helm-chart-alloy` / `infrastructure-alloy` | DaemonSet: tails `/var/log/pods`, parses, ships to Loki; OTLP receiver (`alloy.observability.svc:4317/4318`). `alloy-events`: Kubernetes events → Loki |
@@ -85,12 +85,31 @@ python3 tooling/observability/generate_alerts.py       # -> alerts/
 New service: add a `Svc(...)` line to `CATALOG` in the generator, re-run,
 commit. Grafana's sidecar loads the ConfigMaps (label `grafana_dashboard`,
 folder from annotation `grafana_folder`). Hand edits in the UI are not saved.
-Alert rules are Grafana-managed (folder *Alerts*); the kube-prometheus-stack
-default rules appear next to them (KubeCPU/MemoryOvercommit disabled).
+
+**Alerts** - two evaluators:
+- *Grafana-managed* (folder *Alerts*, `generate_alerts.py`): every rule carries
+  `namespace` + `service` labels and a `dashboard` annotation (the service
+  dashboard, or the namespace's dashboards). Besides "is it up" (probes,
+  replicas, crash loops) there are "is it failing" rules: *Error log spike*
+  (sudden change vs yesterday) and *Errors logged steadily* (>20 errors/h for
+  2h - catches things that are broken all the time), plus functional ones
+  (stocks pipeline, JetStream, VPN tunnel, *arr health, backups via CronJob
+  rules). Probe rules alert on *no data* too (blackbox exporter gone).
+- *Prometheus* (kube-prometheus-stack default rules, routed by the kps
+  Alertmanager): node/kubelet/apiserver/Prometheus internals, KubeJobNotCompleted
+  etc. Rules that duplicate a Grafana rule are disabled in the kps values
+  (`defaultRules.disabled`), and `GrafanaDown` / `GrafanaAlertingStalled` watch
+  the Grafana evaluator. `Watchdog` always fires (dead-man's switch).
+
+Noisy rule? Fix the level at the source or add a level correction in
+`helm-chart-alloy/config/log-parsing.alloy` (section "level corrections") -
+don't silence the rule.
+
 **No contact point is configured yet** - alerts are visible in Grafana only.
-To get paged: add a contact point (ntfy / Pushover / Discord / email) and a
-notification policy for `severity=critical` in Grafana, and point the kps
-Alertmanager `Watchdog` at a dead-man's switch (e.g. healthchecks.io) - the
+To get paged, configure the same channel (ntfy / Pushover / Discord / email)
+in **both** places: a Grafana contact point + notification policy, and a
+receiver in the kps Alertmanager config (`alertmanager.config` in the kps
+values); send `Watchdog` to a dead-man's switch (e.g. healthchecks.io) - the
 whole stack runs on dell-r620, so that is the only way to hear about that
 node dying.
 
@@ -100,6 +119,12 @@ python3 tooling/observability/verify_log_coverage.py   # every container's logs 
 python3 tooling/observability/verify_dashboards.py     # every dashboard panel returns data
 ```
 (see the docstrings for the port-forwards / credentials they need)
+
+### Databases in Grafana
+Datasources *Stocks Postgres*, *Polymarket Postgres*, *Stock Guesser MySQL*
+log in as `grafana_ro` (SELECT only, read-only transactions, 30s statement
+timeout, 5 connections). Recreate the users after a database rebuild:
+`tooling/scripts/setup-credentials/setup-grafana-db-readonly.sh`.
 
 ### Secrets
 Grafana admin + OIDC client secret come from the 1Password item
@@ -122,6 +147,7 @@ commit + push, then `... finalize`.
 - Loki logs "failed to load chunk ... no such file" when a query touches the original
   (non-backfill) streams for 2026-10-11 before ~06:04Z: stale index refs left by the
   migration's delete request. Harmless (that data was replaced by `log_origin=backfill-*`
-  streams); they age out with retention.
+  streams); they age out with retention. Alloy downgrades exactly that message to warn
+  (`log-parsing.alloy`, marked TEMPORARY - remove after 2026-12-10).
 - Alloy hot-reloads its config; one reload deadlocked it (no logs shipped).
   It now has a liveness probe, and "A node stopped shipping logs" alerts.

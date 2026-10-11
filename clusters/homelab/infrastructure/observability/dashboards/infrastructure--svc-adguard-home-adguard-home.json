@@ -1316,6 +1316,134 @@
    },
    "id": 19,
    "panels": [],
+   "title": "Service metrics",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "1 = up, 0 = down. dns_a = resolves github.com through the LoadBalancer IP the LAN uses; 0 = LAN DNS is broken",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 44
+   },
+   "id": 20,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "min by (instance) (probe_success{probe=\"internal\", target_namespace=\"adguard-home\"})",
+     "instant": false,
+     "legendFormat": "{{instance}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Probes: LAN DNS (10.0.0.71:53) and web UI",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "queries AdGuard could not forward; with parallel upstreams a single failing upstream is harmless, all failing = DNS outage",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 44
+   },
+   "id": 21,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum by (upstream) (count_over_time({k8s_namespace_name=\"adguard-home\", service_name=\"adguard-home\"} |= \"exchange failed\" | regexp \"upstream=(?P<upstream>[^ ]+)\" [$__auto])) or vector(0)",
+     "legendFormat": "{{upstream}}",
+     "queryType": "range",
+     "refId": "A"
+    }
+   ],
+   "title": "Upstream failures by upstream",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 52
+   },
+   "id": 22,
+   "panels": [],
    "title": "Resources",
    "type": "row"
   },
@@ -1406,9 +1534,9 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 44
+    "y": 53
    },
-   "id": 20,
+   "id": 23,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1545,9 +1673,9 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 44
+    "y": 53
    },
-   "id": 21,
+   "id": 24,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1625,9 +1753,9 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 44
+    "y": 53
    },
-   "id": 22,
+   "id": 25,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1661,9 +1789,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 52
+    "y": 61
    },
-   "id": 23,
+   "id": 26,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -1678,9 +1806,9 @@
     "h": 16,
     "w": 24,
     "x": 0,
-    "y": 53
+    "y": 62
    },
-   "id": 24,
+   "id": 27,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,

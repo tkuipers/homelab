@@ -36,17 +36,20 @@ otelcol.receiver.filelog "pods" {
 		// CRI format, joins partial lines, sets k8s.namespace.name /
 		// k8s.pod.name / k8s.pod.uid / k8s.container.name from the file path.
 		{type = "container", add_metadata_from_filepath = true},
-		// Multi-line: stack traces / tracebacks are glued onto the line before.
+		// Multi-line: stack traces / tracebacks are glued onto the line before,
+		// per stream: stdout and stderr of one container must not be glued together.
+		{type = "add", field = `attributes["log.stream_id"]`, value = `EXPR(attributes["log.file.path"] + ":" + attributes["log.iostream"])`},
 		{
 			type               = "recombine",
 			combine_field      = "body",
-			source_identifier  = `attributes["log.file.path"]`,
+			source_identifier  = `attributes["log.stream_id"]`,
 			is_first_entry     = `body matches "^\\S" and not (body matches "^(Traceback |During handling|The above exception|[A-Za-z_][\\w.]*(Error|Exception|Warning)(: |$)|Caused by:|no A{1,4} record resolved)")`,
 			combine_with       = "\n",
 			max_log_lines      = 500,
 			force_flush_period = "1s",
 		},
 		{type = "remove", field = `attributes["log.file.path"]`},
+		{type = "remove", field = `attributes["log.stream_id"]`},
 		{type = "remove", field = `attributes["log.file.name"]`},
 		{type = "remove", field = `attributes["logtag"]`},
 	]
@@ -147,7 +150,11 @@ otelcol.processor.filter "healthchecks" {
 	error_mode = "ignore"
 
 	logs {
-		log_record = [`attributes["healthcheck"] == true and Int(attributes["status"]) < 400`]
+		log_record = [
+			`attributes["healthcheck"] == true and Int(attributes["status"]) < 400`,
+			// 1Password Connect: probe/heartbeat requests (~2/s, no information)
+			`IsMatch(resource.attributes["k8s.container.name"], "^connect-(api|sync)$") and IsMatch(body, "^\\(I\\) GET /(health|heartbeat)( completed \\(200|$)")`,
+		]
 	}
 
 	output {

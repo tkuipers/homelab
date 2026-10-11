@@ -21,6 +21,53 @@ kube-prometheus-stack:
       # fires forever on old failed Jobs; replaced by the Grafana rule
       # "Job failed" (only Jobs started in the last 24h)
       KubeJobFailed: true
+      # Duplicates of Grafana-managed rules (alerts/ - generate_alerts.py), which
+      # carry namespace/service labels and dashboard links. One failure = one alert.
+      KubePodCrashLooping: true             # hl-crashloop
+      KubeDeploymentReplicasMismatch: true  # hl-workload-unavailable
+      KubeStatefulSetReplicasMismatch: true # hl-statefulset-not-ready
+      KubeDaemonSetRolloutStuck: true       # hl-daemonset-not-ready
+      NodeFilesystemAlmostOutOfSpace: true  # hl-node-disk
+      NodeFilesystemSpaceFillingUp: true    # hl-node-disk-forecast
+      TargetDown: true                      # hl-scrape-down
+
+  # Watches the other evaluator: Grafana evaluates every rule in alerts/, so
+  # Prometheus alerts when Grafana is down or has stopped evaluating.
+  additionalPrometheusRulesMap:
+    grafana-alerting:
+      groups:
+        - name: grafana-alerting
+          rules:
+            - alert: GrafanaDown
+              expr: absent(up{job="kps-grafana"} == 1)
+              for: 10m
+              labels:
+                severity: critical
+                namespace: observability
+                service: grafana
+              annotations:
+                summary: Grafana is down - none of the Grafana-managed alert rules are being evaluated
+                description: kubectl -n observability get pods -l app.kubernetes.io/name=grafana; check its logs.
+            - alert: GrafanaAlertingStalled
+              expr: sum(rate(grafana_alerting_rule_evaluations_total[10m])) == 0
+              for: 15m
+              labels:
+                severity: critical
+                namespace: observability
+                service: grafana
+              annotations:
+                summary: Grafana is up but evaluates no alert rules
+                description: Check Grafana logs (logger=ngalert) and Alerting > Alert rules for provisioning errors.
+            - alert: GrafanaAlertRulesFailing
+              expr: sum(increase(grafana_alerting_rule_evaluation_failures_total[15m])) > 5
+              for: 15m
+              labels:
+                severity: warning
+                namespace: observability
+                service: grafana
+              annotations:
+                summary: Grafana alert rules fail to evaluate (query errors / datasource down)
+                description: Alerting > Alert rules, filter by state Error.
 
   # --- control plane -------------------------------------------------------
   # Talos binds controller-manager/scheduler on 0.0.0.0 (see
@@ -178,6 +225,9 @@ kube-prometheus-stack:
             - logs.tkuipers.ca
 
     grafana.ini:
+      log:
+        # one info line per datasource query (alert evaluation = ~15k lines/h)
+        filters: plugin.prometheus:warn plugin.loki:warn plugin.tempo:warn tsdb.loki:warn
       server:
         domain: logs.tkuipers.ca
         root_url: https://logs.tkuipers.ca
@@ -340,13 +390,51 @@ prometheus-blackbox-exporter:
         timeout: 5s
         tcp:
           preferred_ip_protocol: ip4
-      http_up_tls:
+      # --- external (public hostname) modules: each one only accepts what a
+      # healthy host of that class answers, so a deleted/misrouted Ingress
+      # (ingress-nginx default backend 404) or a broken backend (502/503) fails.
+      http_public:          # public app: 2xx after redirects
+        prober: http
+        timeout: 10s
+        http:
+          preferred_ip_protocol: ip4
+          follow_redirects: true
+      http_authelia:        # behind Authelia: the redirect to the login portal
         prober: http
         timeout: 10s
         http:
           preferred_ip_protocol: ip4
           follow_redirects: false
-          valid_status_codes: [200, 201, 202, 204, 301, 302, 303, 307, 308, 401, 403, 404, 405]
+          valid_status_codes: [302]
+          fail_if_header_not_matches:
+            - header: Location
+              regexp: '^https://auth\.tkuipers\.ca/'
+      http_401:             # API that requires credentials (k8s API proxy)
+        prober: http
+        timeout: 10s
+        http:
+          preferred_ip_protocol: ip4
+          follow_redirects: false
+          valid_status_codes: [401]
+      http_anki_sync:       # anki sync server: no page at /, its sync API answers 400 to an empty POST
+        prober: http
+        timeout: 10s
+        http:
+          preferred_ip_protocol: ip4
+          method: POST
+          follow_redirects: false
+          valid_status_codes: [400]
+      # LAN DNS (AdGuard): resolves an external name with a non-empty answer
+      dns_a:
+        prober: dns
+        timeout: 5s
+        dns:
+          preferred_ip_protocol: ip4
+          query_name: github.com
+          query_type: A
+          valid_rcodes: [NOERROR]
+          validate_answer_rrs:
+            fail_if_none_matches_regexp: ['.*\tIN\tA\t.*']
   resources:
     requests:
       cpu: 10m
@@ -361,161 +449,184 @@ prometheus-blackbox-exporter:
     targets:
     - name: adguard-tkuipers-ca
       url: https://adguard.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: adguard-home
         target_service: adguard-home
     - name: anki-tkuipers-ca
-      url: https://anki.tkuipers.ca/
-      module: http_up_tls
+      url: https://anki.tkuipers.ca/sync/hostKey
+
+      module: http_anki_sync
       additionalMetricsRelabels:
         probe: external
         target_namespace: anki
         target_service: anki
     - name: argo-tkuipers-ca
       url: https://argo.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: argocd
         target_service: argocd-server
     - name: auth-tkuipers-ca
       url: https://auth.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: authelia
         target_service: authelia
     - name: hamh-tkuipers-ca
       url: https://hamh.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: homeassistant
         target_service: hamh
     - name: home-tkuipers-ca
       url: https://home.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: homeassistant
         target_service: homeassistant
     - name: tkuipers-ca
       url: https://tkuipers.ca/
-      module: http_up_tls
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: homepage
         target_service: homepage
     - name: resume-tkuipers-ca
       url: https://resume.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: homepage
         target_service: resume-proxy
     - name: bazarr-tkuipers-ca
       url: https://bazarr.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: bazarr
     - name: jellyfin-tkuipers-ca
       url: https://jellyfin.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: jellyfin
     - name: mediarequests-tkuipers-ca
       url: https://mediarequests.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: jellyseerr
     - name: kavita-tkuipers-ca
       url: https://kavita.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: kavita
     - name: prowlarr-tkuipers-ca
       url: https://prowlarr.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: prowlarr
     - name: radarr-tkuipers-ca
       url: https://radarr.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: radarr
     - name: readarr-tkuipers-ca
       url: https://readarr.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: readarr
     - name: sabnzbd-tkuipers-ca
       url: https://sabnzbd.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: sabnzbd
     - name: sonarr-tkuipers-ca
       url: https://sonarr.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: sonarr
     - name: transmission-tkuipers-ca
       url: https://transmission.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: mediacenter
         target_service: transmission
     - name: logs-tkuipers-ca
       url: https://logs.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: observability
         target_service: grafana
     - name: polymarket-tkuipers-ca
       url: https://polymarket.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_authelia
       additionalMetricsRelabels:
         probe: external
         target_namespace: polymarket-bot
         target_service: bot
     - name: stocks-api-tkuipers-ca
-      url: https://stocks-api.tkuipers.ca/
-      module: http_up_tls
+      url: https://stocks-api.tkuipers.ca/healthz
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: stocks
         target_service: api
     - name: stocks-tkuipers-ca
       url: https://stocks.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: stocks
         target_service: console
     - name: k8s-tkuipers-ca
       url: https://k8s.tkuipers.ca/
-      module: http_up_tls
+
+      module: http_401
       additionalMetricsRelabels:
         probe: external
         target_namespace: ingress-nginx
@@ -627,6 +738,13 @@ prometheus-blackbox-exporter:
         probe: internal
         target_namespace: anki
         target_service: anki
+    - name: int-adguard-home-dns
+      url: 10.0.0.71:53
+      module: dns_a
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: adguard-home
+        target_service: adguard-home
     - name: int-adguard-home-adguard-home
       url: http://adguard-home-web.adguard-home.svc/
       module: http_alive

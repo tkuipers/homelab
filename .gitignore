@@ -28,3 +28,7 @@ cluster-configs/
 !**setup**credentials**.sh
 tooling/scripts/setup-credentials/setup-stocks-credentials.local.inc.sh
 op.sig
+
+# Python bytecode
+__pycache__/
+*.pyc

@@ -537,7 +537,6 @@
    "options": {
     "alertInstanceLabelFilter": "",
     "dashboardAlerts": false,
-    "datasource": "Prometheus",
     "groupMode": "default",
     "maxItems": 50,
     "sortOrder": 1,
@@ -937,7 +936,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "max by (namespace, job_name) (kube_job_status_failed > 0) or on() vector(0)",
+     "expr": "max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 7 * 86400) or on() vector(0)",
      "format": "table",
      "instant": true,
      "legendFormat": "__auto",
@@ -945,7 +944,7 @@
      "refId": "A"
     }
    ],
-   "title": "Failed Jobs",
+   "title": "Failed Jobs (started in the last 7d)",
    "transformations": [
     {
      "id": "organize",

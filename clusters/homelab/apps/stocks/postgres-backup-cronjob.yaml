@@ -25,10 +25,11 @@ spec:
             - name: backup
               image: postgres:16
               command:
-                - /bin/sh
+                - /bin/bash
                 - -c
                 - |
-                  set -eu
+                  # pipefail: a failing dump must fail the Job, not leave an empty .gz
+                  set -euo pipefail
 
                   apt-get update -qq && apt-get install -y -qq awscli > /dev/null
 
