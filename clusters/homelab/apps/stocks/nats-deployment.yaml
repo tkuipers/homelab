@@ -26,6 +26,9 @@ spec:
             - -js
             - -sd
             - /data
+            # HTTP monitoring (healthz/varz/jsz) for the exporter + probes
+            - -m
+            - "8222"
           ports:
             - containerPort: 4222
               name: client
