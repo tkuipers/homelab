@@ -1,0 +1,130 @@
+# Scrape configs for components that expose Prometheus metrics but are not
+# installed by a chart we control (or whose chart doesn't ship a monitor).
+# Prometheus selects every ServiceMonitor/PodMonitor in the cluster.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [argocd]
+  selector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - argocd-metrics
+          - argocd-server-metrics
+          - argocd-repo-server
+          - argocd-applicationset-controller
+          - argocd-notifications-controller-metrics
+          - argocd-dex-server
+  endpoints:
+    - port: metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: authelia
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [authelia]
+  selector:
+    matchLabels:
+      app: authelia
+  endpoints:
+    - port: metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cert-manager
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [cert-manager]
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: infrastructure-cert-manager
+  endpoints:
+    - port: tcp-prometheus-servicemonitor
+      interval: 60s
+    - port: http-metrics
+      interval: 60s
+    - port: metrics
+      interval: 60s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: exportarr
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [mediacenter]
+  selector: {}
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 60s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: metallb
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [metallb-system]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: metallb
+  podMetricsEndpoints:
+    - port: monitoring
+      interval: 60s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: external-secrets
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [default]
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: external-secrets
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 60s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: external-dns
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [external-dns]
+  selector: {}
+  podMetricsEndpoints:
+    - portNumber: 7979
+      interval: 60s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: csi-driver-smb
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [nfs-provisioner]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: csi-driver-smb
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 60s

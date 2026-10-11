@@ -6,3 +6,5 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - storage-pvs.yaml
+  # Scrape configs for things not covered by their own charts
+  - monitors/servicemonitors.yaml
