@@ -244,6 +244,7 @@ kube-prometheus-stack:
         secretKeyRef:
           name: homelab-agent-webhook
           key: token
+          optional: true
       GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
         secretKeyRef:
           name: grafana-oidc
