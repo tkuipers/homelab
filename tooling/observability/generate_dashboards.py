@@ -72,6 +72,7 @@ class Svc:
     access_logs: bool = False   # emits per-request access logs (status field)
     extras: List[Callable] = field(default_factory=list)
     description: str = ""
+    quiet: bool = False         # logs very rarely: Logs panel looks back 400d (archive streams)
 
 
 def pod_re(s: Svc) -> str:
@@ -416,8 +417,8 @@ def standard(s: Svc) -> Board:
 
     # ---- logs -------------------------------------------------------------
     b.row("Logs")
-    b.logs("Logs", f'{sel} | detected_level=~"$level" |~ "(?i)$search"', h=16, time_from="30d",
-           desc="newest first, whole retention (30d) so quiet services still show their last lines. Filter with the level/search variables; expand a line for all parsed fields")
+    b.logs("Logs", f'{sel} | detected_level=~"$level" |~ "(?i)$search"', h=16, time_from="400d" if s.quiet else "30d",
+           desc=("this service logs very rarely: looking back 400d (history is archived for that long). " if s.quiet else "") + "newest first. Filter with the level/search variables; expand a line for all parsed fields")
     return b
 
 
@@ -630,7 +631,7 @@ CATALOG: List[Svc] = [
     S("stocks", "minio", "Stocks MinIO", folder="Stocks"),
     S("stocks", "nats", "Stocks NATS", folder="Stocks"),
     S("stocks", "postgres", "Stocks Postgres", folder="Stocks", extras=[postgres_panels]),
-    S("stocks", "redis", "Stocks Redis", folder="Stocks"),
+    S("stocks", "redis", "Stocks Redis", folder="Stocks", quiet=True),
     S("stocks", "postgres-backup", "Stocks Postgres backup (CronJob)", kind="cronjob", folder="Stocks"),
 
     # --- infrastructure ----------------------------------------------------
@@ -641,18 +642,18 @@ CATALOG: List[Svc] = [
     S("cert-manager", "infrastructure-cert-manager", "cert-manager", folder="Infrastructure", extras=[cert_manager_panels]),
     S("cert-manager", "infrastructure-cert-manager-cainjector", "cert-manager cainjector", folder="Infrastructure"),
     S("cert-manager", "infrastructure-cert-manager-webhook", "cert-manager webhook", folder="Infrastructure"),
-    S("nfs-provisioner", "csi-smb-controller", "CSI SMB controller", folder="Infrastructure"),
+    S("nfs-provisioner", "csi-smb-controller", "CSI SMB controller", folder="Infrastructure", quiet=True),
     S("nfs-provisioner", "csi-smb-node", "CSI SMB node", kind="daemonset", folder="Infrastructure"),
-    S("nfs-provisioner", "samba-server-dell-r620", "Samba server (dell-r620)", folder="Infrastructure"),
-    S("nfs-provisioner", "samba-server-omen-worker1", "Samba server (omen-worker1)", folder="Infrastructure"),
+    S("nfs-provisioner", "samba-server-dell-r620", "Samba server (dell-r620)", folder="Infrastructure", quiet=True),
+    S("nfs-provisioner", "samba-server-omen-worker1", "Samba server (omen-worker1)", folder="Infrastructure", quiet=True),
     S("external-dns", "external-dns", "external-dns", folder="Infrastructure"),
     S("ingress-nginx", "infrastructure-ingress-nginx-controller", "Ingress NGINX", access_logs=True, probe="kubernetes-api-proxy", folder="Infrastructure",
       extras=[ingress_global], description="All HTTP traffic into the cluster. Per-service views live in each service dashboard."),
-    S("local-path-storage", "local-path-provisioner", "local-path provisioner", folder="Infrastructure"),
+    S("local-path-storage", "local-path-provisioner", "local-path provisioner", folder="Infrastructure", quiet=True),
     S("metallb-system", "infrastructure-metallb-controller", "MetalLB controller", folder="Infrastructure", extras=[metallb_panels]),
     S("metallb-system", "infrastructure-metallb-speaker", "MetalLB speaker", kind="daemonset", folder="Infrastructure"),
-    S("nvidia-device-plugin", "nvidia-device-plugin", "NVIDIA device plugin", kind="daemonset", folder="Infrastructure"),
-    S("default", "external-secrets", "External Secrets Operator", folder="Infrastructure", extras=[eso_panels]),
+    S("nvidia-device-plugin", "nvidia-device-plugin", "NVIDIA device plugin", kind="daemonset", folder="Infrastructure", quiet=True),
+    S("default", "external-secrets", "External Secrets Operator", folder="Infrastructure", extras=[eso_panels], quiet=True),
     S("default", "external-secrets-cert-controller", "External Secrets cert controller", folder="Infrastructure"),
     S("default", "external-secrets-webhook", "External Secrets webhook", folder="Infrastructure"),
     S("default", "op-connect", "1Password Connect", folder="Infrastructure"),
@@ -663,7 +664,7 @@ CATALOG: List[Svc] = [
     S("argocd", "argocd-applicationset-controller", "Argo CD applicationset controller", folder="Argo CD"),
     S("argocd", "argocd-notifications-controller", "Argo CD notifications controller", folder="Argo CD"),
     S("argocd", "argocd-dex-server", "Argo CD dex", folder="Argo CD"),
-    S("argocd", "argocd-redis", "Argo CD redis", folder="Argo CD"),
+    S("argocd", "argocd-redis", "Argo CD redis", folder="Argo CD", quiet=True),
 
     S("kube-system", "coredns", "CoreDNS", folder="Kubernetes", extras=[coredns_panels]),
     S("kube-system", "kube-apiserver", "kube-apiserver", kind="static", folder="Kubernetes", extras=[apiserver_panels]),

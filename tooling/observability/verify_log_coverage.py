@@ -29,7 +29,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 LOKI = os.environ.get("LOKI_URL", "http://localhost:13100").rstrip("/")
-RETENTION = dt.timedelta(days=int(os.environ.get("RETENTION_DAYS", "29")))
+RETENTION = dt.timedelta(days=int(os.environ.get("RETENTION_DAYS", "399")))  # archive streams keep 400d
 
 
 def kubectl(*args):
@@ -51,7 +51,7 @@ def last_log_time(ns, pod, container):
 
 
 def loki_count(ns, pod, container):
-    q = f'sum(count_over_time({{k8s_namespace_name="{ns}", k8s_pod_name="{pod}", k8s_container_name="{container}"}}[30d]))'
+    q = f'sum(count_over_time({{k8s_namespace_name="{ns}", k8s_pod_name="{pod}", k8s_container_name="{container}"}}[400d]))'
     url = f"{LOKI}/loki/api/v1/query?" + urllib.parse.urlencode({"query": q})
     for attempt in range(5):
         try:

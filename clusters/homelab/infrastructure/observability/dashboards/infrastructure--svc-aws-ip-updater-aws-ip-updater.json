@@ -1157,7 +1157,7 @@
     "type": "loki",
     "uid": "loki"
    },
-   "description": "newest first, whole retention (30d) so quiet services still show their last lines. Filter with the level/search variables; expand a line for all parsed fields",
+   "description": "newest first. Filter with the level/search variables; expand a line for all parsed fields",
    "gridPos": {
     "h": 16,
     "w": 24,
