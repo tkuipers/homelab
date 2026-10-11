@@ -4,8 +4,6 @@
 # stored in the 1Password item "Homelab Agent Credentials" (Homelab vault).
 # The agent's ExternalSecret takes every field of the item.
 #
-#   git-ssh-private-key   deploy key with WRITE access to tkuipers/homelab
-#                         (generated here; the public half is added to GitHub)
 #   webhook-token         bearer token Grafana / Alertmanager send (generated)
 #   twilio-account-sid    Twilio account (console.twilio.com, Account info)
 #   twilio-auth-token     Twilio auth token (also signs the incoming-SMS webhook)
@@ -13,11 +11,17 @@
 #   sms-allowed-numbers   your mobile number(s), E.164, comma separated
 #   typesafe-api-key      Jev classifier key (console.typesafe.ai)
 #
+# Other credentials the agent uses (not managed here):
+#   "Agent SSH Key", "Agent SSH Signing Key" (1Password, Homelab vault): Tyler's keys; the
+#        agent clones/pushes and signs commits as him through its ssh-agent sidecar
+#   "Homelab Agent MCP Secrets" (optional): values MCP servers reference by name
+#   HOMELAB_DEPLOY_KEY (Actions secret in tkuipers/homelab-agent): CI's write deploy key
+#        on tkuipers/homelab, used only to pin new image digests
+#
 # Usage:
 #   ./setup-homelab-agent-credentials.sh                # create what's missing, ask for the rest
-#   ./setup-homelab-agent-credentials.sh --rotate-key   # new deploy key (old one removed from GitHub)
 #   ./setup-homelab-agent-credentials.sh --rotate-token # new webhook token (restart Grafana + Alertmanager after)
-#   ./setup-homelab-agent-credentials.sh --generated-only  # only the deploy key + webhook token, no prompts
+#   ./setup-homelab-agent-credentials.sh --generated-only  # only the webhook token, no prompts
 #
 # Afterwards ESO picks the values up within an hour; to apply right away:
 #   kubectl -n homelab-agent annotate externalsecret homelab-agent force-sync=$(date +%s) --overwrite
@@ -25,6 +29,7 @@
 #
 # Twilio: point the number's "A message comes in" webhook at
 #   https://agent.tkuipers.ca/hooks/sms  (HTTP POST)
+# (the agent sets the fallback URL, /hooks/sms-fallback on the relay, itself)
 #
 
 set -euo pipefail
@@ -33,25 +38,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/common.sh"
 
 ITEM_NAME="Homelab Agent Credentials"
-REPO="tkuipers/homelab"
-DEPLOY_KEY_TITLE="homelab-agent (write)"
-
-ROTATE_KEY=false
 ROTATE_TOKEN=false
 GENERATED_ONLY=false
 for arg in "$@"; do
     case "$arg" in
-        --rotate-key) ROTATE_KEY=true ;;
         --rotate-token) ROTATE_TOKEN=true ;;
         --generated-only) GENERATED_ONLY=true ;;
-        -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,36p' "$0"; exit 0 ;;
         *) log_error "Unknown argument: $arg"; exit 1 ;;
     esac
 done
 
 check_op_cli
 check_vault
-command -v gh &>/dev/null || { log_error "GitHub CLI (gh) is required for the deploy key"; exit 1; }
 
 field() { op_get_field "$ITEM_NAME" "$1"; }
 
@@ -63,21 +62,10 @@ fi
 
 UPDATES=()
 
-# --- deploy key -----------------------------------------------------------------
-if [ "$ROTATE_KEY" = true ] || [ -z "$(field git-ssh-private-key)" ]; then
-    tmp="$(mktemp -d)"
-    trap 'rm -rf "$tmp"' EXIT
-    ssh-keygen -q -t ed25519 -N "" -C "homelab-agent@tkuipers.ca" -f "$tmp/key"
-    # remove an older key with the same title
-    for id in $(gh api "repos/$REPO/keys" --jq ".[] | select(.title == \"$DEPLOY_KEY_TITLE\") | .id"); do
-        gh api -X DELETE "repos/$REPO/keys/$id" >/dev/null
-        log_info "Removed old deploy key $id"
-    done
-    gh repo deploy-key add "$tmp/key.pub" --repo "$REPO" --allow-write --title "$DEPLOY_KEY_TITLE" >/dev/null
-    log_success "Deploy key with write access added to $REPO"
-    UPDATES+=("git-ssh-private-key[password]=$(cat "$tmp/key")")
-else
-    log_info "Deploy key: keeping the existing one"
+# --- retired: the old deploy key (the agent now uses Tyler's own SSH keys) -----------
+if [ -n "$(field git-ssh-private-key)" ]; then
+    op item edit "$ITEM_NAME" --vault="$VAULT_NAME" "git-ssh-private-key[delete]" >/dev/null
+    log_success "Removed the unused git-ssh-private-key field"
 fi
 
 # --- webhook token ----------------------------------------------------------------
