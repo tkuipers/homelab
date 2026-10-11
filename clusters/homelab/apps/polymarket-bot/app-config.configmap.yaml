@@ -117,4 +117,6 @@ data:
       # Master switch. The bot ALSO honours bot_state.trading_enabled in the DB;
       # if either this OR the DB flag is False, the executor is a no-op.
       # The DB-side flag is the operator-facing toggle (Pause/Resume button).
-      enabled: true
+      # Off since 2026-10-11: Polymarket geoblocks the node's IP (every order
+      # 403 "Trading restricted in your region"; nothing filled since 2026-07-29).
+      enabled: false
