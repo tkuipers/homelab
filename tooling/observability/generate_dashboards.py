@@ -177,6 +177,21 @@ class Board:
         }
         return self._add(p, w, h)
 
+    def timeline(self, title, targets, w=24, h=8, desc="", up_down=True):
+        """State timeline: one lane per series; 1 = up (green), 0 = down (red)."""
+        mappings = [{"type": "value", "options": {"0": {"text": "DOWN", "color": "red"},
+                                                  "1": {"text": "UP", "color": "green"}}}] if up_down else []
+        p = {
+            "type": "state-timeline", "title": title, "description": desc, "datasource": PROM,
+            "targets": [target(PROM, e, legend=l, ref=chr(65 + i)) for i, (e, l) in enumerate(targets)],
+            "fieldConfig": {"defaults": {"mappings": mappings, "color": {"mode": "thresholds"},
+                                         "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": None}, {"color": "green", "value": 1}]}},
+                            "overrides": []},
+            "options": {"showValue": "never", "rowHeight": 0.8, "mergeValues": True, "alignValue": "left",
+                        "legend": {"showLegend": False}},
+        }
+        return self._add(p, w, h)
+
     def table(self, title, targets, w=12, h=8, ds=PROM, desc="", transformations=None, overrides=None):
         p = {
             "type": "table", "title": title, "description": desc, "datasource": ds,
@@ -470,22 +485,47 @@ def adguard_panels(b: Board, s: Svc):
 
 def agent_panels(b: Board, s: Svc):
     yes_no = [{"type": "value", "options": {"0": {"text": "NO", "color": "red"}, "1": {"text": "YES", "color": "green"}}}]
+    b.row("Agent health")
     b.stat("Claude signed in", "max(homelab_agent_signed_in)", mappings=yes_no,
            thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}],
            desc="If NO: sign in at https://agent.tkuipers.ca/#/auth")
+    b.stat("Parts down", 'count(homelab_agent_component_up == 0) or vector(0)', thresholds=RED_IF_ABOVE_0,
+           desc="Agent parts failing their health check (see the timeline below)")
+    b.stat("MCP servers down", 'count(homelab_agent_mcp_up == 0) or vector(0)', thresholds=RED_IF_ABOVE_0)
     b.stat("Working now", "max(homelab_agent_busy)", desc="Conversations executing right now")
-    b.stat("Queued", "max(homelab_agent_queue_length)")
+    b.stat("Oldest queued", "max(homelab_agent_oldest_queued_seconds)", unit="s",
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 600}, {"color": "red", "value": 1800}])
     b.stat("Last daily scan", "time() - max(homelab_agent_last_scan_timestamp_seconds)", unit="s",
            thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 26 * 3600}, {"color": "red", "value": 30 * 3600}])
+    b.timeline("Agent parts (up / down over time)", [("max by (component) (homelab_agent_component_up)", "{{component}}")], h=7,
+               desc="claude = signed in; database = Postgres reachable; egress_proxy; ssh_keys = git auth + signing keys loaded; sms; jev; homelab_repo; scheduler")
+    b.row("MCP servers")
+    b.timeline("MCP servers (up / down over time)", [("max by (server) (homelab_agent_mcp_up)", "{{server}}")], h=7,
+               desc="Each enabled MCP server is probed every 5 minutes: connect and list its tools. Edit servers at https://agent.tkuipers.ca/#/mcp")
+    b.table("MCP servers now", [
+        ("max by (server) (homelab_agent_mcp_up)", ""),
+        ("max by (server) (homelab_agent_mcp_tools)", ""),
+        ("max by (server) (homelab_agent_mcp_probe_seconds)", ""),
+    ], w=12, transformations=[
+        {"id": "merge", "options": {}},
+        {"id": "organize", "options": {"excludeByName": {"Time": True},
+                                       "renameByName": {"Value #A": "Up", "Value #B": "Tools", "Value #C": "Probe (s)", "server": "Server"}}},
+    ], overrides=[{"matcher": {"id": "byName", "options": "Up"}, "properties": [
+        {"id": "mappings", "value": [{"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}}]},
+        {"id": "custom.cellOptions", "value": {"type": "color-background"}}]}])
+    b.ts("MCP connect failures at run start", [("sum by (server) (increase(homelab_agent_mcp_connect_failures_total[$__rate_interval]))", "{{server}}")], w=12, bars=True)
+    b.ts("MCP probe latency", [("max by (server) (homelab_agent_mcp_probe_seconds)", "{{server}}")], unit="s", w=12)
+    b.row("Activity")
     b.ts("Conversations started", [("sum by (kind) (increase(homelab_agent_runs_total[$__rate_interval]))", "{{kind}}")], bars=True)
     b.ts("Outcomes", [("sum by (outcome) (increase(homelab_agent_run_outcomes_total[$__rate_interval]))", "{{outcome}}")], bars=True)
     b.ts("Claude usage (USD equivalent)", [("sum by (kind) (increase(homelab_agent_cost_usd_total[$__rate_interval]))", "{{kind}}")], bars=True,
          desc="Estimated from Claude Code's own accounting; on a subscription this is not billed per token")
     b.ts("Texts", [("sum by (direction) (increase(homelab_agent_sms_total[$__rate_interval]))", "{{direction}}")], bars=True)
-    b.ts("SMS routing", [("sum by (method, result) (increase(homelab_agent_route_decisions_total[$__rate_interval]))", "{{method}} -> {{result}}"),
-                         ("sum(increase(homelab_agent_route_corrections_total[$__rate_interval]))", "moved by Tyler (misroute)")], bars=True,
+    b.ts("Routing", [("sum by (method, result) (increase(homelab_agent_route_decisions_total[$__rate_interval]))", "{{method}} -> {{result}}"),
+                     ("sum(increase(homelab_agent_route_corrections_total[$__rate_interval]))", "moved by Tyler (misroute)")], bars=True,
          desc="How incoming texts were routed. 'moved by Tyler' = he corrected a route with a bare #N: tune ROUTE_MIN_* if it grows")
     b.ts("Top tools", [("topk(8, sum by (tool) (increase(homelab_agent_tool_calls_total[$__rate_interval])))", "{{tool}}")], bars=True)
+    b.ts("Database write errors", [("sum(increase(homelab_agent_db_write_errors_total[$__rate_interval])) or vector(0)", "errors")], bars=True)
 
 
 def authelia_panels(b: Board, s: Svc):

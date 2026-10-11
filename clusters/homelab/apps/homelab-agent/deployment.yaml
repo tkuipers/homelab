@@ -187,6 +187,9 @@ spec:
               mountPath: /data
             - name: ssh
               mountPath: /ssh
+            - name: mcp-secrets
+              mountPath: /secrets/mcp
+              readOnly: true
           resources:
             requests:
               cpu: 200m
@@ -195,7 +198,7 @@ spec:
               memory: 6Gi
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /readyz
               port: http
             periodSeconds: 10
           livenessProbe:
@@ -212,6 +215,11 @@ spec:
           secret:
             secretName: homelab-agent-keys
             defaultMode: 0400
+        - name: mcp-secrets
+          secret:
+            secretName: homelab-agent-mcp
+            optional: true
+            defaultMode: 0440
         - name: ssh
           emptyDir:
             medium: Memory

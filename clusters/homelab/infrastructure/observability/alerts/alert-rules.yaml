@@ -2540,6 +2540,218 @@ data:
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
           dashboard: https://logs.tkuipers.ca/d/svc-homelab-agent-homelab-agent
         isPaused: false
+      - uid: agent-component-down
+        title: Homelab agent part down
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: min by (component) (homelab_agent_component_up)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        labels:
+          severity: warning
+          namespace: homelab-agent
+          notify: relay
+        annotations:
+          summary: 'Homelab agent: {{ $labels.component }} is failing its health check'
+          description: Settings > Health in https://agent.tkuipers.ca shows details; the agent dashboard has the timeline.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=homelab-agent
+        isPaused: false
+      - uid: agent-mcp-down
+        title: Homelab agent MCP server down
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: min by (server) (homelab_agent_mcp_up)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+          namespace: homelab-agent
+          notify: relay
+        annotations:
+          summary: MCP server {{ $labels.server }} isn't answering the agent's probe
+          description: Test it at https://agent.tkuipers.ca/#/mcp
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=homelab-agent
+        isPaused: false
+      - uid: agent-signed-out
+        title: Homelab agent not signed in to Claude
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max(homelab_agent_signed_in)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 30m
+        labels:
+          severity: warning
+          namespace: homelab-agent
+          notify: relay
+        annotations:
+          summary: The homelab agent has been signed out of Claude for 30 minutes
+          description: Sign in at https://agent.tkuipers.ca/#/auth
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=homelab-agent
+        isPaused: false
+      - uid: agent-queue-stuck
+        title: Homelab agent queue stuck
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max(homelab_agent_oldest_queued_seconds)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 1800
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+          namespace: homelab-agent
+          notify: relay
+        annotations:
+          summary: A conversation has waited over 30 minutes for a slot
+          description: 'All slots busy: see https://agent.tkuipers.ca (Working now).'
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=homelab-agent
+        isPaused: false
       - uid: agent-scan-overdue
         title: Homelab agent daily scan overdue
         condition: C

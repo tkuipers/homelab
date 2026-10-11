@@ -1320,6 +1320,19 @@
    "type": "row"
   },
   {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 44
+   },
+   "id": 20,
+   "panels": [],
+   "title": "Agent health",
+   "type": "row"
+  },
+  {
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1366,9 +1379,9 @@
     "h": 4,
     "w": 4,
     "x": 0,
-    "y": 44
+    "y": 45
    },
-   "id": 20,
+   "id": 21,
    "options": {
     "colorMode": "background",
     "graphMode": "none",
@@ -1403,6 +1416,136 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
+   "description": "Agent parts failing their health check (see the timeline below)",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 45
+   },
+   "id": 22,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(homelab_agent_component_up == 0) or vector(0)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Parts down",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 8,
+    "y": 45
+   },
+   "id": 23,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(homelab_agent_mcp_up == 0) or vector(0)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "MCP servers down",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
    "description": "Conversations executing right now",
    "fieldConfig": {
     "defaults": {
@@ -1426,10 +1569,10 @@
    "gridPos": {
     "h": 4,
     "w": 4,
-    "x": 4,
-    "y": 44
+    "x": 12,
+    "y": 45
    },
-   "id": 21,
+   "id": 24,
    "options": {
     "colorMode": "background",
     "graphMode": "none",
@@ -1477,20 +1620,28 @@
        {
         "color": "green",
         "value": null
+       },
+       {
+        "color": "orange",
+        "value": 600
+       },
+       {
+        "color": "red",
+        "value": 1800
        }
       ]
      },
-     "unit": "short"
+     "unit": "s"
     },
     "overrides": []
    },
    "gridPos": {
     "h": 4,
     "w": 4,
-    "x": 8,
-    "y": 44
+    "x": 16,
+    "y": 45
    },
-   "id": 22,
+   "id": 25,
    "options": {
     "colorMode": "background",
     "graphMode": "none",
@@ -1510,14 +1661,14 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "max(homelab_agent_queue_length)",
+     "expr": "max(homelab_agent_oldest_queued_seconds)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
      "refId": "A"
     }
    ],
-   "title": "Queued",
+   "title": "Oldest queued",
    "type": "stat"
   },
   {
@@ -1556,10 +1707,10 @@
    "gridPos": {
     "h": 4,
     "w": 4,
-    "x": 12,
-    "y": 44
+    "x": 20,
+    "y": 45
    },
-   "id": 23,
+   "id": 26,
    "options": {
     "colorMode": "background",
     "graphMode": "none",
@@ -1594,6 +1745,411 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
+   "description": "claude = signed in; database = Postgres reachable; egress_proxy; ssh_keys = git auth + signing keys loaded; sms; jev; homelab_repo; scheduler",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "color": "red",
+         "text": "DOWN"
+        },
+        "1": {
+         "color": "green",
+         "text": "UP"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 49
+   },
+   "id": 27,
+   "options": {
+    "alignValue": "left",
+    "legend": {
+     "showLegend": false
+    },
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "showValue": "never"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max by (component) (homelab_agent_component_up)",
+     "instant": false,
+     "legendFormat": "{{component}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Agent parts (up / down over time)",
+   "type": "state-timeline"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 56
+   },
+   "id": 28,
+   "panels": [],
+   "title": "MCP servers",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "Each enabled MCP server is probed every 5 minutes: connect and list its tools. Edit servers at https://agent.tkuipers.ca/#/mcp",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "color": "red",
+         "text": "DOWN"
+        },
+        "1": {
+         "color": "green",
+         "text": "UP"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 57
+   },
+   "id": 29,
+   "options": {
+    "alignValue": "left",
+    "legend": {
+     "showLegend": false
+    },
+    "mergeValues": true,
+    "rowHeight": 0.8,
+    "showValue": "never"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max by (server) (homelab_agent_mcp_up)",
+     "instant": false,
+     "legendFormat": "{{server}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "MCP servers (up / down over time)",
+   "type": "state-timeline"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Up"
+      },
+      "properties": [
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "options": {
+           "0": {
+            "color": "red",
+            "text": "DOWN"
+           },
+           "1": {
+            "color": "green",
+            "text": "UP"
+           }
+          },
+          "type": "value"
+         }
+        ]
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 64
+   },
+   "id": 30,
+   "options": {
+    "cellHeight": "sm",
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max by (server) (homelab_agent_mcp_up)",
+     "format": "table",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max by (server) (homelab_agent_mcp_tools)",
+     "format": "table",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max by (server) (homelab_agent_mcp_probe_seconds)",
+     "format": "table",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "C"
+    }
+   ],
+   "title": "MCP servers now",
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value #A": "Up",
+       "Value #B": "Tools",
+       "Value #C": "Probe (s)",
+       "server": "Server"
+      }
+     }
+    }
+   ],
+   "type": "table"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 64
+   },
+   "id": 31,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (server) (increase(homelab_agent_mcp_connect_failures_total[$__rate_interval]))",
+     "instant": false,
+     "legendFormat": "{{server}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "MCP connect failures at run start",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 72
+   },
+   "id": 32,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max by (server) (homelab_agent_mcp_probe_seconds)",
+     "instant": false,
+     "legendFormat": "{{server}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "MCP probe latency",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 80
+   },
+   "id": 33,
+   "panels": [],
+   "title": "Activity",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
    "description": "",
    "fieldConfig": {
     "defaults": {
@@ -1617,9 +2173,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 48
+    "y": 81
    },
-   "id": 24,
+   "id": 34,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1675,9 +2231,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 48
+    "y": 81
    },
-   "id": 25,
+   "id": 35,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1733,9 +2289,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 56
+    "y": 89
    },
-   "id": 26,
+   "id": 36,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1791,9 +2347,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 56
+    "y": 89
    },
-   "id": 27,
+   "id": 37,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1849,9 +2405,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 64
+    "y": 97
    },
-   "id": 28,
+   "id": 38,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1887,7 +2443,7 @@
      "refId": "B"
     }
    ],
-   "title": "SMS routing",
+   "title": "Routing",
    "type": "timeseries"
   },
   {
@@ -1918,9 +2474,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 64
+    "y": 97
    },
-   "id": 29,
+   "id": 39,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1949,14 +2505,72 @@
    "type": "timeseries"
   },
   {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 105
+   },
+   "id": 40,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(increase(homelab_agent_db_write_errors_total[$__rate_interval])) or vector(0)",
+     "instant": false,
+     "legendFormat": "errors",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Database write errors",
+   "type": "timeseries"
+  },
+  {
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 72
+    "y": 113
    },
-   "id": 30,
+   "id": 41,
    "panels": [],
    "title": "Resources",
    "type": "row"
@@ -2048,9 +2662,9 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 73
+    "y": 114
    },
-   "id": 31,
+   "id": 42,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -2187,9 +2801,9 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 73
+    "y": 114
    },
-   "id": 32,
+   "id": 43,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -2267,9 +2881,9 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 73
+    "y": 114
    },
-   "id": 33,
+   "id": 44,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -2303,9 +2917,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 81
+    "y": 122
    },
-   "id": 34,
+   "id": 45,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -2320,9 +2934,9 @@
     "h": 16,
     "w": 24,
     "x": 0,
-    "y": 82
+    "y": 123
    },
-   "id": 35,
+   "id": 46,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,
