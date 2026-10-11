@@ -33,25 +33,36 @@ spec:
           type: RuntimeDefault
         fsGroup: 1000
       initContainers:
-        # ssh refuses keys readable by others, and keys without a final newline
-        # (1Password strips it): copy the deploy key with 0600 and a newline
-        - name: ssh-key
+        # Native sidecar (starts first, runs alongside): holds the SSH keys in an
+        # ssh-agent and shares only its socket + the public signing key via /ssh.
+        - name: keys
           image: ghcr.io/tkuipers/homelab-agent:latest
           imagePullPolicy: Always
+          restartPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
-          command:
-            - sh
-            - -c
-            - mkdir -p /data/home/.ssh && umask 077 && { cat /secrets/git/git-ssh-private-key; echo; } | sed '/^$/d' > /data/home/.ssh/id_ed25519
+          env:
+            - name: MODE
+              value: keys
+          startupProbe:
+            exec:
+              command: ["test", "-S", "/ssh/agent.sock"]
+            periodSeconds: 1
+            failureThreshold: 30
           volumeMounts:
-            - name: data
-              mountPath: /data
-            - name: git-key
-              mountPath: /secrets/git
+            - name: keys
+              mountPath: /keys
               readOnly: true
+            - name: ssh
+              mountPath: /ssh
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              memory: 96Mi
       containers:
         - name: agent
           image: ghcr.io/tkuipers/homelab-agent:latest
@@ -72,8 +83,8 @@ spec:
               value: http://kps-grafana.observability.svc
             - name: REPO_URL
               value: git@github.com:tkuipers/homelab.git
-            - name: GIT_SSH_COMMAND
-              value: ssh -i /data/home/.ssh/id_ed25519 -o IdentitiesOnly=yes
+            - name: SSH_AUTH_SOCK
+              value: /ssh/agent.sock
             - name: SCAN_TIME
               value: "06:00"
             - name: SCAN_TZ
@@ -97,6 +108,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: ssh
+              mountPath: /ssh
           resources:
             requests:
               cpu: 200m
@@ -118,10 +131,11 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: homelab-agent-data
-        - name: git-key
+        - name: keys
           secret:
-            secretName: homelab-agent
-            defaultMode: 0440
-            items:
-              - key: git-ssh-private-key
-                path: git-ssh-private-key
+            secretName: homelab-agent-keys
+            defaultMode: 0400
+        - name: ssh
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
