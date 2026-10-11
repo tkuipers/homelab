@@ -63,11 +63,14 @@ loki:
             - action: index_label
               attributes:
                 - k8s.node.name
+                # set only on the one-off history backfill streams
+                - log.origin
     compactor:
       retention_enabled: true
       delete_request_store: filesystem
       compaction_interval: 10m
       retention_delete_delay: 2h
+      delete_request_cancel_period: 10m
     querier:
       max_concurrent: 8
     server:
