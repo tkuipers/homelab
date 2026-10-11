@@ -2,15 +2,17 @@
 // TEMPORARY one-off backfill (2026-10-11). Remove this file (and its line in
 // templates/config.yaml) once it has run.
 //
-// Re-reads every pod log file with its own checkpoints and ships lines that
-// are between 65 minutes and 29 days old. The live pipeline already has the
-// last hour; Loki rejects anything older than 30d. Lines for streams that
-// are actively logging can't be backfilled further than ~1h behind their
-// newest entry (Loki out-of-order window) and are rejected harmlessly.
+// Re-reads every pod log file with its own checkpoints and ships the lines
+// written before the live pipeline took over (2026-10-11T05:14:00Z) and less
+// than 29d old (Loki rejects >30d). History goes to separate streams
+// (index label log_origin="backfill-<restart count>") so it can't collide
+// with the live streams' out-of-order window, and the two files a
+// restarted container has (N-1.log, N.log) don't collide with each other.
+// Dashboards select on namespace/service_name, so they see both.
 // =============================================================================
 
 otelcol.storage.file "backfill" {
-	directory = "/var/lib/alloy/storage-backfill-2"
+	directory = "/var/lib/alloy/storage-backfill-3"
 }
 
 otelcol.receiver.filelog "backfill" {
@@ -46,8 +48,23 @@ otelcol.processor.filter "backfill" {
 
 	logs {
 		log_record = [
-			`time_unix_nano > UnixNano(Now()) - 3900000000000`,
+			`time_unix_nano >= 1791695640000000000`,
 			`time_unix_nano < UnixNano(Now()) - 2505600000000000`,
+		]
+	}
+
+	output {
+		logs = [otelcol.processor.transform.backfill.input]
+	}
+}
+
+otelcol.processor.transform "backfill" {
+	error_mode = "ignore"
+
+	log_statements {
+		context    = "resource"
+		statements = [
+			`set(attributes["log.origin"], Concat(["backfill-", attributes["k8s.container.restart_count"]], ""))`,
 		]
 	}
 
