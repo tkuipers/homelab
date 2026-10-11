@@ -275,22 +275,30 @@ matter_devices:
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.attic_sensor_battery_type, hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.attic_sensor_battery_voltage, hidden: true }
       "TemperatureSensor-1026-0": { id: sensor.attic_temperature }
-  # Aqara Hub M3 [Aqara Hub M3]  (1 entities)
+  # Aqara Hub M3 [Aqara Hub M3]  (4 entities)
   - serial: "54ef4476343a"
     area: null
     entities:
       "IdentifyButton-3-1": { id: button.aqara_hub_identify, hidden: true }
-  # Smart Wi-Fi Switch [Smart Wi-Fi Switch]  (3 entities)
+      "GeneralDiagnosticsRebootCount-51-1": { id: sensor.aqara_hub_m3_reboot_count, hidden: true }
+      "GeneralDiagnosticsUpTime-51-2": { id: sensor.aqara_hub_m3_uptime, hidden: true }
+      "WiFiDiagnosticsRssi-54-4": { id: sensor.aqara_hub_m3_wi_fi_rssi, hidden: true }
+  # Smart Wi-Fi Switch [Smart Wi-Fi Switch]  (6 entities)
   - serial: "BC071D001664"
     area: "Main Bedroom"
     entities:
+      "GeneralDiagnosticsBootReason-51-4": { id: sensor.smart_wi_fi_switch_boot_reason, hidden: true }
+      "GeneralDiagnosticsRebootCount-51-1": { id: sensor.smart_wi_fi_switch_reboot_count, hidden: true }
+      "GeneralDiagnosticsUpTime-51-2": { id: sensor.smart_wi_fi_switch_uptime, hidden: true }
       "MatterLight-6-0": { id: light.main_bedroom }
       "MatterStartUpOnOff-6-16387": { id: select.main_bedroom_power_on_behavior, hidden: true }
       "MatterUpdate-40-9": { id: update.main_bedroom_firmware, hidden: true }
-  # H7057 [H7057]  (11 entities)
+  # H7057 [H7057]  (14 entities)
   - identifier: "matter:deviceid_DF8F5546DC2CCC5A-0000000000000004-MatterNodeDevice"
     area: "Outside"
     entities:
+      "GeneralDiagnosticsRebootCount-51-1": { id: sensor.h7057_reboot_count, hidden: true }
+      "GeneralDiagnosticsUpTime-51-2": { id: sensor.h7057_uptime, hidden: true }
       "IdentifyButton-3-1#0": { id: button.h7057_identify_0, hidden: true }
       "IdentifyButton-3-1#1": { id: button.h7057_identify_1, hidden: true }
       "MatterLight-6-0": { id: light.back_yard_floodlights }
@@ -302,6 +310,7 @@ matter_devices:
       "on_off_transition_time-8-16": { id: number.h7057_on_off_transition_time, hidden: true }
       "on_transition_time-8-18": { id: number.h7057_on_transition_time, hidden: true }
       "power_on_level-8-16384": { id: number.h7057_power_on_level, hidden: true }
+      "WiFiDiagnosticsRssi-54-4": { id: sensor.h7057_wi_fi_rssi, hidden: true }
 
 unique_id_entities:
   "aa6d7dfa-ac6c-11f0-ae2b-b3232d552ca8-climate": { id: climate.main_floor_thermostat, area: "Main Common Space" }
