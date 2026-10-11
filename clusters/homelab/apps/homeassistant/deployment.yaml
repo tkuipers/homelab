@@ -52,9 +52,6 @@ spec:
               # --- Ensure base config + http trusted_proxies block ---
               if [ ! -f "$CONFIG" ]; then
                 cat > "$CONFIG" <<'EOF'
-              # Loads default set of integrations. Do not remove.
-              default_config:
-
               frontend:
                 themes: !include_dir_merge_named themes
 
@@ -160,11 +157,47 @@ spec:
 
               # --- Manage sentinel-bracketed blocks (rewrite on every boot) ---
               # Strip any existing managed blocks so we can rewrite cleanly.
+              # The bare default_config: line is dropped too; the default_config
+              # managed block below replaces it.
               awk '
                 /^# >>> .* managed >>>/ { in_block=1; next }
                 /^# <<< .* managed <<</ { in_block=0; next }
+                /^# Loads default set of integrations\. Do not remove\.$/ { next }
+                /^default_config:[[:space:]]*$/ { next }
                 !in_block { print }
               ' "$CONFIG" > "$CONFIG.tmp"
+
+              cat >> "$CONFIG.tmp" <<'EOF'
+
+              # >>> default_config managed >>>
+              # default_config's integrations (HA 2026.9 manifest) minus dhcp. dhcp
+              # discovery can't see the LAN from the pod network, and its hourly host
+              # scan sent ~250 PTR lookups for the pod /24 through CoreDNS, which
+              # timed out upstream and stalled other cluster DNS for a few seconds.
+              # Re-check this list against default_config/manifest.json after major
+              # HA upgrades.
+              assist_pipeline:
+              bluetooth:
+              cloud:
+              conversation:
+              energy:
+              file:
+              go2rtc:
+              history:
+              homeassistant_alerts:
+              logbook:
+              media_source:
+              mobile_app:
+              my:
+              ssdp:
+              stream:
+              sun:
+              usage_prediction:
+              usb:
+              webhook:
+              zeroconf:
+              # <<< default_config managed <<<
+              EOF
 
               cat >> "$CONFIG.tmp" <<'EOF'
 
