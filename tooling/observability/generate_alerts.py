@@ -8,8 +8,8 @@ sidecar, label grafana_alert=1).
 Output: clusters/homelab/infrastructure/observability/alerts/
 
 Two groups:
-  * "Ported from Datadog" - 1:1 ports of the monitors that lived in
-    infrastructure/datadog (see git history), as close as the data allows.
+  * "Service monitors" - 1:1 ports of the monitors of the previous
+    monitoring platform (see git history), as close as the data allows.
   * "Homelab" - generic incident alerts every service gets (probe down,
     5xx ratio, crash loops, error-log spikes, pipeline health, ...).
 
@@ -67,41 +67,41 @@ def deploy_down(uid, title, ns, deploy):
                 description="Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.")
 
 
-DATADOG_PORTS = [
+SERVICE_MONITORS = [
     deploy_down("dd-homepage-pod-health", "Homepage pod health", "homepage", "homepage"),
     rule("dd-homepage-http-errors", "Homepage HTTP 5xx rate",
          '100 * (sum(rate(nginx_ingress_controller_requests{exported_namespace="homepage", status=~"5.."}[5m])) or vector(0)) / (sum(rate(nginx_ingress_controller_requests{exported_namespace="homepage"}[5m])) > 0)',
          "gt", 10, severity="critical", dashboard=svc_uid("homepage", "homepage"),
          summary="More than 10% of homepage requests return 5xx",
-         description="Datadog port: nginx 5xx / total * 100 > 10 over 5m. Source is now the ingress-nginx metrics."),
+         description="Ported monitor: nginx 5xx / total * 100 > 10 over 5m. Source is now the ingress-nginx metrics."),
     deploy_down("dd-argocd-server-health", "Argo CD server health", "argocd", "argocd-server"),
     rule("dd-argocd-sync-failures", "Argo CD apps out of sync",
          'count(argocd_app_info{sync_status="OutOfSync"}) or vector(0)', "gt", 2, for_="10m",
          dashboard=svc_uid("argocd", "argocd-server"),
          summary="More than 2 Argo CD applications are OutOfSync for 10m",
-         description="Datadog port (critical > 2, warning > 1). See Argo CD dashboard > 'Applications not Synced/Healthy'."),
+         description="Ported monitor (critical > 2, warning > 1). See Argo CD dashboard > 'Applications not Synced/Healthy'."),
     deploy_down("dd-ingress-nginx-health", "Ingress NGINX health", "ingress-nginx", "infrastructure-ingress-nginx-controller"),
     deploy_down("dd-cert-manager-health", "cert-manager health", "cert-manager", "infrastructure-cert-manager"),
     deploy_down("dd-stock-guesser-pod-health", "Stock Guesser app pod health", "stock-guesser", "stock-guesser-app"),
     deploy_down("dd-stock-guesser-mysql-health", "Stock Guesser MySQL health", "stock-guesser", "mysql"),
-    # Datadog used APM (trace.fastapi.request.duration > 10s). There is no
-    # tracing in the app anymore; the closest signal is the readiness probe
-    # (it times out when the app is slow/hung).
+    # The old monitor used APM (request duration > 10s). There is no tracing
+    # in the app anymore; the closest signal is the readiness probe (it times
+    # out when the app is slow/hung).
     rule("dd-stock-guesser-latency", "Stock Guesser app slow / probes failing",
          'sum(increase(prober_probe_total{namespace="stock-guesser", pod=~"stock-guesser-app-.*", result!="successful"}[5m])) or vector(0)',
          "gt", 3, dashboard=svc_uid("stock-guesser", "stock-guesser-app"),
          summary="Stock Guesser app is failing its probes",
-         description="Datadog port of stock-guesser-latency (APM avg request duration > 10s). APM is gone; probe failures/timeouts are the replacement signal."),
+         description="Ported from the APM latency monitor (avg request duration > 10s). There is no APM anymore; probe failures/timeouts are the replacement signal."),
     rule("dd-stock-guesser-errors", "Stock Guesser app error rate",
          '100 * (sum(count_over_time({k8s_namespace_name="stock-guesser", service_name="stock-guesser-app"} | status >= 500 [5m])) or vector(0)) / sum(count_over_time({k8s_namespace_name="stock-guesser", service_name="stock-guesser-app"} | status != "" [5m]))',
          "gt", 20, ds="loki", dashboard=svc_uid("stock-guesser", "stock-guesser-app"),
          summary="More than 20% of Stock Guesser requests fail (5xx)",
-         description="Datadog port of stock-guesser-errors (APM errors/hits > 20%). Now computed from the app's access logs in Loki."),
+         description="Ported from the APM error-rate monitor (errors/hits > 20%). Now computed from the app's access logs in Loki."),
     rule("dd-stock-guesser-training-failures", "Stock Guesser training job failed",
          'sum(kube_job_status_failed{namespace="stock-guesser", job_name=~"stock-guesser-training-[0-9]+"} > 0 and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)) or vector(0)',
          "gt", 0, for_="0s", dashboard=svc_uid("stock-guesser", "stock-guesser-training"),
          summary="A stock-guesser-training Job failed",
-         description="Datadog port (kubernetes_state.job.failed for the training CronJob over 1d)."),
+         description="Ported monitor (failed training Job within 1d)."),
 ]
 
 HOMELAB = [
@@ -253,7 +253,7 @@ def main():
     doc = {
         "apiVersion": 1,
         "groups": [
-            {"orgId": 1, "name": "Ported from Datadog", "folder": "Alerts", "interval": "1m", "rules": DATADOG_PORTS},
+            {"orgId": 1, "name": "Service monitors", "folder": "Alerts", "interval": "1m", "rules": SERVICE_MONITORS},
             {"orgId": 1, "name": "Homelab", "folder": "Alerts", "interval": "1m", "rules": HOMELAB},
         ],
         "deleteRules": [{"orgId": 1, "uid": u} for u in RETIRED_UIDS],
@@ -268,7 +268,7 @@ def main():
     with open(os.path.join(OUT, "alert-rules.yaml"), "w") as fh:
         fh.write("# GENERATED by tooling/observability/generate_alerts.py - do not edit by hand\n")
         yaml.safe_dump(cm, fh, sort_keys=False, width=1000)
-    print(f"wrote {len(DATADOG_PORTS) + len(HOMELAB)} rules")
+    print(f"wrote {len(SERVICE_MONITORS) + len(HOMELAB)} rules")
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ data:
     apiVersion: 1
     groups:
     - orgId: 1
-      name: Ported from Datadog
+      name: Service monitors
       folder: Alerts
       interval: 1m
       rules:
@@ -114,7 +114,7 @@ data:
           severity: critical
         annotations:
           summary: More than 10% of homepage requests return 5xx
-          description: 'Datadog port: nginx 5xx / total * 100 > 10 over 5m. Source is now the ingress-nginx metrics.'
+          description: 'Ported monitor: nginx 5xx / total * 100 > 10 over 5m. Source is now the ingress-nginx metrics.'
           dashboard: https://logs.tkuipers.ca/d/svc-homepage-homepage
         isPaused: false
       - uid: dd-argocd-server-health
@@ -216,7 +216,7 @@ data:
           severity: warning
         annotations:
           summary: More than 2 Argo CD applications are OutOfSync for 10m
-          description: Datadog port (critical > 2, warning > 1). See Argo CD dashboard > 'Applications not Synced/Healthy'.
+          description: Ported monitor (critical > 2, warning > 1). See Argo CD dashboard > 'Applications not Synced/Healthy'.
           dashboard: https://logs.tkuipers.ca/d/svc-argocd-argocd-server
         isPaused: false
       - uid: dd-ingress-nginx-health
@@ -471,7 +471,7 @@ data:
           severity: warning
         annotations:
           summary: Stock Guesser app is failing its probes
-          description: Datadog port of stock-guesser-latency (APM avg request duration > 10s). APM is gone; probe failures/timeouts are the replacement signal.
+          description: Ported from the APM latency monitor (avg request duration > 10s). There is no APM anymore; probe failures/timeouts are the replacement signal.
           dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-stock-guesser-app
         isPaused: false
       - uid: dd-stock-guesser-errors
@@ -522,7 +522,7 @@ data:
           severity: warning
         annotations:
           summary: More than 20% of Stock Guesser requests fail (5xx)
-          description: Datadog port of stock-guesser-errors (APM errors/hits > 20%). Now computed from the app's access logs in Loki.
+          description: Ported from the APM error-rate monitor (errors/hits > 20%). Now computed from the app's access logs in Loki.
           dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-stock-guesser-app
         isPaused: false
       - uid: dd-stock-guesser-training-failures
@@ -573,7 +573,7 @@ data:
           severity: warning
         annotations:
           summary: A stock-guesser-training Job failed
-          description: Datadog port (kubernetes_state.job.failed for the training CronJob over 1d).
+          description: Ported monitor (failed training Job within 1d).
           dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-stock-guesser-training
         isPaused: false
     - orgId: 1
