@@ -8,7 +8,7 @@ resources:
   - storage-pvs.yaml
   # Grafana secrets from 1Password - enabled by
   # tooling/scripts/setup-credentials/setup-observability-credentials.sh
-  # - secrets/external-secrets.yaml
+  - secrets/external-secrets.yaml
   # Scrape configs for things not covered by their own charts
   - monitors/servicemonitors.yaml
   # Grafana dashboards (generated: tooling/observability/generate_dashboards.py)
