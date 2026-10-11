@@ -64,7 +64,7 @@ data:
         annotations:
           summary: homepage/homepage has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
-          __dashboardUid__: svc-homepage-homepage
+          dashboard: https://logs.tkuipers.ca/d/svc-homepage-homepage
         isPaused: false
       - uid: dd-homepage-http-errors
         title: Homepage HTTP 5xx rate
@@ -115,7 +115,7 @@ data:
         annotations:
           summary: More than 10% of homepage requests return 5xx
           description: 'Datadog port: nginx 5xx / total * 100 > 10 over 5m. Source is now the ingress-nginx metrics.'
-          __dashboardUid__: svc-homepage-homepage
+          dashboard: https://logs.tkuipers.ca/d/svc-homepage-homepage
         isPaused: false
       - uid: dd-argocd-server-health
         title: Argo CD server health
@@ -166,7 +166,7 @@ data:
         annotations:
           summary: argocd/argocd-server has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
-          __dashboardUid__: svc-argocd-argocd-server
+          dashboard: https://logs.tkuipers.ca/d/svc-argocd-argocd-server
         isPaused: false
       - uid: dd-argocd-sync-failures
         title: Argo CD apps out of sync
@@ -217,7 +217,7 @@ data:
         annotations:
           summary: More than 2 Argo CD applications are OutOfSync for 10m
           description: Datadog port (critical > 2, warning > 1). See Argo CD dashboard > 'Applications not Synced/Healthy'.
-          __dashboardUid__: svc-argocd-argocd-server
+          dashboard: https://logs.tkuipers.ca/d/svc-argocd-argocd-server
         isPaused: false
       - uid: dd-ingress-nginx-health
         title: Ingress NGINX health
@@ -268,7 +268,7 @@ data:
         annotations:
           summary: ingress-nginx/infrastructure-ingress-nginx-controller has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
-          __dashboardUid__: svc-ingress-nginx-infrastructur-15969e20
+          dashboard: https://logs.tkuipers.ca/d/svc-ingress-nginx-infrastructur-15969e20
         isPaused: false
       - uid: dd-cert-manager-health
         title: cert-manager health
@@ -319,7 +319,7 @@ data:
         annotations:
           summary: cert-manager/infrastructure-cert-manager has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
-          __dashboardUid__: svc-cert-manager-infrastructure-71e44504
+          dashboard: https://logs.tkuipers.ca/d/svc-cert-manager-infrastructure-71e44504
         isPaused: false
       - uid: dd-stock-guesser-pod-health
         title: Stock Guesser app pod health
@@ -370,7 +370,7 @@ data:
         annotations:
           summary: stock-guesser/stock-guesser-app has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
-          __dashboardUid__: svc-stock-guesser-stock-guesser-app
+          dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-stock-guesser-app
         isPaused: false
       - uid: dd-stock-guesser-mysql-health
         title: Stock Guesser MySQL health
@@ -421,7 +421,7 @@ data:
         annotations:
           summary: stock-guesser/mysql has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
-          __dashboardUid__: svc-stock-guesser-mysql
+          dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-mysql
         isPaused: false
       - uid: dd-stock-guesser-latency
         title: Stock Guesser app slow / probes failing
@@ -472,7 +472,7 @@ data:
         annotations:
           summary: Stock Guesser app is failing its probes
           description: Datadog port of stock-guesser-latency (APM avg request duration > 10s). APM is gone; probe failures/timeouts are the replacement signal.
-          __dashboardUid__: svc-stock-guesser-stock-guesser-app
+          dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-stock-guesser-app
         isPaused: false
       - uid: dd-stock-guesser-errors
         title: Stock Guesser app error rate
@@ -523,7 +523,7 @@ data:
         annotations:
           summary: More than 20% of Stock Guesser requests fail (5xx)
           description: Datadog port of stock-guesser-errors (APM errors/hits > 20%). Now computed from the app's access logs in Loki.
-          __dashboardUid__: svc-stock-guesser-stock-guesser-app
+          dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-stock-guesser-app
         isPaused: false
       - uid: dd-stock-guesser-training-failures
         title: Stock Guesser training job failed
@@ -574,7 +574,7 @@ data:
         annotations:
           summary: A stock-guesser-training Job failed
           description: Datadog port (kubernetes_state.job.failed for the training CronJob over 1d).
-          __dashboardUid__: svc-stock-guesser-stock-guesser-training
+          dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-stock-guesser-training
         isPaused: false
     - orgId: 1
       name: Homelab

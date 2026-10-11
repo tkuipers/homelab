@@ -53,7 +53,8 @@ def rule(uid, title, expr, op, threshold, for_="5m", ds="prometheus", severity="
         "isPaused": False,
     }
     if dashboard:
-        r["annotations"]["__dashboardUid__"] = dashboard
+        # (__dashboardUid__ would also need __panelId__; a plain link is enough)
+        r["annotations"]["dashboard"] = f"https://logs.tkuipers.ca/d/{dashboard}"
     return r
 
 
