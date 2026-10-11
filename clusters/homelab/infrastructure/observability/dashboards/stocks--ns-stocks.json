@@ -53,8 +53,17 @@
      "color": {
       "mode": "thresholds"
      },
-     "mappings": [],
-     "noValue": "NONE",
+     "mappings": [
+      {
+       "options": {
+        "-1": {
+         "color": "text",
+         "text": "NONE"
+        }
+       },
+       "type": "value"
+      }
+     ],
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -98,7 +107,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "sum(count_over_time({k8s_namespace_name=\"stocks\", service_name=\"ingestion\"} |= \"pipeline_complete\" [3h]))",
+     "expr": "(sum(count_over_time({k8s_namespace_name=\"stocks\", service_name=\"ingestion\"} |= \"pipeline_complete\" [3h]))) or (vector(0) - 1)",
      "legendFormat": "",
      "queryType": "instant",
      "refId": "A"
@@ -118,8 +127,17 @@
      "color": {
       "mode": "thresholds"
      },
-     "mappings": [],
-     "noValue": "NONE",
+     "mappings": [
+      {
+       "options": {
+        "-1": {
+         "color": "text",
+         "text": "NONE"
+        }
+       },
+       "type": "value"
+      }
+     ],
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -163,7 +181,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "sum(count_over_time({k8s_namespace_name=\"stocks\", service_name=\"decision\"} |= \"decision.predicted\" [26h]))",
+     "expr": "(sum(count_over_time({k8s_namespace_name=\"stocks\", service_name=\"decision\"} |= \"decision.predicted\" [26h]))) or (vector(0) - 1)",
      "legendFormat": "",
      "queryType": "instant",
      "refId": "A"

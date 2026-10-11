@@ -133,6 +133,12 @@ class Board:
     def stat(self, title, expr, unit="short", ds=PROM, thresholds=None, w=4, h=4,
              mappings=None, desc="", decimals=None, legend="", no_value=None):
         steps = thresholds or [{"color": "green", "value": None}]
+        if no_value:
+            # "nothing to report" is shown as text instead of a misleading 0:
+            # the query returns -1 when there is no data and a value mapping
+            # renders it (the panel still has data, unlike Grafana's noValue)
+            expr = f"({expr}) or " + ("(vector(0) - 1)" if ds is LOKI else "vector(-1)")
+            mappings = (mappings or []) + [{"type": "value", "options": {"-1": {"text": no_value, "color": "text"}}}]
         p = {
             "type": "stat", "title": title, "description": desc, "datasource": ds,
             "targets": [target(ds, expr, legend=legend, instant=True)],
@@ -141,7 +147,6 @@ class Board:
                 "thresholds": {"mode": "absolute", "steps": steps},
                 "color": {"mode": "thresholds"},
                 **({"decimals": decimals} if decimals is not None else {}),
-                **({"noValue": no_value} if no_value else {}),
             }, "overrides": []},
             "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False},
                         "colorMode": "background", "graphMode": "none", "textMode": "auto",

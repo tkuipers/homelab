@@ -263,8 +263,17 @@
       "mode": "thresholds"
      },
      "decimals": 0,
-     "mappings": [],
-     "noValue": "no pods",
+     "mappings": [
+      {
+       "options": {
+        "-1": {
+         "color": "text",
+         "text": "no pods"
+        }
+       },
+       "type": "value"
+      }
+     ],
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -312,7 +321,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"polymarket-bot\", pod=~\"postgres-backup-[0-9]+-[a-z0-9]{5}\"}[24h]))",
+     "expr": "(sum(increase(kube_pod_container_status_restarts_total{namespace=\"polymarket-bot\", pod=~\"postgres-backup-[0-9]+-[a-z0-9]{5}\"}[24h]))) or vector(-1)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -333,8 +342,17 @@
      "color": {
       "mode": "thresholds"
      },
-     "mappings": [],
-     "noValue": "no logs (1h)",
+     "mappings": [
+      {
+       "options": {
+        "-1": {
+         "color": "text",
+         "text": "no logs (1h)"
+        }
+       },
+       "type": "value"
+      }
+     ],
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -382,7 +400,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "sum(count_over_time({k8s_namespace_name=\"polymarket-bot\", service_name=\"postgres-backup\"} | detected_level=~\"error|fatal|critical\" [1h])) or (sum(count_over_time({k8s_namespace_name=\"polymarket-bot\", service_name=\"postgres-backup\"} [1h])) * 0)",
+     "expr": "(sum(count_over_time({k8s_namespace_name=\"polymarket-bot\", service_name=\"postgres-backup\"} | detected_level=~\"error|fatal|critical\" [1h])) or (sum(count_over_time({k8s_namespace_name=\"polymarket-bot\", service_name=\"postgres-backup\"} [1h])) * 0)) or (vector(0) - 1)",
      "legendFormat": "",
      "queryType": "instant",
      "refId": "A"
@@ -402,8 +420,17 @@
      "color": {
       "mode": "thresholds"
      },
-     "mappings": [],
-     "noValue": "no pods",
+     "mappings": [
+      {
+       "options": {
+        "-1": {
+         "color": "text",
+         "text": "no pods"
+        }
+       },
+       "type": "value"
+      }
+     ],
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -447,7 +474,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(kube_pod_container_status_last_terminated_reason{namespace=\"polymarket-bot\", pod=~\"postgres-backup-[0-9]+-[a-z0-9]{5}\", reason=\"OOMKilled\"}) or (count(kube_pod_container_info{namespace=\"polymarket-bot\", pod=~\"postgres-backup-[0-9]+-[a-z0-9]{5}\"}) * 0)",
+     "expr": "(sum(kube_pod_container_status_last_terminated_reason{namespace=\"polymarket-bot\", pod=~\"postgres-backup-[0-9]+-[a-z0-9]{5}\", reason=\"OOMKilled\"}) or (count(kube_pod_container_info{namespace=\"polymarket-bot\", pod=~\"postgres-backup-[0-9]+-[a-z0-9]{5}\"}) * 0)) or vector(-1)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
