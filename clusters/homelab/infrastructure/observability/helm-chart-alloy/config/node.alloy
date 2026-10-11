@@ -41,7 +41,7 @@ otelcol.receiver.filelog "pods" {
 			type               = "recombine",
 			combine_field      = "body",
 			source_identifier  = `attributes["log.file.path"]`,
-			is_first_entry     = `body matches "^\\S" and not (body matches "^(Traceback |During handling|The above exception|[A-Za-z_][\\w.]*(Error|Exception|Warning)(: |$)|Caused by:)")`,
+			is_first_entry     = `body matches "^\\S" and not (body matches "^(Traceback |During handling|The above exception|[A-Za-z_][\\w.]*(Error|Exception|Warning)(: |$)|Caused by:|no A{1,4} record resolved)")`,
 			combine_with       = "\n",
 			max_log_lines      = 500,
 			force_flush_period = "1s",
@@ -138,6 +138,20 @@ otelcol.processor.transform "resource" {
 	output {
 		logs   = [otelcol.processor.filter.empty.input]
 		traces = [otelcol.processor.batch.default.input]
+	}
+}
+
+// successful kubelet health checks (GET /healthz 200 every few seconds from
+// every pod) are pure noise; failed ones are kept
+otelcol.processor.filter "healthchecks" {
+	error_mode = "ignore"
+
+	logs {
+		log_record = [`attributes["healthcheck"] == true and Int(attributes["status"]) < 400`]
+	}
+
+	output {
+		logs = [otelcol.processor.batch.default.input]
 	}
 }
 

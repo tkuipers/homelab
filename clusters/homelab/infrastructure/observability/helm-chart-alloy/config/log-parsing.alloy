@@ -97,6 +97,9 @@ otelcol.processor.transform "logs" {
 			// gluetun: 2026-10-10T21:50:50-07:00 INFO [firewall] message
 			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}-\\d{2}-\\d{2}T\\S+ (?P<level>[A-Z]+) \\[(?P<logger>[^\\]]+)\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
 			`set(attributes["log.format"], "gluetun") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// nginx error log: 2026/10/11 06:26:03 [error] 49#49: *936819 [lua] dns.lua:152: message
+			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}/\\d{2}/\\d{2} [\\d:]+ \\[(?P<level>\\w+)\\] (?P<pid>\\d+)#\\d+: (?:\\*(?P<connection_id>\\d+) )?(?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
+			`set(attributes["log.format"], "nginx_error") where attributes["log.format"] == nil and attributes["pid"] != nil and attributes["msg"] != nil`,
 			// adguard / go log w/ level: 2026/10/11 04:50:02.632400 [error] dnsproxy: message
 			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}/\\d{2}/\\d{2} [\\d:.]+ \\[(?P<level>\\w+)\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
 			`set(attributes["log.format"], "golog") where attributes["log.format"] == nil and attributes["msg"] != nil`,
@@ -125,6 +128,14 @@ otelcol.processor.transform "logs" {
 			`set(attributes["log.format"], "access_json") where attributes["log.format"] == "json" and attributes["method"] != nil and attributes["path"] != nil and attributes["status"] != nil and (attributes["msg"] == nil and attributes["message"] == nil or attributes["event"] == "http_request")`,
 			`delete_key(attributes, "event") where attributes["log.format"] == "access_json" and attributes["event"] == "http_request"`,
 			`set(attributes["log.format"], "access_nginx") where attributes["log.format"] == "json" and attributes["ingress"] != nil and attributes["upstream_addr"] != nil`,
+
+			// split ?query off access-log paths so path="/x" matches every request to /x
+			`merge_maps(attributes, ExtractPatterns(attributes["path"], "^(?P<path_only>[^?]*)\\?(?P<query>.*)$"), "insert") where IsMatch(attributes["log.format"], "^access_") and IsString(attributes["path"]) and IsMatch(attributes["path"], "\\?")`,
+			`set(attributes["path"], attributes["path_only"]) where attributes["path_only"] != nil`,
+			`delete_key(attributes, "path_only")`,
+			// kubelet health checks (pod network gateway 10.244.x.1 or kube-probe UA)
+			`set(attributes["healthcheck"], true) where IsMatch(attributes["log.format"], "^access_") and IsString(attributes["http_user_agent"]) and IsMatch(attributes["http_user_agent"], "^kube-probe")`,
+			`set(attributes["healthcheck"], true) where IsMatch(attributes["log.format"], "^access_") and IsString(attributes["path"]) and IsMatch(attributes["path"], "^/(healthz|readyz|livez|health|healthcheck|ping|ready|status)/?$") and ((IsString(attributes["client_addr"]) and IsMatch(attributes["client_addr"], "^10\\.244\\.\\d+\\.1:")) or (IsString(attributes["remote_addr"]) and IsMatch(attributes["remote_addr"], "^10\\.244\\.\\d+\\.1$")) or (attributes["client_addr"] == nil and attributes["remote_addr"] == nil))`,
 
 			// ---- message: pick the message field, everything else stays as attributes
 			`set(attributes["log.msg_key"], "msg") where IsString(attributes["msg"])`,
@@ -177,6 +188,6 @@ otelcol.processor.transform "logs" {
 	}
 
 	output {
-		logs = [otelcol.processor.batch.default.input]
+		logs = [otelcol.processor.filter.healthchecks.input]
 	}
 }
