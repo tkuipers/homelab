@@ -1,0 +1,57 @@
+// =============================================================================
+// TEMPORARY one-off backfill (2026-10-11). Remove this file (and its line in
+// templates/config.yaml) once it has run.
+//
+// Re-reads every pod log file with its own checkpoints and ships lines that
+// are between 65 minutes and 29 days old. The live pipeline already has the
+// last hour; Loki rejects anything older than 30d. Lines for streams that
+// are actively logging can't be backfilled further than ~1h behind their
+// newest entry (Loki out-of-order window) and are rejected harmlessly.
+// =============================================================================
+
+otelcol.storage.file "backfill" {
+	directory = "/var/lib/alloy/storage-backfill"
+}
+
+otelcol.receiver.filelog "backfill" {
+	include           = ["/var/log/pods/*/*/*.log"]
+	start_at          = "beginning"
+	include_file_path = true
+	max_log_size      = "1MiB"
+	storage           = otelcol.storage.file.backfill.handler
+
+	operators = [
+		{type = "container", add_metadata_from_filepath = true},
+		{
+			type               = "recombine",
+			combine_field      = "body",
+			source_identifier  = `attributes["log.file.path"]`,
+			is_first_entry     = `body matches "^\\S" and not (body matches "^(Traceback |During handling|The above exception|[A-Za-z_][\\w.]*(Error|Exception|Warning)(: |$)|Caused by:)")`,
+			combine_with       = "\n",
+			max_log_lines      = 500,
+			force_flush_period = "1s",
+		},
+		{type = "remove", field = `attributes["log.file.path"]`},
+		{type = "remove", field = `attributes["log.file.name"]`},
+		{type = "remove", field = `attributes["logtag"]`},
+	]
+
+	output {
+		logs = [otelcol.processor.filter.backfill.input]
+	}
+}
+
+otelcol.processor.filter "backfill" {
+	error_mode = "ignore"
+
+	logs {
+		log_record = [
+			`time_unix_nano > UnixNano(Now()) - 3900000000000`,
+			`time_unix_nano < UnixNano(Now()) - 2505600000000000`,
+		]
+	}
+
+	output {
+		logs = [otelcol.processor.k8sattributes.default.input]
+	}
+}

@@ -6,6 +6,7 @@ data:
   config.alloy: |-
 {{ .Files.Get "config/node.alloy" | indent 4 }}
 {{ .Files.Get "config/log-parsing.alloy" | indent 4 }}
+{{ .Files.Get "config/backfill.alloy" | indent 4 }}
 ---
 apiVersion: v1
 kind: ConfigMap

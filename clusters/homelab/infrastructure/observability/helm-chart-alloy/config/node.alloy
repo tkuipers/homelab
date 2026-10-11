@@ -177,10 +177,14 @@ otelcol.exporter.otlphttp "loki" {
 		endpoint = "http://loki.observability.svc:3100/otlp"
 	}
 
+	// One consumer keeps batches in order: Loki rejects lines that arrive more
+	// than ~1h behind the newest line of their stream, which parallel
+	// consumers cause when draining a backlog.
 	sending_queue {
-		enabled    = true
-		queue_size = 5000
-		storage    = otelcol.storage.file.state.handler
+		enabled       = true
+		num_consumers = 1
+		queue_size    = 5000
+		storage       = otelcol.storage.file.state.handler
 	}
 }
 
