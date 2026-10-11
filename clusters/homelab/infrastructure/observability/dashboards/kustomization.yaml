@@ -9,6 +9,12 @@ generatorOptions:
     grafana_dashboard: "1"
 
 configMapGenerator:
+  - name: dash-overview-platform-health
+    files:
+      - overview--platform-health.json
+    options:
+      annotations:
+        grafana_folder: "Overview"
   - name: dash-overview-homelab-overview
     files:
       - overview--homelab-overview.json

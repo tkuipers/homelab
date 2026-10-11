@@ -697,6 +697,86 @@ CATALOG: List[Svc] = [
 # Overview dashboards
 # ----------------------------------------------------------------------------
 
+# Problem counts per platform area (0 = OK). Shared by the area tiles and the
+# "Platform status" roll-up, so they can never disagree.
+AREAS = [
+    # (title, PromQL counting failing things, description)
+    ("Apps", 'count(probe_success{probe="internal"} == 0)',
+     "in-cluster health checks of the apps themselves (incl. LAN DNS) that fail"),
+    ("Public URLs", 'count(probe_success{probe="external"} == 0)',
+     "public *.tkuipers.ca hosts that fail (DNS / ingress / TLS / Authelia)"),
+    ("Workloads",
+     '(count(kube_deployment_status_replicas_available - kube_deployment_spec_replicas < 0) or vector(0))'
+     ' + (count(kube_statefulset_status_replicas_ready - kube_statefulset_replicas < 0) or vector(0))'
+     ' + (count(kube_daemonset_status_number_ready - kube_daemonset_status_desired_number_scheduled < 0) or vector(0))'
+     ' + (count(kube_pod_container_status_waiting_reason{reason=~"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError"}) or vector(0))',
+     "deployments / statefulsets / daemonsets missing ready pods + crash-looping containers"),
+    ("Nodes",
+     '(count(kube_node_status_condition{condition="Ready", status="true"} == 0) or vector(0))'
+     ' + (count(kube_node_status_condition{condition=~"MemoryPressure|DiskPressure|PIDPressure", status="true"} == 1) or vector(0))',
+     "nodes not Ready or under memory / disk / PID pressure"),
+    ("Disks",
+     'count(max by (instance, mountpoint) (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"}) > 0.85)',
+     "node filesystems more than 85% full"),
+    ("Certificates",
+     'count(min by (instance) (probe_ssl_earliest_cert_expiry - time()) < 14 * 86400)'
+     ' + (count(certmanager_certificate_ready_status{condition="False"} == 1) or vector(0))',
+     "public certificates expiring within 14 days + cert-manager certificates not Ready"),
+    ("Scheduled jobs",
+     'count(((time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) - 2 * (max by (namespace, cronjob) (kube_cronjob_next_schedule_time) - max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)) - 1800) > 0 unless on (namespace, cronjob) (kube_cronjob_spec_suspend == 1))'
+     ' + (count(max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)) or vector(0))',
+     "CronJobs overdue (incl. backups) + Jobs that failed in the last 24h"),
+    ("GitOps (Argo CD)", 'count(argocd_app_info{sync_status!="Synced"} or argocd_app_info{health_status!="Healthy"})',
+     "Argo CD applications not Synced or not Healthy"),
+    ("Secrets", 'count(externalsecret_status_condition{condition="Ready", status="False"} == 1)',
+     "ExternalSecrets that cannot sync from 1Password"),
+    ("Monitoring",
+     '(count(up == 0) or vector(0))'
+     ' + (sum(rate(otelcol_exporter_sent_log_records_total{component_id="otelcol.exporter.otlphttp.loki"}[5m])) < bool 0.01 or vector(1))'
+     ' + (sum(rate(grafana_alerting_rule_evaluations_total[10m])) < bool 0.001 or vector(1))',
+     "the monitoring itself: scrape targets down + logs not shipping + Grafana not evaluating alert rules"),
+]
+OK_MAP = [{"type": "value", "options": {"0": {"text": "OK", "color": "green"}}}]
+
+
+def master() -> Board:
+    b = Board("platform-health", "Platform health", ["homelab", "overview"], "Overview", time_from="now-24h",
+              description="Home dashboard: is the platform green? Every tile is a count of failing things (OK = 0). "
+                          "For details go to Homelab overview or the service dashboards.")
+    # ---- one answer ---------------------------------------------------------
+    rollup = " + ".join(f"clamp_max(({q}) or vector(0), 1)" for _, q, _ in AREAS)
+    b.stat("Platform status", rollup, w=16, h=5, unit="suffix: area(s) need attention",
+           thresholds=RED_IF_ABOVE_0, desc="number of the areas below that are not OK",
+           mappings=[{"type": "value", "options": {"0": {"text": "ALL GREEN", "color": "green"}}}])
+    b.stat("Firing alerts",
+           '(count(ALERTS{alertstate="firing", alertname!~"Watchdog|InfoInhibitor"}) or vector(0)) + (sum(grafana_alerting_alerts{state="alerting"}) or vector(0))',
+           w=8, h=5, thresholds=ORANGE_RED, mappings=OK_MAP,
+           desc="Grafana-managed + Prometheus alerts currently firing (list below)")
+    # ---- one tile per area --------------------------------------------------
+    for title, q, desc in AREAS:
+        b.stat(title, f"({q}) or vector(0)", w=4, h=4, thresholds=RED_IF_ABOVE_0, mappings=OK_MAP, desc=desc + ". 0 = OK")
+    b.stat("Services logging errors",
+           'count(sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [1h])) > 20) or vector(0)',
+           ds=LOKI, w=4, h=4, thresholds=ORANGE_RED, mappings=OK_MAP,
+           desc="services that logged more than 20 error lines in the last hour (alert 'Errors logged steadily' fires after 2h)")
+    b.stat("Ingress 5xx (1h)",
+           '(sum(rate(nginx_ingress_controller_requests{status=~"5.."}[1h])) or vector(0)) / sum(rate(nginx_ingress_controller_requests[1h]))',
+           unit="percentunit", decimals=2, w=4, h=4,
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.01}, {"color": "red", "value": 0.05}],
+           desc="share of all requests through ingress-nginx answered with 5xx")
+    # ---- what and since when -----------------------------------------------
+    b.alertlist("Firing alerts", w=14, h=9)
+    b.ts("Problems over time", [
+        ('count(probe_success == 0) or vector(0)', "failing probes"),
+        ('(count(kube_deployment_status_replicas_available - kube_deployment_spec_replicas < 0) or vector(0)) + (count(kube_statefulset_status_replicas_ready - kube_statefulset_replicas < 0) or vector(0)) + (count(kube_daemonset_status_number_ready - kube_daemonset_status_desired_number_scheduled < 0) or vector(0))', "workloads not ready"),
+        ('(count(ALERTS{alertstate="firing", alertname!~"Watchdog|InfoInhibitor"}) or vector(0)) + (sum(grafana_alerting_alerts{state="alerting"}) or vector(0))', "firing alerts"),
+    ], w=10, h=9, desc="when did it start? (24h)")
+    b.text("", "Details: **[Homelab overview](/d/homelab-overview)** (incident start page) · "
+               "**[All dashboards](/dashboards)** · **[Alert rules](/alerting/list)** · "
+               "**[Explore logs](/a/grafana-lokiexplore-app/explore)**", h=2)
+    return b
+
+
 def overview() -> Board:
     b = Board("homelab-overview", "Homelab overview", ["homelab", "overview"], "Overview",
               description="Start here during an incident: what is down, failing or restarting right now.")
@@ -804,7 +884,7 @@ def main():
     for f in os.listdir(OUT):
         if f.endswith(".json"):
             os.remove(os.path.join(OUT, f))
-    boards = [overview()] + [namespace_overview(*x) for x in NAMESPACE_OVERVIEWS] + [standard(s) for s in CATALOG]
+    boards = [master(), overview()] + [namespace_overview(*x) for x in NAMESPACE_OVERVIEWS] + [standard(s) for s in CATALOG]
     uids = set()
     gens = []
     for b in boards:

@@ -267,6 +267,10 @@ kube-prometheus-stack:
         skip_org_role_sync: false
       unified_alerting:
         enabled: true
+      dashboards:
+        # Home = "Platform health" (generate_dashboards.py master()); the sidecar
+        # writes dashboards to /tmp/dashboards/<grafana_folder>/<file>
+        default_home_dashboard_path: /tmp/dashboards/Overview/overview--platform-health.json
 
     sidecar:
       dashboards:
