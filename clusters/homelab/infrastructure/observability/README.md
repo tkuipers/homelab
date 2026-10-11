@@ -118,5 +118,9 @@ them to 1Password and switches to ExternalSecrets (`secrets/`).
 - etcd and kube-proxy metrics are not scraped (Talos binds them to localhost).
 - Talos machine/kernel logs (`dmesg`, kubelet, etcd) are not shipped; kernel
   OOM kills are only visible as `node_vmstat_oom_kill` (alerted).
+- Loki logs "failed to load chunk ... no such file" when a query touches the original
+  (non-backfill) streams for 2026-10-11 before ~06:04Z: stale index refs left by the
+  migration's delete request. Harmless (that data was replaced by `log_origin=backfill-*`
+  streams); they age out with retention.
 - Alloy hot-reloads its config; one reload deadlocked it (no logs shipped).
   It now has a liveness probe, and "A node stopped shipping logs" alerts.
