@@ -83,6 +83,13 @@ rules:
   - apiGroups: [monitoring.coreos.com]
     resources: [servicemonitors, podmonitors, prometheusrules, probes]
     verbs: [patch, update]
+  # one-off cleanup (Tyler, 2026-10-11): webhook configs left by the old Flux
+  # ingress-nginx release and the old "monitoring" kube-prometheus-stack; their
+  # Services are gone, so every Ingress/PrometheusRule write logs an apiserver error
+  - apiGroups: [admissionregistration.k8s.io]
+    resources: [validatingwebhookconfigurations, mutatingwebhookconfigurations]
+    resourceNames: [ingress-nginx-ingress-nginx-admission, kube-prometheus-stack-admission]
+    verbs: [delete]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
