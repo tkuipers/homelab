@@ -15,6 +15,14 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
+      # gluetun resolves its healthcheck hosts through the pod's resolv.conf. With the
+      # default ndots:5, github.com is first tried as github.com.<search domain>; gluetun
+      # forwards those to kube-dns, which is unreachable behind its firewall, so every
+      # lookup times out and the VPN restarts forever. ndots:1 sends public names upstream.
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
       initContainers:
       - name: create-downloads-dir
         image: busybox:latest
