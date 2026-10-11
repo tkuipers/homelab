@@ -30,6 +30,26 @@ ingress-nginx:
       use-forwarded-headers: "true"
       compute-full-forwarded-for: "true"
 
+      # JSON access logs -> Alloy turns every key into a Loki field
+      # ("msg" becomes the log line). See observability/helm-chart-alloy.
+      log-format-escape-json: "true"
+      log-format-upstream: '{"time":"$time_iso8601","msg":"$request_method $host$uri $status","method":"$request_method","host":"$host","path":"$uri","query":"$args","protocol":"$server_protocol","status":$status,"bytes_sent":$bytes_sent,"request_length":$request_length,"request_time":$request_time,"remote_addr":"$remote_addr","x_forwarded_for":"$proxy_add_x_forwarded_for","remote_user":"$remote_user","referer":"$http_referer","user_agent":"$http_user_agent","request_id":"$req_id","trace_id":"$opentelemetry_trace_id","upstream":"$proxy_upstream_name","upstream_addr":"$upstream_addr","upstream_status":"$upstream_status","upstream_response_time":"$upstream_response_time","upstream_response_length":"$upstream_response_length","ingress":"$ingress_name","ingress_namespace":"$namespace","ingress_service":"$service_name"}'
+
+      # One trace span per request through the ingress -> Alloy -> Tempo
+      enable-opentelemetry: "true"
+      otlp-collector-host: alloy.observability.svc.cluster.local
+      otlp-collector-port: "4317"
+      otel-service-name: ingress-nginx
+      otel-sampler: AlwaysOn
+      opentelemetry-trust-incoming-span: "true"
+      opentelemetry-operation-name: "HTTP $request_method $service_name $uri"
+
+    # Prometheus metrics (per-ingress request counts, status codes, latency)
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+
     # Resources
     resources:
       requests:
