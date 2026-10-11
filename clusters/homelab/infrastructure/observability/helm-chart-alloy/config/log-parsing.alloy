@@ -188,6 +188,10 @@ otelcol.processor.transform "logs" {
 			`set(severity_text, "warn") where resource.attributes["k8s.container.name"] == "argocd-repo-server" and IsMatch(body, "You may need to run .helm dependency build.")`,
 			// nginx logs every 404 for a missing file (scanners: wp-login.php ...) at error
 			`set(severity_text, "warn") where attributes["log.format"] == "nginx_error" and IsMatch(body, "^open\\(\\) .* failed \\(2: No such file or directory\\)")`,
+			// polymarket-bot's Postgres driver appends "RETURNING id" to every INSERT and
+			// re-runs it without on failure (polymarket_bot/db_drivers.py), so inserts into
+			// bot_state / bankroll_snapshots (no id column) log this ~20x/h; the write succeeds
+			`set(severity_text, "warn") where resource.attributes["k8s.namespace.name"] == "polymarket-bot" and attributes["log.format"] == "postgres" and IsMatch(body, "^column \"id\" does not exist at character [0-9]+")`,
 			// TEMPORARY (remove after 2026-12-10, when 60d retention has aged them out):
 			// stale index refs left by the 2026-10-11 migration delete request make
 			// queries touching 2026-10-11 <06:04Z log "failed to load chunk ... no such
