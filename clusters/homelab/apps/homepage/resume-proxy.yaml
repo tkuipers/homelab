@@ -6,7 +6,10 @@ metadata:
   namespace: homepage
 spec:
   type: ExternalName
-  externalName: tkuipers-resume.s3.amazonaws.com
+  # Trailing dot = FQDN: ingress-nginx resolves ExternalName backends itself
+  # (every worker, every second, per TTL) and would otherwise try all three
+  # cluster search domains first (ndots:5), ~4x the DNS queries.
+  externalName: tkuipers-resume.s3.amazonaws.com.
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
