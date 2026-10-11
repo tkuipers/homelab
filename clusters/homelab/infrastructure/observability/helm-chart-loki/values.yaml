@@ -39,6 +39,14 @@ loki:
       # The "Loki storage budget" alert fires if the projected 60d volume
       # passes 90GB (lower this if it does).
       retention_period: 60d
+      retention_stream:
+        # one-off archive of container history older than ~30d (tiny):
+        # keeps "last thing this quiet service ever said" queryable
+        - selector: '{log_origin=~"backfill-archive.*"}'
+          priority: 1
+          period: 400d
+      # dashboards' log panels for quiet services look back a year
+      max_query_length: 400d
       allow_structured_metadata: true
       volume_enabled: true
       discover_log_levels: true
@@ -49,8 +57,10 @@ loki:
       per_stream_rate_limit: 16MB
       per_stream_rate_limit_burst: 32MB
       reject_old_samples: true
-      # accept backfill of whatever kubelet still has on disk (bounded by retention)
-      reject_old_samples_max_age: 30d
+      # accept whatever kubelet still has on disk (quiet containers' newest
+      # lines can be months old). Normal streams are still cut at
+      # retention_period; the archive streams below keep them for a year.
+      reject_old_samples_max_age: 400d
       max_query_series: 10000
       max_entries_limit_per_query: 10000
       query_timeout: 5m
