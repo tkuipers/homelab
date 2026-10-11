@@ -109,6 +109,9 @@ otelcol.processor.transform "logs" {
 			// rust tracing (anki): 2026-10-11T01:11:47.358383Z  INFO span{..}: message k=v
 			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\d{4}-\\d{2}-\\d{2}T\\S+Z\\s+(?P<level>TRACE|DEBUG|INFO|WARN|ERROR) (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
 			`set(attributes["log.format"], "rust_tracing") where attributes["log.format"] == nil and attributes["msg"] != nil`,
+			// rust request span (anki): request{uri="/x"}: finished elap_ms=0 httpstatus=404
+			`merge_maps(attributes, ExtractPatterns(attributes["msg"], "^request\\{uri=\"(?P<path>[^\"]*)\"\\}: finished elap_ms=(?P<duration_ms>\\d+) httpstatus=(?P<status>\\d{3})"), "insert") where attributes["log.format"] == "rust_tracing" and IsString(attributes["msg"])`,
+			`set(attributes["log.format"], "access_rust") where attributes["log.format"] == "rust_tracing" and attributes["status"] != nil`,
 			// coredns / bracketed level: [ERROR] plugin/errors: ...
 			`merge_maps(attributes, ExtractPatterns(body, "(?s)^\\[(?P<level>DEBUG|INFO|WARNING|WARN|ERROR|FATAL)\\] (?P<msg>.*)$"), "insert") where attributes["log.format"] == nil`,
 			`set(attributes["log.format"], "bracket_level") where attributes["log.format"] == nil and attributes["msg"] != nil`,
@@ -146,7 +149,7 @@ otelcol.processor.transform "logs" {
 			`set(severity_text, "info") where severity_text == "" and IsMatch(attributes["log.format"], "^access_")`,
 
 			// ---- level -------------------------------------------------------------
-			`set(severity_text, attributes["level"]) where IsString(attributes["level"])`,
+			`set(severity_text, attributes["level"]) where severity_text == "" and IsString(attributes["level"])`,
 			`set(severity_text, attributes["levelname"]) where severity_text == "" and IsString(attributes["levelname"])`,
 			`set(severity_text, attributes["lvl"]) where severity_text == "" and IsString(attributes["lvl"])`,
 			`set(severity_text, attributes["severity"]) where severity_text == "" and IsString(attributes["severity"])`,
