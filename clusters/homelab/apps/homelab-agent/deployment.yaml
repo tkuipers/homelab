@@ -20,6 +20,8 @@ spec:
         app: homelab-agent
     spec:
       serviceAccountName: homelab-agent
+      # SIGTERM pauses running turns and flushes the database (src/main.ts); they resume after the restart
+      terminationGracePeriodSeconds: 60
       imagePullSecrets:
         - name: ghcr-secret
       # plenty of memory for parallel Claude Code sessions
