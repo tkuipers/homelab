@@ -22,6 +22,10 @@ spec:
       containers:
         - name: minio
           image: minio/minio:latest
+          # MinIO no longer publishes minio/minio images, so a re-pull of
+          # :latest fails (ImagePullBackOff). Use the copy cached on the node.
+          # TODO: pin to an image that still exists / build our own.
+          imagePullPolicy: IfNotPresent
           args:
             - server
             - /data
