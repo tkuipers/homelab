@@ -48,12 +48,18 @@ spec:
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "$(POSTGRES_DB)"]
+              # via sh: kubelet only expands $(VAR) from static env values, so the
+              # secret-backed POSTGRES_USER became "" and every probe logged
+              # FATAL: role "root" does not exist
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
             initialDelaySeconds: 5
             periodSeconds: 5
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "$(POSTGRES_DB)"]
+              # via sh: kubelet only expands $(VAR) from static env values, so the
+              # secret-backed POSTGRES_USER became "" and every probe logged
+              # FATAL: role "root" does not exist
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
             initialDelaySeconds: 30
             periodSeconds: 10
           resources:
@@ -63,6 +69,38 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+        # Prometheus metrics (connections, transactions, locks, db size);
+        # scraped by the "app-exporters" PodMonitor in infrastructure/observability
+        - name: postgres-exporter
+          image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+          env:
+            - name: PGDB
+              valueFrom:
+                secretKeyRef:
+                  name: polymarket-secret
+                  key: postgres-database
+            - name: DATA_SOURCE_URI
+              value: "localhost:5432/$(PGDB)?sslmode=disable"
+            - name: DATA_SOURCE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: polymarket-secret
+                  key: postgres-user
+            - name: DATA_SOURCE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: polymarket-secret
+                  key: postgres-password
+          ports:
+            - containerPort: 9187
+              name: metrics
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
       volumes:
         - name: data
           hostPath:

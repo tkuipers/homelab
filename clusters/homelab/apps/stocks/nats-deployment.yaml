@@ -41,6 +41,26 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "500m"
+        # Prometheus metrics incl. JetStream stream/consumer lag (pending,
+        # ack pending, redelivered) - the "is the pipeline moving" signal
+        - name: nats-exporter
+          image: natsio/prometheus-nats-exporter:0.20.1
+          args:
+            - -varz
+            - -connz
+            - -jsz=all
+            - -port=7777
+            - http://localhost:8222
+          ports:
+            - containerPort: 7777
+              name: metrics
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
       volumes:
         - name: data
           hostPath:

@@ -58,7 +58,7 @@ push. Alloy hot-reloads the config.
 ### Storage / retention (~150 GB on dell-r620)
 Cluster pattern: hostPath `/var/persist/observability-*` on dell-r620, wrapped
 in static PVs (`storage-pvs.yaml`, class `observability-hostpath`).
-Loki 100 Gi (30d retention; ~1 GB/day observed), Prometheus 40 Gi
+Loki 100 Gi (60d retention; ~0.2-1 GB/day observed, budget alert), Prometheus 40 Gi
 (`retentionSize: 36GB`, 90d), Tempo 8 Gi (5d), Grafana 2 Gi.
 Pods writing to hostPath run as root (hostPath ignores fsGroup).
 

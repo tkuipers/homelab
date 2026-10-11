@@ -145,3 +145,21 @@ spec:
     - port: http
       path: /metrics
       interval: 60s
+---
+# postgres-exporter sidecars (stocks, polymarket-bot) + nats-exporter (stocks)
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: app-exporters
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [stocks, polymarket-bot]
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [stocks-postgres, polymarket-postgres, stocks-nats]
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
