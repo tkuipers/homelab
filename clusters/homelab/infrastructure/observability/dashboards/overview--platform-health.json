@@ -1,6 +1,6 @@
 {
  "description": "Home dashboard: is the platform green? Every tile is a count of failing things (OK = 0). For details go to Homelab overview or the service dashboards.",
- "editable": true,
+ "editable": false,
  "graphTooltip": 1,
  "links": [
   {
@@ -34,7 +34,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "number of the areas below that are not OK",
+   "description": "number of the 11 coloured areas below that are not OK (firing alerts and error logs are shown separately)",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -94,7 +94,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "clamp_max((count(probe_success{probe=\"internal\"} == 0)) or vector(0), 1) + clamp_max((count(probe_success{probe=\"external\"} == 0)) or vector(0), 1) + clamp_max(((count(kube_deployment_status_replicas_available - kube_deployment_spec_replicas < 0) or vector(0)) + (count(kube_statefulset_status_replicas_ready - kube_statefulset_replicas < 0) or vector(0)) + (count(kube_daemonset_status_number_ready - kube_daemonset_status_desired_number_scheduled < 0) or vector(0)) + (count(kube_pod_container_status_waiting_reason{reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError\"}) or vector(0))) or vector(0), 1) + clamp_max(((count(kube_node_status_condition{condition=\"Ready\", status=\"true\"} == 0) or vector(0)) + (count(kube_node_status_condition{condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1) or vector(0))) or vector(0), 1) + clamp_max((count(max by (instance, mountpoint) (1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs|ramfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs|ramfs\"}) > 0.85)) or vector(0), 1) + clamp_max((count(min by (instance) (probe_ssl_earliest_cert_expiry - time()) < 14 * 86400) + (count(certmanager_certificate_ready_status{condition=\"False\"} == 1) or vector(0))) or vector(0), 1) + clamp_max((count(((time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) - 2 * (max by (namespace, cronjob) (kube_cronjob_next_schedule_time) - max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)) - 1800) > 0 unless on (namespace, cronjob) (kube_cronjob_spec_suspend == 1)) + (count(max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)) or vector(0))) or vector(0), 1) + clamp_max((count(argocd_app_info{sync_status!=\"Synced\"} or argocd_app_info{health_status!=\"Healthy\"})) or vector(0), 1) + clamp_max((count(externalsecret_status_condition{condition=\"Ready\", status=\"False\"} == 1)) or vector(0), 1) + clamp_max(((count(up == 0) or vector(0)) + (sum(rate(otelcol_exporter_sent_log_records_total{component_id=\"otelcol.exporter.otlphttp.loki\"}[5m])) < bool 0.01 or vector(1)) + (sum(rate(grafana_alerting_rule_evaluations_total[10m])) < bool 0.001 or vector(1))) or vector(0), 1)",
+     "expr": "clamp_max((count(probe_success{probe=\"internal\"} == 0)) or vector(0), 1) + clamp_max((count(probe_success{probe=\"external\"} == 0)) or vector(0), 1) + clamp_max(((count(kube_deployment_status_replicas_available - kube_deployment_spec_replicas < 0) or vector(0)) + (count(kube_statefulset_status_replicas_ready - kube_statefulset_replicas < 0) or vector(0)) + (count(kube_daemonset_status_number_ready - kube_daemonset_status_desired_number_scheduled < 0) or vector(0)) + (count(kube_pod_container_status_waiting_reason{reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError\"}) or vector(0))) or vector(0), 1) + clamp_max(((count(kube_node_status_condition{condition=\"Ready\", status=\"true\"} == 0) or vector(0)) + (count(kube_node_status_condition{condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1) or vector(0))) or vector(0), 1) + clamp_max((count(max by (instance, mountpoint) (1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs|ramfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs|ramfs\"}) > 0.85)) or vector(0), 1) + clamp_max(((count(min by (instance) (probe_ssl_earliest_cert_expiry - time()) < 14 * 86400) or vector(0)) + (count(certmanager_certificate_ready_status{condition=\"False\"} == 1) or vector(0))) or vector(0), 1) + clamp_max(((count(((time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) - 2 * (max by (namespace, cronjob) (kube_cronjob_next_schedule_time) - max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)) - 1800) > 0 unless on (namespace, cronjob) (kube_cronjob_spec_suspend == 1)) or vector(0)) + (count(max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)) or vector(0))) or vector(0), 1) + clamp_max((count(argocd_app_info{sync_status!=\"Synced\"} or argocd_app_info{health_status!=\"Healthy\"})) or vector(0), 1) + clamp_max((count(externalsecret_status_condition{condition=\"Ready\", status=\"False\"} == 1)) or vector(0), 1) + clamp_max(((count(up == 0) or vector(0)) + (sum(rate(otelcol_exporter_sent_log_records_total{component_id=\"otelcol.exporter.otlphttp.loki\"}[5m])) < bool 0.01 or vector(1)) + (sum(rate(grafana_alerting_rule_evaluations_total[10m])) < bool 0.001 or vector(1)) + (count(count by (job) (up{job=~\"kube-state-metrics|node-exporter|blackbox|argocd-metrics|infrastructure-cert-manager|observability/external-secrets|infrastructure-ingress-nginx-controller-metrics|kubelet\"} == 1)) < bool 8 or vector(1))) or vector(0), 1) + clamp_max(((sum(rate(nginx_ingress_controller_requests{status=~\"5..\"}[15m])) / sum(rate(nginx_ingress_controller_requests[15m])) > bool 0.05) or vector(0)) or vector(0), 1)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -623,7 +623,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "(count(min by (instance) (probe_ssl_earliest_cert_expiry - time()) < 14 * 86400) + (count(certmanager_certificate_ready_status{condition=\"False\"} == 1) or vector(0))) or vector(0)",
+     "expr": "((count(min by (instance) (probe_ssl_earliest_cert_expiry - time()) < 14 * 86400) or vector(0)) + (count(certmanager_certificate_ready_status{condition=\"False\"} == 1) or vector(0))) or vector(0)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -698,14 +698,14 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "(count(((time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) - 2 * (max by (namespace, cronjob) (kube_cronjob_next_schedule_time) - max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)) - 1800) > 0 unless on (namespace, cronjob) (kube_cronjob_spec_suspend == 1)) + (count(max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)) or vector(0))) or vector(0)",
+     "expr": "((count(((time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) - 2 * (max by (namespace, cronjob) (kube_cronjob_next_schedule_time) - max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)) - 1800) > 0 unless on (namespace, cronjob) (kube_cronjob_spec_suspend == 1)) or vector(0)) + (count(max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)) or vector(0))) or vector(0)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
      "refId": "A"
     }
    ],
-   "title": "Scheduled jobs",
+   "title": "Cron jobs",
    "type": "stat"
   },
   {
@@ -780,7 +780,7 @@
      "refId": "A"
     }
    ],
-   "title": "GitOps (Argo CD)",
+   "title": "Argo CD",
    "type": "stat"
   },
   {
@@ -863,7 +863,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "the monitoring itself: scrape targets down + logs not shipping + Grafana not evaluating alert rules. 0 = OK",
+   "description": "the monitoring itself: scrape targets down + logs not shipping + Grafana not evaluating alert rules + a core exporter missing entirely (its tiles would otherwise read OK for lack of data). 0 = OK",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -923,7 +923,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "((count(up == 0) or vector(0)) + (sum(rate(otelcol_exporter_sent_log_records_total{component_id=\"otelcol.exporter.otlphttp.loki\"}[5m])) < bool 0.01 or vector(1)) + (sum(rate(grafana_alerting_rule_evaluations_total[10m])) < bool 0.001 or vector(1))) or vector(0)",
+     "expr": "((count(up == 0) or vector(0)) + (sum(rate(otelcol_exporter_sent_log_records_total{component_id=\"otelcol.exporter.otlphttp.loki\"}[5m])) < bool 0.01 or vector(1)) + (sum(rate(grafana_alerting_rule_evaluations_total[10m])) < bool 0.001 or vector(1)) + (count(count by (job) (up{job=~\"kube-state-metrics|node-exporter|blackbox|argocd-metrics|infrastructure-cert-manager|observability/external-secrets|infrastructure-ingress-nginx-controller-metrics|kubelet\"} == 1)) < bool 8 or vector(1))) or vector(0)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -935,10 +935,10 @@
   },
   {
    "datasource": {
-    "type": "loki",
-    "uid": "loki"
+    "type": "prometheus",
+    "uid": "prometheus"
    },
-   "description": "services that logged more than 20 error lines in the last hour (alert 'Errors logged steadily' fires after 2h)",
+   "description": "1 when more than 5% of all requests through ingress-nginx were answered with 5xx in the last 15m. 0 = OK",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -963,12 +963,8 @@
         "value": null
        },
        {
-        "color": "orange",
-        "value": 1
-       },
-       {
         "color": "red",
-        "value": 10
+        "value": 1
        }
       ]
      },
@@ -999,49 +995,50 @@
    "targets": [
     {
      "datasource": {
-      "type": "loki",
-      "uid": "loki"
+      "type": "prometheus",
+      "uid": "prometheus"
      },
-     "expr": "count(sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~\".+\", service_name!=\"kubernetes-events\"} | detected_level=~\"error|fatal|critical\" [1h])) > 20) or vector(0)",
-     "legendFormat": "",
-     "queryType": "instant",
+     "expr": "((sum(rate(nginx_ingress_controller_requests{status=~\"5..\"}[15m])) / sum(rate(nginx_ingress_controller_requests[15m])) > bool 0.05) or vector(0)) or vector(0)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
      "refId": "A"
     }
    ],
-   "title": "Services logging errors",
+   "title": "5xx rate",
    "type": "stat"
   },
   {
    "datasource": {
-    "type": "prometheus",
-    "uid": "prometheus"
+    "type": "loki",
+    "uid": "loki"
    },
-   "description": "share of all requests through ingress-nginx answered with 5xx",
+   "description": "informational, not part of the status: services that logged more than 20 error lines in the last hour (alert 'Errors logged steadily' fires after 2h)",
    "fieldConfig": {
     "defaults": {
      "color": {
       "mode": "thresholds"
      },
-     "decimals": 2,
-     "mappings": [],
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "text": "none"
+        }
+       },
+       "type": "value"
+      }
+     ],
      "thresholds": {
       "mode": "absolute",
       "steps": [
        {
-        "color": "green",
+        "color": "text",
         "value": null
-       },
-       {
-        "color": "orange",
-        "value": 0.01
-       },
-       {
-        "color": "red",
-        "value": 0.05
        }
       ]
      },
-     "unit": "percentunit"
+     "unit": "short"
     },
     "overrides": []
    },
@@ -1068,17 +1065,16 @@
    "targets": [
     {
      "datasource": {
-      "type": "prometheus",
-      "uid": "prometheus"
+      "type": "loki",
+      "uid": "loki"
      },
-     "expr": "(sum(rate(nginx_ingress_controller_requests{status=~\"5..\"}[1h])) or vector(0)) / sum(rate(nginx_ingress_controller_requests[1h]))",
-     "instant": true,
-     "legendFormat": "__auto",
-     "range": false,
+     "expr": "count(sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~\".+\", service_name!=\"kubernetes-events\"} | detected_level=~\"error|fatal|critical\" [1h])) > 20) or vector(0)",
+     "legendFormat": "",
+     "queryType": "instant",
      "refId": "A"
     }
    ],
-   "title": "Ingress 5xx (1h)",
+   "title": "Error logs",
    "type": "stat"
   },
   {
@@ -1090,7 +1086,7 @@
    },
    "id": 15,
    "options": {
-    "alertInstanceLabelFilter": "",
+    "alertInstanceLabelFilter": "{severity!=\"none\"}",
     "dashboardAlerts": false,
     "groupMode": "default",
     "maxItems": 50,
@@ -1104,7 +1100,7 @@
     },
     "viewMode": "list"
    },
-   "title": "Firing alerts",
+   "title": "Firing & pending alerts",
    "type": "alertlist"
   },
   {
@@ -1155,11 +1151,22 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
+     "expr": "clamp_max((count(probe_success{probe=\"internal\"} == 0)) or vector(0), 1) + clamp_max((count(probe_success{probe=\"external\"} == 0)) or vector(0), 1) + clamp_max(((count(kube_deployment_status_replicas_available - kube_deployment_spec_replicas < 0) or vector(0)) + (count(kube_statefulset_status_replicas_ready - kube_statefulset_replicas < 0) or vector(0)) + (count(kube_daemonset_status_number_ready - kube_daemonset_status_desired_number_scheduled < 0) or vector(0)) + (count(kube_pod_container_status_waiting_reason{reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError\"}) or vector(0))) or vector(0), 1) + clamp_max(((count(kube_node_status_condition{condition=\"Ready\", status=\"true\"} == 0) or vector(0)) + (count(kube_node_status_condition{condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\"} == 1) or vector(0))) or vector(0), 1) + clamp_max((count(max by (instance, mountpoint) (1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs|ramfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs|ramfs\"}) > 0.85)) or vector(0), 1) + clamp_max(((count(min by (instance) (probe_ssl_earliest_cert_expiry - time()) < 14 * 86400) or vector(0)) + (count(certmanager_certificate_ready_status{condition=\"False\"} == 1) or vector(0))) or vector(0), 1) + clamp_max(((count(((time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) - 2 * (max by (namespace, cronjob) (kube_cronjob_next_schedule_time) - max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)) - 1800) > 0 unless on (namespace, cronjob) (kube_cronjob_spec_suspend == 1)) or vector(0)) + (count(max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)) or vector(0))) or vector(0), 1) + clamp_max((count(argocd_app_info{sync_status!=\"Synced\"} or argocd_app_info{health_status!=\"Healthy\"})) or vector(0), 1) + clamp_max((count(externalsecret_status_condition{condition=\"Ready\", status=\"False\"} == 1)) or vector(0), 1) + clamp_max(((count(up == 0) or vector(0)) + (sum(rate(otelcol_exporter_sent_log_records_total{component_id=\"otelcol.exporter.otlphttp.loki\"}[5m])) < bool 0.01 or vector(1)) + (sum(rate(grafana_alerting_rule_evaluations_total[10m])) < bool 0.001 or vector(1)) + (count(count by (job) (up{job=~\"kube-state-metrics|node-exporter|blackbox|argocd-metrics|infrastructure-cert-manager|observability/external-secrets|infrastructure-ingress-nginx-controller-metrics|kubelet\"} == 1)) < bool 8 or vector(1))) or vector(0), 1) + clamp_max(((sum(rate(nginx_ingress_controller_requests{status=~\"5..\"}[15m])) / sum(rate(nginx_ingress_controller_requests[15m])) > bool 0.05) or vector(0)) or vector(0), 1)",
+     "instant": false,
+     "legendFormat": "areas needing attention",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
      "expr": "count(probe_success == 0) or vector(0)",
      "instant": false,
      "legendFormat": "failing probes",
      "range": true,
-     "refId": "A"
+     "refId": "B"
     },
     {
      "datasource": {
@@ -1170,7 +1177,7 @@
      "instant": false,
      "legendFormat": "workloads not ready",
      "range": true,
-     "refId": "B"
+     "refId": "C"
     },
     {
      "datasource": {
@@ -1181,7 +1188,7 @@
      "instant": false,
      "legendFormat": "firing alerts",
      "range": true,
-     "refId": "C"
+     "refId": "D"
     }
    ],
    "title": "Problems over time",

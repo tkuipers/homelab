@@ -104,6 +104,7 @@ class Board:
         self.time_from, self.description = time_from, description
         self.panels, self.x, self.y, self.row_h, self.pid = [], 0, 0, 0, 1
         self.variables = []
+        self.editable = True
 
     def _place(self, w, h):
         if self.x + w > 24:
@@ -210,10 +211,10 @@ class Board:
                          "query": "", "includeVars": False, "keepTime": True}}
         return self._add(p, w, h)
 
-    def alertlist(self, title, w=24, h=8):
+    def alertlist(self, title, w=24, h=8, label_filter=""):
         p = {"type": "alertlist", "title": title,
              "options": {"viewMode": "list", "groupMode": "default", "maxItems": 50,
-                         "sortOrder": 1, "dashboardAlerts": False, "alertInstanceLabelFilter": "",
+                         "sortOrder": 1, "dashboardAlerts": False, "alertInstanceLabelFilter": label_filter,
                          "stateFilter": {"firing": True, "pending": True, "noData": False,
                                          "normal": False, "error": True}}}
         return self._add(p, w, h)
@@ -231,7 +232,7 @@ class Board:
     def render(self):
         return {
             "uid": self.uid, "title": self.title, "tags": self.tags, "description": self.description,
-            "timezone": "browser", "editable": True, "graphTooltip": 1, "schemaVersion": 39,
+            "timezone": "browser", "editable": self.editable, "graphTooltip": 1, "schemaVersion": 39,
             "refresh": "1m", "time": {"from": self.time_from, "to": "now"},
             "templating": {"list": self.variables},
             "links": [
@@ -742,22 +743,27 @@ AREAS = [
      'count(max by (instance, mountpoint) (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"}) > 0.85)',
      "node filesystems more than 85% full"),
     ("Certificates",
-     'count(min by (instance) (probe_ssl_earliest_cert_expiry - time()) < 14 * 86400)'
+     '(count(min by (instance) (probe_ssl_earliest_cert_expiry - time()) < 14 * 86400) or vector(0))'
      ' + (count(certmanager_certificate_ready_status{condition="False"} == 1) or vector(0))',
      "public certificates expiring within 14 days + cert-manager certificates not Ready"),
-    ("Scheduled jobs",
-     'count(((time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) - 2 * (max by (namespace, cronjob) (kube_cronjob_next_schedule_time) - max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)) - 1800) > 0 unless on (namespace, cronjob) (kube_cronjob_spec_suspend == 1))'
+    ("Cron jobs",
+     '(count(((time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) - 2 * (max by (namespace, cronjob) (kube_cronjob_next_schedule_time) - max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)) - 1800) > 0 unless on (namespace, cronjob) (kube_cronjob_spec_suspend == 1)) or vector(0))'
      ' + (count(max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)) or vector(0))',
      "CronJobs overdue (incl. backups) + Jobs that failed in the last 24h"),
-    ("GitOps (Argo CD)", 'count(argocd_app_info{sync_status!="Synced"} or argocd_app_info{health_status!="Healthy"})',
+    ("Argo CD", 'count(argocd_app_info{sync_status!="Synced"} or argocd_app_info{health_status!="Healthy"})',
      "Argo CD applications not Synced or not Healthy"),
     ("Secrets", 'count(externalsecret_status_condition{condition="Ready", status="False"} == 1)',
      "ExternalSecrets that cannot sync from 1Password"),
     ("Monitoring",
      '(count(up == 0) or vector(0))'
      ' + (sum(rate(otelcol_exporter_sent_log_records_total{component_id="otelcol.exporter.otlphttp.loki"}[5m])) < bool 0.01 or vector(1))'
-     ' + (sum(rate(grafana_alerting_rule_evaluations_total[10m])) < bool 0.001 or vector(1))',
-     "the monitoring itself: scrape targets down + logs not shipping + Grafana not evaluating alert rules"),
+     ' + (sum(rate(grafana_alerting_rule_evaluations_total[10m])) < bool 0.001 or vector(1))'
+     ' + (count(count by (job) (up{job=~"kube-state-metrics|node-exporter|blackbox|argocd-metrics|infrastructure-cert-manager|observability/external-secrets|infrastructure-ingress-nginx-controller-metrics|kubelet"} == 1)) < bool 8 or vector(1))',
+     "the monitoring itself: scrape targets down + logs not shipping + Grafana not evaluating alert rules"
+     " + a core exporter missing entirely (its tiles would otherwise read OK for lack of data)"),
+    ("5xx rate",
+     '(sum(rate(nginx_ingress_controller_requests{status=~"5.."}[15m])) / sum(rate(nginx_ingress_controller_requests[15m])) > bool 0.05) or vector(0)',
+     "1 when more than 5% of all requests through ingress-nginx were answered with 5xx in the last 15m"),
 ]
 OK_MAP = [{"type": "value", "options": {"0": {"text": "OK", "color": "green"}}}]
 
@@ -766,10 +772,11 @@ def master() -> Board:
     b = Board("platform-health", "Platform health", ["homelab", "overview"], "Overview", time_from="now-24h",
               description="Home dashboard: is the platform green? Every tile is a count of failing things (OK = 0). "
                           "For details go to Homelab overview or the service dashboards.")
+    b.editable = False  # generated; the home copy cannot be saved anyway
     # ---- one answer ---------------------------------------------------------
     rollup = " + ".join(f"clamp_max(({q}) or vector(0), 1)" for _, q, _ in AREAS)
     b.stat("Platform status", rollup, w=16, h=5, unit="suffix: area(s) need attention",
-           thresholds=RED_IF_ABOVE_0, desc="number of the areas below that are not OK",
+           thresholds=RED_IF_ABOVE_0, desc="number of the 11 coloured areas below that are not OK (firing alerts and error logs are shown separately)",
            mappings=[{"type": "value", "options": {"0": {"text": "ALL GREEN", "color": "green"}}}])
     b.stat("Firing alerts",
            '(count(ALERTS{alertstate="firing", alertname!~"Watchdog|InfoInhibitor"}) or vector(0)) + (sum(grafana_alerting_alerts{state="alerting"}) or vector(0))',
@@ -778,18 +785,14 @@ def master() -> Board:
     # ---- one tile per area --------------------------------------------------
     for title, q, desc in AREAS:
         b.stat(title, f"({q}) or vector(0)", w=4, h=4, thresholds=RED_IF_ABOVE_0, mappings=OK_MAP, desc=desc + ". 0 = OK")
-    b.stat("Services logging errors",
+    b.stat("Error logs",
            'count(sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [1h])) > 20) or vector(0)',
-           ds=LOKI, w=4, h=4, thresholds=ORANGE_RED, mappings=OK_MAP,
-           desc="services that logged more than 20 error lines in the last hour (alert 'Errors logged steadily' fires after 2h)")
-    b.stat("Ingress 5xx (1h)",
-           '(sum(rate(nginx_ingress_controller_requests{status=~"5.."}[1h])) or vector(0)) / sum(rate(nginx_ingress_controller_requests[1h]))',
-           unit="percentunit", decimals=2, w=4, h=4,
-           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.01}, {"color": "red", "value": 0.05}],
-           desc="share of all requests through ingress-nginx answered with 5xx")
+           ds=LOKI, w=4, h=4, thresholds=[{"color": "text", "value": None}], mappings=[{"type": "value", "options": {"0": {"text": "none"}}}],
+           desc="informational, not part of the status: services that logged more than 20 error lines in the last hour (alert 'Errors logged steadily' fires after 2h)")
     # ---- what and since when -----------------------------------------------
-    b.alertlist("Firing alerts", w=14, h=9)
+    b.alertlist("Firing & pending alerts", w=14, h=9, label_filter='{severity!="none"}')
     b.ts("Problems over time", [
+        (rollup, "areas needing attention"),
         ('count(probe_success == 0) or vector(0)', "failing probes"),
         ('(count(kube_deployment_status_replicas_available - kube_deployment_spec_replicas < 0) or vector(0)) + (count(kube_statefulset_status_replicas_ready - kube_statefulset_replicas < 0) or vector(0)) + (count(kube_daemonset_status_number_ready - kube_daemonset_status_desired_number_scheduled < 0) or vector(0))', "workloads not ready"),
         ('(count(ALERTS{alertstate="firing", alertname!~"Watchdog|InfoInhibitor"}) or vector(0)) + (sum(grafana_alerting_alerts{state="alerting"}) or vector(0))', "firing alerts"),
