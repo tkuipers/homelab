@@ -245,3 +245,169 @@ kube-prometheus-stack:
             enabled: true
           lokiSearch:
             datasourceUid: loki
+
+# --- synthetic probes ----------------------------------------------------
+# Probes go through real DNS + ingress + TLS (+ Authelia), i.e. what a user
+# sees. Auth redirects/401s count as "up"; 5xx, timeouts and TLS errors don't.
+prometheus-blackbox-exporter:
+  fullnameOverride: blackbox
+  config:
+    modules:
+      http_up_tls:
+        prober: http
+        timeout: 10s
+        http:
+          preferred_ip_protocol: ip4
+          follow_redirects: false
+          valid_status_codes: [200, 201, 202, 204, 301, 302, 303, 307, 308, 401, 403, 404, 405]
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  serviceMonitor:
+    enabled: true
+    defaults:
+      interval: 60s
+      scrapeTimeout: 15s
+    targets:
+    - name: adguard-tkuipers-ca
+      url: https://adguard.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: adguard-home
+        target_service: adguard-home
+    - name: anki-tkuipers-ca
+      url: https://anki.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: anki
+        target_service: anki
+    - name: argo-tkuipers-ca
+      url: https://argo.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: argocd
+        target_service: argocd-server
+    - name: auth-tkuipers-ca
+      url: https://auth.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: authelia
+        target_service: authelia
+    - name: hamh-tkuipers-ca
+      url: https://hamh.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: homeassistant
+        target_service: hamh
+    - name: home-tkuipers-ca
+      url: https://home.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: homeassistant
+        target_service: homeassistant
+    - name: tkuipers-ca
+      url: https://tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: homepage
+        target_service: homepage
+    - name: resume-tkuipers-ca
+      url: https://resume.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: homepage
+        target_service: resume-proxy
+    - name: bazarr-tkuipers-ca
+      url: https://bazarr.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: bazarr
+    - name: jellyfin-tkuipers-ca
+      url: https://jellyfin.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: jellyfin
+    - name: mediarequests-tkuipers-ca
+      url: https://mediarequests.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: jellyseerr
+    - name: kavita-tkuipers-ca
+      url: https://kavita.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: kavita
+    - name: prowlarr-tkuipers-ca
+      url: https://prowlarr.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: prowlarr
+    - name: radarr-tkuipers-ca
+      url: https://radarr.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: radarr
+    - name: readarr-tkuipers-ca
+      url: https://readarr.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: readarr
+    - name: sabnzbd-tkuipers-ca
+      url: https://sabnzbd.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: sabnzbd
+    - name: sonarr-tkuipers-ca
+      url: https://sonarr.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: sonarr
+    - name: transmission-tkuipers-ca
+      url: https://transmission.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: mediacenter
+        target_service: transmission
+    - name: logs-tkuipers-ca
+      url: https://logs.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: observability
+        target_service: grafana
+    - name: polymarket-tkuipers-ca
+      url: https://polymarket.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: polymarket-bot
+        target_service: bot
+    - name: stocks-api-tkuipers-ca
+      url: https://stocks-api.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: stocks
+        target_service: api
+    - name: stocks-tkuipers-ca
+      url: https://stocks.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: stocks
+        target_service: console
+    - name: k8s-tkuipers-ca
+      url: https://k8s.tkuipers.ca/
+      module: http_up_tls
+      additionalMetricsRelabels:
+        target_namespace: ingress-nginx
+        target_service: kubernetes-api-proxy
+
