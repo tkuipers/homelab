@@ -95,6 +95,11 @@ kube-prometheus-stack:
           memory: 256Mi
 
   prometheusOperator:
+    # cert-manager issues the webhook cert (no patch jobs fighting ArgoCD
+    # over caBundle)
+    admissionWebhooks:
+      certManager:
+        enabled: true
     resources:
       requests:
         cpu: 50m

@@ -7,6 +7,17 @@
 #
 # hostPath does not enforce capacity — retention settings in each component
 # keep usage inside these numbers (total budget ~150Gi).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: observability-hostpath
+  labels:
+    app.kubernetes.io/part-of: observability
+# No dynamic provisioning: only the static PVs below use this class.
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
