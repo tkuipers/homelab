@@ -134,8 +134,9 @@ kube-prometheus-stack:
       limits:
         memory: 1Gi
 
-    # Temp secrets (created by hand, see tooling/scripts/setup-credentials/
-    # setup-observability-credentials.sh to move them into 1Password).
+    # Secrets: ExternalSecrets from the 1Password item "Observability
+    # Credentials" (../secrets/external-secrets.yaml), managed by
+    # tooling/scripts/setup-credentials/setup-observability-credentials.sh.
     admin:
       existingSecret: grafana-admin
       userKey: admin-user
@@ -145,6 +146,24 @@ kube-prometheus-stack:
         secretKeyRef:
           name: grafana-oidc
           key: client-secret
+      # encrypts datasource passwords etc. in Grafana's DB - never rotate casually
+      GF_SECURITY_SECRET_KEY:
+        secretKeyRef:
+          name: grafana-security
+          key: secret-key
+      # read-only 'grafana_ro' DB users (setup-grafana-db-readonly.sh)
+      DS_PG_STOCKS_PASSWORD:
+        secretKeyRef:
+          name: grafana-datasources
+          key: pg-stocks-password
+      DS_PG_POLYMARKET_PASSWORD:
+        secretKeyRef:
+          name: grafana-datasources
+          key: pg-polymarket-password
+      DS_MYSQL_STOCKGUESSER_PASSWORD:
+        secretKeyRef:
+          name: grafana-datasources
+          key: mysql-stockguesser-password
 
     ingress:
       enabled: true
@@ -198,6 +217,12 @@ kube-prometheus-stack:
         skip_org_role_sync: false
       unified_alerting:
         enabled: true
+      plugins:
+        # Core datasources are versioned separately from Grafana; install the
+        # catalog versions and keep them updated on every start so they don't
+        # lag behind between Grafana releases (the chart defaults auto-update off).
+        preinstall: prometheus,loki,tempo,grafana-postgresql-datasource,mysql,grafana-pyroscope-datasource,elasticsearch,jaeger,zipkin,influxdb,opentsdb,mssql
+        preinstall_auto_update: true
 
     sidecar:
       dashboards:
@@ -255,6 +280,42 @@ kube-prometheus-stack:
             enabled: true
           lokiSearch:
             datasourceUid: loki
+      # App databases, read-only user 'grafana_ro' (SELECT only, read-only
+      # transactions, 30s statement timeout, 5 connections).
+      - name: Stocks Postgres
+        uid: pg-stocks
+        type: grafana-postgresql-datasource
+        url: postgres.stocks.svc:5432
+        user: grafana_ro
+        jsonData:
+          database: stocks
+          sslmode: disable
+          postgresVersion: 1600
+          maxOpenConns: 5
+        secureJsonData:
+          password: ${DS_PG_STOCKS_PASSWORD}
+      - name: Polymarket Postgres
+        uid: pg-polymarket
+        type: grafana-postgresql-datasource
+        url: postgres.polymarket-bot.svc:5432
+        user: grafana_ro
+        jsonData:
+          database: polymarket_bot
+          sslmode: disable
+          postgresVersion: 1600
+          maxOpenConns: 5
+        secureJsonData:
+          password: ${DS_PG_POLYMARKET_PASSWORD}
+      - name: Stock Guesser MySQL
+        uid: mysql-stockguesser
+        type: mysql
+        url: mysql.stock-guesser.svc:3306
+        user: grafana_ro
+        jsonData:
+          database: stocker
+          maxOpenConns: 5
+        secureJsonData:
+          password: ${DS_MYSQL_STOCKGUESSER_PASSWORD}
 
 # --- synthetic probes ----------------------------------------------------
 # probe=external: real DNS + ingress + TLS (+ Authelia) = what a user sees.
