@@ -62,7 +62,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "",
+   "description": "in-cluster health probes (the apps themselves) currently failing",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -112,14 +112,79 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "count(probe_success == 0) or vector(0)",
+     "expr": "count(probe_success{probe=\"internal\"} == 0) or vector(0)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
      "refId": "A"
     }
    ],
-   "title": "Probes failing",
+   "title": "Health checks failing",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "public *.tkuipers.ca probes (DNS/ingress/TLS/Authelia) failing",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 3
+   },
+   "id": 4,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(probe_success{probe=\"external\"} == 0) or vector(0)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Public URLs failing",
    "type": "stat"
   },
   {
@@ -154,10 +219,10 @@
    "gridPos": {
     "h": 4,
     "w": 4,
-    "x": 4,
+    "x": 8,
     "y": 3
    },
-   "id": 4,
+   "id": 5,
    "options": {
     "colorMode": "background",
     "graphMode": "none",
@@ -219,10 +284,10 @@
    "gridPos": {
     "h": 4,
     "w": 4,
-    "x": 8,
+    "x": 12,
     "y": 3
    },
-   "id": 5,
+   "id": 6,
    "options": {
     "colorMode": "background",
     "graphMode": "none",
@@ -289,10 +354,10 @@
    "gridPos": {
     "h": 4,
     "w": 4,
-    "x": 12,
+    "x": 16,
     "y": 3
    },
-   "id": 6,
+   "id": 7,
    "options": {
     "colorMode": "background",
     "graphMode": "none",
@@ -359,10 +424,10 @@
    "gridPos": {
     "h": 4,
     "w": 4,
-    "x": 16,
+    "x": 20,
     "y": 3
    },
-   "id": 7,
+   "id": 8,
    "options": {
     "colorMode": "background",
     "graphMode": "none",
@@ -397,7 +462,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "",
+   "description": "Grafana-managed (folder Alerts) + Prometheus (kube-prometheus-stack) alerts",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -428,10 +493,10 @@
    "gridPos": {
     "h": 4,
     "w": 4,
-    "x": 20,
-    "y": 3
+    "x": 0,
+    "y": 7
    },
-   "id": 8,
+   "id": 9,
    "options": {
     "colorMode": "background",
     "graphMode": "none",
@@ -451,7 +516,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "count(ALERTS{alertstate=\"firing\", alertname!~\"Watchdog|InfoInhibitor\"}) or vector(0)",
+     "expr": "(count(ALERTS{alertstate=\"firing\", alertname!~\"Watchdog|InfoInhibitor\"}) or vector(0)) + (sum(grafana_alerting_alerts{state=\"alerting\"}) or vector(0))",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -465,10 +530,10 @@
    "gridPos": {
     "h": 9,
     "w": 12,
-    "x": 0,
+    "x": 4,
     "y": 7
    },
-   "id": 9,
+   "id": 10,
    "options": {
     "alertInstanceLabelFilter": "",
     "dashboardAlerts": false,
@@ -501,10 +566,10 @@
    "gridPos": {
     "h": 9,
     "w": 12,
-    "x": 12,
-    "y": 7
+    "x": 0,
+    "y": 16
    },
-   "id": 10,
+   "id": 11,
    "options": {
     "cellHeight": "sm",
     "showHeader": true
@@ -543,9 +608,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 16
+    "y": 25
    },
-   "id": 11,
+   "id": 12,
    "panels": [],
    "title": "Failure rates",
    "type": "row"
@@ -578,9 +643,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 17
+    "y": 26
    },
-   "id": 12,
+   "id": 13,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -635,9 +700,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 17
+    "y": 26
    },
-   "id": 13,
+   "id": 14,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -693,9 +758,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 25
+    "y": 34
    },
-   "id": 14,
+   "id": 15,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -751,9 +816,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 25
+    "y": 34
    },
-   "id": 15,
+   "id": 16,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -771,9 +836,9 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "count by (target_service) (probe_success == 0) or vector(0)",
+     "expr": "count by (probe, target_namespace, target_service) (probe_success == 0) or vector(0)",
      "instant": false,
-     "legendFormat": "{{target_service}}",
+     "legendFormat": "{{probe}} {{target_namespace}}/{{target_service}}",
      "range": true,
      "refId": "A"
     }
@@ -808,9 +873,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 33
+    "y": 42
    },
-   "id": 16,
+   "id": 17,
    "options": {
     "cellHeight": "sm",
     "showHeader": true
@@ -859,9 +924,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 33
+    "y": 42
    },
-   "id": 17,
+   "id": 18,
    "options": {
     "cellHeight": "sm",
     "showHeader": true
@@ -902,9 +967,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 41
+    "y": 50
    },
-   "id": 18,
+   "id": 19,
    "panels": [],
    "title": "Cluster",
    "type": "row"
@@ -937,9 +1002,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 42
+    "y": 51
    },
-   "id": 19,
+   "id": 20,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -995,9 +1060,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 42
+    "y": 51
    },
-   "id": 20,
+   "id": 21,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1053,9 +1118,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 50
+    "y": 59
    },
-   "id": 21,
+   "id": 22,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1111,9 +1176,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 50
+    "y": 59
    },
-   "id": 22,
+   "id": 23,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1169,9 +1234,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 58
+    "y": 67
    },
-   "id": 23,
+   "id": 24,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1227,9 +1292,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 58
+    "y": 67
    },
-   "id": 24,
+   "id": 25,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1285,9 +1350,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 66
+    "y": 75
    },
-   "id": 25,
+   "id": 26,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1343,9 +1408,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 66
+    "y": 75
    },
-   "id": 26,
+   "id": 27,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1379,9 +1444,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 74
+    "y": 83
    },
-   "id": 27,
+   "id": 28,
    "panels": [],
    "title": "Service dashboards",
    "type": "row"
@@ -1391,9 +1456,9 @@
     "h": 14,
     "w": 24,
     "x": 0,
-    "y": 75
+    "y": 84
    },
-   "id": 28,
+   "id": 29,
    "options": {
     "folderUID": "",
     "includeVars": false,

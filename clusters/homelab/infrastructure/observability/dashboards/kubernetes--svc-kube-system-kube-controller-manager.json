@@ -120,6 +120,7 @@
      },
      "decimals": 0,
      "mappings": [],
+     "noValue": "no pods",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -167,7 +168,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"kube-system\", pod=~\"kube-controller-manager-.+\"}[24h])) or vector(0)",
+     "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"kube-system\", pod=~\"kube-controller-manager-.+\"}[24h]))",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -182,13 +183,14 @@
     "type": "loki",
     "uid": "loki"
    },
-   "description": "log lines at error level or worse in the last hour",
+   "description": "log lines at error level or worse in the last hour ('no logs' = the service logged nothing at all)",
    "fieldConfig": {
     "defaults": {
      "color": {
       "mode": "thresholds"
      },
      "mappings": [],
+     "noValue": "no logs (1h)",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -236,7 +238,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "sum(count_over_time({k8s_namespace_name=\"kube-system\", service_name=\"kube-controller-manager\"} | detected_level=~\"error|fatal|critical\" [1h])) or vector(0)",
+     "expr": "sum(count_over_time({k8s_namespace_name=\"kube-system\", service_name=\"kube-controller-manager\"} | detected_level=~\"error|fatal|critical\" [1h])) or (sum(count_over_time({k8s_namespace_name=\"kube-system\", service_name=\"kube-controller-manager\"} [1h])) * 0)",
      "legendFormat": "",
      "queryType": "instant",
      "refId": "A"
@@ -257,6 +259,7 @@
       "mode": "thresholds"
      },
      "mappings": [],
+     "noValue": "no pods",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -300,7 +303,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(kube_pod_container_status_last_terminated_reason{namespace=\"kube-system\", pod=~\"kube-controller-manager-.+\", reason=\"OOMKilled\"}) or vector(0)",
+     "expr": "sum(kube_pod_container_status_last_terminated_reason{namespace=\"kube-system\", pod=~\"kube-controller-manager-.+\", reason=\"OOMKilled\"}) or (count(kube_pod_container_info{namespace=\"kube-system\", pod=~\"kube-controller-manager-.+\"}) * 0)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,

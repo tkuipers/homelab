@@ -39,6 +39,677 @@
    },
    "id": 1,
    "panels": [],
+   "title": "Pipeline activity",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "'pipeline_complete' events from ingestion (runs hourly)",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "noValue": "NONE",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 1
+   },
+   "id": 2,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum(count_over_time({k8s_namespace_name=\"stocks\", service_name=\"ingestion\"} |= \"pipeline_complete\" [3h]))",
+     "legendFormat": "",
+     "queryType": "instant",
+     "refId": "A"
+    }
+   ],
+   "title": "Ingestion runs (3h)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "'decision.predicted' events from the decision service",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "noValue": "NONE",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 1
+   },
+   "id": 3,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum(count_over_time({k8s_namespace_name=\"stocks\", service_name=\"decision\"} |= \"decision.predicted\" [26h]))",
+     "legendFormat": "",
+     "queryType": "instant",
+     "refId": "A"
+    }
+   ],
+   "title": "Decisions (26h)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "largest number of messages waiting for a JetStream consumer",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 50
+       },
+       {
+        "color": "red",
+        "value": 500
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 8,
+    "y": 1
+   },
+   "id": 4,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(jetstream_consumer_num_pending)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Consumer backlog (max)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "messages delivered more than once - consumers failing to ack",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "decimals": 0,
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 10
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 12,
+    "y": 1
+   },
+   "id": 5,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(increase(jetstream_consumer_num_redelivered[1h]))",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Redeliveries (1h)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 20
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 16,
+    "y": 1
+   },
+   "id": 6,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum(count_over_time({k8s_namespace_name=\"stocks\"} | detected_level=~\"error|fatal|critical\" [1h])) or (sum(count_over_time({k8s_namespace_name=\"stocks\"} [1h])) * 0)",
+     "legendFormat": "",
+     "queryType": "instant",
+     "refId": "A"
+    }
+   ],
+   "title": "ERROR events (1h)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "color": "red",
+         "text": "DOWN"
+        },
+        "1": {
+         "color": "green",
+         "text": "UP"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 20,
+    "y": 1
+   },
+   "id": 7,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(pg_up{namespace=\"stocks\"})",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Postgres up",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 5
+   },
+   "id": 8,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max by (stream_name, consumer_name) (jetstream_consumer_num_pending)",
+     "instant": false,
+     "legendFormat": "{{stream_name}} -> {{consumer_name}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "JetStream consumer backlog",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 5
+   },
+   "id": 9,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (stream_name) (increase(jetstream_stream_last_seq[$__rate_interval]))",
+     "instant": false,
+     "legendFormat": "{{stream_name}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Messages published per stream",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 13
+   },
+   "id": 10,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (consumer_name) (jetstream_consumer_num_ack_pending)",
+     "instant": false,
+     "legendFormat": "ack pending {{consumer_name}}",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (consumer_name) (increase(jetstream_consumer_num_redelivered[$__rate_interval]))",
+     "instant": false,
+     "legendFormat": "redelivered {{consumer_name}}",
+     "range": true,
+     "refId": "B"
+    }
+   ],
+   "title": "Ack pending / redelivered",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "structured (JSON) events per service = real work, not health checks",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 13
+   },
+   "id": 11,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum by (service_name) (count_over_time({k8s_namespace_name=\"stocks\", service_name=~\"ingestion|decision|orchestrator|paper-filler|audit-consumer|training\"} | log_format=\"json\" [$__auto]))",
+     "legendFormat": "{{service_name}}",
+     "queryType": "range",
+     "refId": "A"
+    }
+   ],
+   "title": "Business events",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 21
+   },
+   "id": 12,
+   "panels": [],
    "title": "Workloads",
    "type": "row"
   },
@@ -56,9 +727,9 @@
     "h": 10,
     "w": 12,
     "x": 0,
-    "y": 1
+    "y": 22
    },
-   "id": 2,
+   "id": 13,
    "options": {
     "cellHeight": "sm",
     "showHeader": true
@@ -138,9 +809,9 @@
     "h": 10,
     "w": 12,
     "x": 12,
-    "y": 1
+    "y": 22
    },
-   "id": 3,
+   "id": 14,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -196,9 +867,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 11
+    "y": 32
    },
-   "id": 4,
+   "id": 15,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -374,9 +1045,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 11
+    "y": 32
    },
-   "id": 5,
+   "id": 16,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -431,9 +1102,9 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 19
+    "y": 40
    },
-   "id": 6,
+   "id": 17,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -489,9 +1160,9 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 19
+    "y": 40
    },
-   "id": 7,
+   "id": 18,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -525,9 +1196,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 27
+    "y": 48
    },
-   "id": 8,
+   "id": 19,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -542,9 +1213,9 @@
     "h": 12,
     "w": 24,
     "x": 0,
-    "y": 28
+    "y": 49
    },
-   "id": 9,
+   "id": 20,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,
@@ -582,9 +1253,9 @@
     "h": 10,
     "w": 24,
     "x": 0,
-    "y": 40
+    "y": 61
    },
-   "id": 10,
+   "id": 21,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,

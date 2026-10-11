@@ -134,6 +134,7 @@
      },
      "decimals": 0,
      "mappings": [],
+     "noValue": "no pods",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -181,7 +182,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"stocks\", pod=~\"decision-[a-z0-9]{6,10}-[a-z0-9]{5}\"}[24h])) or vector(0)",
+     "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"stocks\", pod=~\"decision-[a-z0-9]{6,10}-[a-z0-9]{5}\"}[24h]))",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -196,13 +197,14 @@
     "type": "loki",
     "uid": "loki"
    },
-   "description": "log lines at error level or worse in the last hour",
+   "description": "log lines at error level or worse in the last hour ('no logs' = the service logged nothing at all)",
    "fieldConfig": {
     "defaults": {
      "color": {
       "mode": "thresholds"
      },
      "mappings": [],
+     "noValue": "no logs (1h)",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -250,7 +252,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "sum(count_over_time({k8s_namespace_name=\"stocks\", service_name=\"decision\"} | detected_level=~\"error|fatal|critical\" [1h])) or vector(0)",
+     "expr": "sum(count_over_time({k8s_namespace_name=\"stocks\", service_name=\"decision\"} | detected_level=~\"error|fatal|critical\" [1h])) or (sum(count_over_time({k8s_namespace_name=\"stocks\", service_name=\"decision\"} [1h])) * 0)",
      "legendFormat": "",
      "queryType": "instant",
      "refId": "A"
@@ -271,6 +273,7 @@
       "mode": "thresholds"
      },
      "mappings": [],
+     "noValue": "no pods",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -314,7 +317,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(kube_pod_container_status_last_terminated_reason{namespace=\"stocks\", pod=~\"decision-[a-z0-9]{6,10}-[a-z0-9]{5}\", reason=\"OOMKilled\"}) or vector(0)",
+     "expr": "sum(kube_pod_container_status_last_terminated_reason{namespace=\"stocks\", pod=~\"decision-[a-z0-9]{6,10}-[a-z0-9]{5}\", reason=\"OOMKilled\"}) or (count(kube_pod_container_info{namespace=\"stocks\", pod=~\"decision-[a-z0-9]{6,10}-[a-z0-9]{5}\"}) * 0)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -325,6 +328,85 @@
    "type": "stat"
   },
   {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "blackbox probe of the app's own health endpoint (or TCP port) through its Service - the app itself answers",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "color": "red",
+         "text": "DOWN"
+        },
+        "1": {
+         "color": "green",
+         "text": "UP"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 16,
+    "y": 1
+   },
+   "id": 6,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "min(probe_success{probe=\"internal\", target_namespace=\"stocks\", target_service=\"decision\"})",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Health check (in-cluster)",
+   "type": "stat"
+  },
+  {
    "collapsed": false,
    "gridPos": {
     "h": 1,
@@ -332,7 +414,7 @@
     "x": 0,
     "y": 5
    },
-   "id": 6,
+   "id": 7,
    "panels": [],
    "title": "Failures",
    "type": "row"
@@ -488,7 +570,7 @@
     "x": 0,
     "y": 6
    },
-   "id": 7,
+   "id": 8,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -545,7 +627,7 @@
     "x": 12,
     "y": 6
    },
-   "id": 8,
+   "id": 9,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -603,7 +685,7 @@
     "x": 0,
     "y": 14
    },
-   "id": 9,
+   "id": 10,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -660,7 +742,7 @@
     "x": 0,
     "y": 22
    },
-   "id": 10,
+   "id": 11,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -695,7 +777,7 @@
     "x": 0,
     "y": 30
    },
-   "id": 11,
+   "id": 12,
    "panels": [],
    "title": "Resources",
    "type": "row"
@@ -789,7 +871,7 @@
     "x": 0,
     "y": 31
    },
-   "id": 12,
+   "id": 13,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -928,7 +1010,7 @@
     "x": 8,
     "y": 31
    },
-   "id": 13,
+   "id": 14,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1008,7 +1090,7 @@
     "x": 16,
     "y": 31
    },
-   "id": 14,
+   "id": 15,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1044,7 +1126,7 @@
     "x": 0,
     "y": 39
    },
-   "id": 15,
+   "id": 16,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -1061,7 +1143,7 @@
     "x": 0,
     "y": 40
    },
-   "id": 16,
+   "id": 17,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,

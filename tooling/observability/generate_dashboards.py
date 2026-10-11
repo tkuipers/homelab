@@ -33,6 +33,23 @@ OUT = os.path.join(ROOT, "clusters/homelab/infrastructure/observability/dashboar
 PROM = {"type": "prometheus", "uid": "prometheus"}
 LOKI = {"type": "loki", "uid": "loki"}
 
+KPS_VALUES = os.path.join(ROOT, "clusters/homelab/infrastructure/observability/helm-chart-kube-prometheus-stack/values.yaml")
+
+
+def internal_probes():
+    """(namespace, workload) pairs that have an in-cluster blackbox health probe."""
+    import yaml
+    v = yaml.safe_load(open(KPS_VALUES))
+    out = set()
+    for t in v["prometheus-blackbox-exporter"]["serviceMonitor"]["targets"]:
+        r = t.get("additionalMetricsRelabels", {})
+        if r.get("probe") == "internal":
+            out.add((r["target_namespace"], r["target_service"]))
+    return out
+
+
+INTERNAL_PROBES = internal_probes()
+
 LEVEL_COLORS = {
     "fatal": "dark-red", "critical": "dark-red", "error": "red", "warn": "orange",
     "info": "green", "debug": "blue", "trace": "purple", "unknown": "text",
@@ -114,7 +131,7 @@ class Board:
         self.panels.append(p)
 
     def stat(self, title, expr, unit="short", ds=PROM, thresholds=None, w=4, h=4,
-             mappings=None, desc="", decimals=None, legend=""):
+             mappings=None, desc="", decimals=None, legend="", no_value=None):
         steps = thresholds or [{"color": "green", "value": None}]
         p = {
             "type": "stat", "title": title, "description": desc, "datasource": ds,
@@ -124,6 +141,7 @@ class Board:
                 "thresholds": {"mode": "absolute", "steps": steps},
                 "color": {"mode": "thresholds"},
                 **({"decimals": decimals} if decimals is not None else {}),
+                **({"noValue": no_value} if no_value else {}),
             }, "overrides": []},
             "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False},
                         "colorMode": "background", "graphMode": "none", "textMode": "auto",
@@ -304,25 +322,29 @@ def standard(s: Svc) -> Board:
     # ---- status -----------------------------------------------------------
     b.row("Status")
     health_stat(b, s)
-    b.stat("Restarts (24h)", f'sum(increase(kube_pod_container_status_restarts_total{{{kp}}}[24h])) or vector(0)',
-           thresholds=ORANGE_RED, decimals=0)
-    b.stat("Error logs (1h)", f'sum(count_over_time({sel} | detected_level=~"error|fatal|critical" [1h])) or vector(0)',
+    b.stat("Restarts (24h)", f'sum(increase(kube_pod_container_status_restarts_total{{{kp}}}[24h]))',
+           thresholds=ORANGE_RED, decimals=0, no_value="no pods")
+    b.stat("Error logs (1h)", f'sum(count_over_time({sel} | detected_level=~"error|fatal|critical" [1h])) or (sum(count_over_time({sel} [1h])) * 0)',
            ds=LOKI, thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 1}, {"color": "red", "value": 50}],
-           desc="log lines at error level or worse in the last hour")
-    b.stat("OOMKilled (last termination)", f'sum(kube_pod_container_status_last_terminated_reason{{{kp}, reason="OOMKilled"}}) or vector(0)',
-           thresholds=RED_IF_ABOVE_0, desc="containers whose last termination was an OOM kill")
+           desc="log lines at error level or worse in the last hour ('no logs' = the service logged nothing at all)", no_value="no logs (1h)")
+    b.stat("OOMKilled (last termination)", f'sum(kube_pod_container_status_last_terminated_reason{{{kp}, reason="OOMKilled"}}) or (count(kube_pod_container_info{{{kp}}}) * 0)',
+           thresholds=RED_IF_ABOVE_0, desc="containers whose last termination was an OOM kill", no_value="no pods")
     if s.ingress:
         ing = "|".join(s.ingress)
         b.stat("Ingress 5xx (1h)",
-               f'(sum(rate(nginx_ingress_controller_requests{{exported_namespace="{s.ns}", ingress=~"{ing}", status=~"5.."}}[1h])) or vector(0)) / (sum(rate(nginx_ingress_controller_requests{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[1h])) > 0) or vector(0)',
-               unit="percentunit", decimals=2,
+               f'(sum(rate(nginx_ingress_controller_requests{{exported_namespace="{s.ns}", ingress=~"{ing}", status=~"5.."}}[1h])) or vector(0)) / (sum(rate(nginx_ingress_controller_requests{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[1h])) > 0)',
+               unit="percentunit", decimals=2, no_value="no traffic",
                thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.01}, {"color": "red", "value": 0.05}],
                desc="share of requests through the ingress answered with 5xx")
-    if s.probe:
-        b.stat("External probe", f'min(probe_success{{target_namespace="{s.ns}", target_service="{s.probe}"}})',
+    if (s.ns, s.name) in INTERNAL_PROBES:
+        b.stat("Health check (in-cluster)", f'min(probe_success{{probe="internal", target_namespace="{s.ns}", target_service="{s.name}"}})',
                mappings=UPDOWN, thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}],
-               desc="blackbox HTTPS probe of the public hostname (DNS+ingress+TLS+auth)")
-        b.stat("TLS cert expires in", f'min(probe_ssl_earliest_cert_expiry{{target_namespace="{s.ns}", target_service="{s.probe}"}} - time())',
+               desc="blackbox probe of the app's own health endpoint (or TCP port) through its Service - the app itself answers")
+    if s.probe:
+        b.stat("Public URL reachable", f'min(probe_success{{probe="external", target_namespace="{s.ns}", target_service="{s.probe}"}})',
+               mappings=UPDOWN, thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}],
+               desc="HTTPS probe of the public hostname: DNS + ingress + TLS (+ Authelia). Behind Authelia this stops at the login redirect and does NOT prove the app works - see 'Health check (in-cluster)'")
+        b.stat("TLS cert expires in", f'min(probe_ssl_earliest_cert_expiry{{probe="external", target_namespace="{s.ns}", target_service="{s.probe}"}} - time())',
                unit="s", thresholds=[{"color": "red", "value": None}, {"color": "orange", "value": 7 * 86400}, {"color": "green", "value": 21 * 86400}])
 
     # ---- failures ---------------------------------------------------------
@@ -356,13 +378,13 @@ def standard(s: Svc) -> Board:
             (f'histogram_quantile(0.5, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p50"),
             (f'histogram_quantile(0.95, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p95"),
             (f'histogram_quantile(0.99, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p99"),
-        ] + ([(f'max(probe_duration_seconds{{target_namespace="{s.ns}", target_service="{s.probe}"}})', "external probe (end-to-end)")] if s.probe else []),
+        ] + ([(f'max(probe_duration_seconds{{probe="external", target_namespace="{s.ns}", target_service="{s.probe}"}})', "external probe (end-to-end)")] if s.probe else []),
              unit="s", w=8, desc="ingress request duration percentiles (requests stopped by Authelia have none) and the synthetic end-to-end probe")
         b.ts("Bandwidth out", [(f'sum(rate(nginx_ingress_controller_response_size_sum{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])) or vector(0)', "bytes/s")], unit="Bps", w=8)
     elif s.probe:
         b.row("External probe")
-        b.ts("External probe duration", [(f'max(probe_duration_seconds{{target_namespace="{s.ns}", target_service="{s.probe}"}})', "probe")], unit="s")
-        b.ts("External probe success", [(f'min(probe_success{{target_namespace="{s.ns}", target_service="{s.probe}"}})', "up")], min0=True)
+        b.ts("External probe duration", [(f'max(probe_duration_seconds{{probe="external", target_namespace="{s.ns}", target_service="{s.probe}"}})', "probe")], unit="s")
+        b.ts("External probe success", [(f'min(probe_success{{probe="external", target_namespace="{s.ns}", target_service="{s.probe}"}})', "up")], min0=True)
 
     # ---- service specific -------------------------------------------------
     if s.extras:
@@ -482,6 +504,12 @@ def jellyfin_panels(b: Board, s: Svc):
 
 
 def postgres_panels(b: Board, s: Svc):
+    pg = f'namespace="{s.ns}"'
+    b.stat("Postgres up (exporter)", f'max(pg_up{{{pg}}})', mappings=UPDOWN, thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}])
+    b.ts("Connections by database", [(f'sum by (datname) (pg_stat_database_numbackends{{{pg}}})', "{{datname}}")])
+    b.ts("Transactions / s", [(f'sum(rate(pg_stat_database_xact_commit{{{pg}}}[$__rate_interval]))', "commit"), (f'sum(rate(pg_stat_database_xact_rollback{{{pg}}}[$__rate_interval]))', "rollback")])
+    b.ts("Deadlocks / conflicts", [(f'sum(increase(pg_stat_database_deadlocks{{{pg}}}[$__rate_interval]))', "deadlocks"), (f'sum(increase(pg_stat_database_conflicts{{{pg}}}[$__rate_interval]))', "conflicts")], bars=True)
+    b.ts("Database size", [(f'sum by (datname) (pg_database_size_bytes{{{pg}}})', "{{datname}}")], unit="bytes")
     b.ts("Errors by severity", [(f'sum by (detected_level) (count_over_time({loki_sel(s)} | detected_level=~"error|fatal" [$__auto]))', "{{detected_level}}")], ds=LOKI, bars=True, overrides=level_overrides())
     b.logs("FATAL / ERROR", f'{loki_sel(s)} | detected_level=~"error|fatal"', h=8, time_from="7d", max_lines=200)
 
@@ -514,10 +542,10 @@ def apiserver_panels(b: Board, s: Svc):
 
 def blackbox_panels(b: Board, s: Svc):
     b.table("Probe status", [
-        ('min by (target_namespace, target_service, instance) (probe_success)', ""),
+        ('min by (probe, target_namespace, target_service, instance) (probe_success)', ""),
     ], w=12, transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "up"}}}],
         overrides=[{"matcher": {"id": "byName", "options": "up"}, "properties": [{"id": "mappings", "value": UPDOWN}, {"id": "custom.cellOptions", "value": {"type": "color-background"}}]}])
-    b.table("TLS days left", [('sort(min by (instance) (probe_ssl_earliest_cert_expiry - time()) / 86400)', "")], w=12,
+    b.table("TLS days left", [('sort(min by (instance) (probe_ssl_earliest_cert_expiry{probe="external"} - time()) / 86400)', "")], w=12,
             transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "days"}}}])
 
 
@@ -663,7 +691,10 @@ def overview() -> Board:
     b.text("", "**Start here.** Red = act now. Every service has its own dashboard (*Services* dropdown above). "
                "Logs: *Explore* → Loki, or the Logs app. Alerts: *Alerting* → Alert rules.", h=2)
     b.row("Right now")
-    b.stat("Probes failing", 'count(probe_success == 0) or vector(0)', thresholds=RED_IF_ABOVE_0, w=4)
+    b.stat("Health checks failing", 'count(probe_success{probe="internal"} == 0) or vector(0)', thresholds=RED_IF_ABOVE_0, w=4,
+           desc="in-cluster health probes (the apps themselves) currently failing")
+    b.stat("Public URLs failing", 'count(probe_success{probe="external"} == 0) or vector(0)', thresholds=RED_IF_ABOVE_0, w=4,
+           desc="public *.tkuipers.ca probes (DNS/ingress/TLS/Authelia) failing")
     b.stat("Workloads not ready",
            '(count(kube_deployment_status_replicas_available - kube_deployment_spec_replicas < 0) or vector(0)) + (count(kube_statefulset_status_replicas_ready - kube_statefulset_replicas < 0) or vector(0)) + (count(kube_daemonset_status_number_ready - kube_daemonset_status_desired_number_scheduled < 0) or vector(0))',
            thresholds=RED_IF_ABOVE_0, w=4)
@@ -671,7 +702,8 @@ def overview() -> Board:
     b.stat("Restarts (1h)", 'sum(increase(kube_pod_container_status_restarts_total[1h])) or vector(0)', thresholds=ORANGE_RED, w=4, decimals=0)
     b.stat("Ingress 5xx (1h)", '(sum(rate(nginx_ingress_controller_requests{status=~"5.."}[1h])) or vector(0)) / sum(rate(nginx_ingress_controller_requests[1h]))', unit="percentunit", decimals=2,
            thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.01}, {"color": "red", "value": 0.05}], w=4)
-    b.stat("Firing alerts", 'count(ALERTS{alertstate="firing", alertname!~"Watchdog|InfoInhibitor"}) or vector(0)', thresholds=ORANGE_RED, w=4)
+    b.stat("Firing alerts", '(count(ALERTS{alertstate="firing", alertname!~"Watchdog|InfoInhibitor"}) or vector(0)) + (sum(grafana_alerting_alerts{state="alerting"}) or vector(0))',
+           thresholds=ORANGE_RED, w=4, desc="Grafana-managed (folder Alerts) + Prometheus (kube-prometheus-stack) alerts")
     b.alertlist("Firing / pending alerts", w=12, h=9)
     b.table("Problems", [
         ('max by (namespace, pod, container, reason) (kube_pod_container_status_waiting_reason{reason!="ContainerCreating"}) or on() vector(0)', ""),
@@ -682,7 +714,7 @@ def overview() -> Board:
          ds=LOKI, bars=True, stack=True, w=12)
     b.ts("Ingress 5xx / s by ingress", [('sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[$__rate_interval])) or vector(0)', "{{exported_namespace}}/{{ingress}}")], unit="reqps", w=12)
     b.ts("Container restarts by pod", [('sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total[10m])) > 0 or vector(0)', "{{namespace}}/{{pod}}")], bars=True, w=12)
-    b.ts("Probe failures", [('count by (target_service) (probe_success == 0) or vector(0)', "{{target_service}}")], bars=True, w=12)
+    b.ts("Probe failures", [('count by (probe, target_namespace, target_service) (probe_success == 0) or vector(0)', "{{probe}} {{target_namespace}}/{{target_service}}")], bars=True, w=12)
     b.table("CronJobs: time since last success", [('sort_desc(time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))', "")], w=12,
             transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "seconds since success"}}}],
             overrides=[{"matcher": {"id": "byName", "options": "seconds since success"}, "properties": [{"id": "unit", "value": "s"}]}])
@@ -695,10 +727,36 @@ def overview() -> Board:
     return b
 
 
+def stocks_pipeline(b: Board):
+    """Is the trading pipeline actually moving? (pods can be Ready while it is stuck)"""
+    b.row("Pipeline activity")
+    b.stat("Ingestion runs (3h)", 'sum(count_over_time({k8s_namespace_name="stocks", service_name="ingestion"} |= "pipeline_complete" [3h]))',
+           ds=LOKI, no_value="NONE", thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}],
+           desc="'pipeline_complete' events from ingestion (runs hourly)")
+    b.stat("Decisions (26h)", 'sum(count_over_time({k8s_namespace_name="stocks", service_name="decision"} |= "decision.predicted" [26h]))',
+           ds=LOKI, no_value="NONE", thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}],
+           desc="'decision.predicted' events from the decision service")
+    b.stat("Consumer backlog (max)", 'max(jetstream_consumer_num_pending)', thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 50}, {"color": "red", "value": 500}],
+           desc="largest number of messages waiting for a JetStream consumer")
+    b.stat("Redeliveries (1h)", 'sum(increase(jetstream_consumer_num_redelivered[1h]))', thresholds=ORANGE_RED, decimals=0,
+           desc="messages delivered more than once - consumers failing to ack")
+    b.stat("ERROR events (1h)", 'sum(count_over_time({k8s_namespace_name="stocks"} | detected_level=~"error|fatal|critical" [1h])) or (sum(count_over_time({k8s_namespace_name="stocks"} [1h])) * 0)',
+           ds=LOKI, thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 1}, {"color": "red", "value": 20}])
+    b.stat("Postgres up", 'max(pg_up{namespace="stocks"})', mappings=UPDOWN, thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}])
+    b.ts("JetStream consumer backlog", [('max by (stream_name, consumer_name) (jetstream_consumer_num_pending)', "{{stream_name}} -> {{consumer_name}}")], w=12)
+    b.ts("Messages published per stream", [('sum by (stream_name) (increase(jetstream_stream_last_seq[$__rate_interval]))', "{{stream_name}}")], bars=True, stack=True, w=12)
+    b.ts("Ack pending / redelivered", [('sum by (consumer_name) (jetstream_consumer_num_ack_pending)', "ack pending {{consumer_name}}"),
+                                        ('sum by (consumer_name) (increase(jetstream_consumer_num_redelivered[$__rate_interval]))', "redelivered {{consumer_name}}")], w=12)
+    b.ts("Business events", [('sum by (service_name) (count_over_time({k8s_namespace_name="stocks", service_name=~"ingestion|decision|orchestrator|paper-filler|audit-consumer|training"} | log_format="json" [$__auto]))', "{{service_name}}")],
+         ds=LOKI, bars=True, stack=True, w=12, desc="structured (JSON) events per service = real work, not health checks")
+
+
 def namespace_overview(ns: str, title: str, folder: str) -> Board:
     b = Board(f"ns-{ns}", f"{title} - overview", ["homelab", "namespace", ns], folder,
               description=f"Every workload in namespace {ns}")
     b.add_level_search_vars()
+    if ns == "stocks":
+        stocks_pipeline(b)
     b.row("Workloads")
     b.table("Workload readiness", [
         (f'max by (deployment) (kube_deployment_status_replicas_available{{namespace="{ns}"}})', "ready"),

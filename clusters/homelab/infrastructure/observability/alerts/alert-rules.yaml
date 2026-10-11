@@ -536,7 +536,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: sum(kube_job_status_failed{namespace="stock-guesser", job_name=~"stock-guesser-training-[0-9]+"}) or vector(0)
+            expr: sum(kube_job_status_failed{namespace="stock-guesser", job_name=~"stock-guesser-training-[0-9]+"} > 0 and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)) or vector(0)
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -581,8 +581,8 @@ data:
       folder: Alerts
       interval: 1m
       rules:
-      - uid: hl-probe-down
-        title: Public endpoint down
+      - uid: hl-health-check-failing
+        title: Service health check failing
         condition: C
         data:
         - refId: A
@@ -592,7 +592,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: min by (target_namespace, target_service, instance) (probe_success)
+            expr: min by (target_namespace, target_service, instance) (probe_success{probe="internal"})
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -628,8 +628,108 @@ data:
         labels:
           severity: critical
         annotations:
-          summary: '{{ $labels.instance }} is not reachable from the cluster'
-          description: Blackbox HTTPS probe (DNS + ingress + TLS + Authelia) failing. Open the service dashboard for {{ $labels.target_namespace }}/{{ $labels.target_service }}.
+          summary: '{{ $labels.target_namespace }}/{{ $labels.target_service }} does not answer its health check'
+          description: 'In-cluster probe of the app itself ({{ $labels.instance }}) via its Service. Open the service dashboard: Kubernetes events, restarts and logs.'
+        isPaused: false
+      - uid: hl-public-url-down
+        title: Public URL unreachable
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: min by (target_namespace, target_service, instance) (probe_success{probe="external"})
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.instance }} is not reachable (DNS / ingress / TLS / Authelia)'
+          description: The public hostname fails while the app's own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), ingress-nginx, cert-manager or Authelia.
+        isPaused: false
+      - uid: hl-authelia-failed-logins
+        title: 'Authelia: many failed logins'
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum(increase(authelia_authn{success="false"}[15m]))
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 10
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $values.B }} failed Authelia logins in 15m'
+          description: Brute force or a broken auth backend. Authelia dashboard > 'Failed logins / bans'.
         isPaused: false
       - uid: hl-ingress-5xx
         title: Ingress 5xx ratio high
@@ -792,7 +892,7 @@ data:
           datasourceUid: loki
           model:
             refId: A
-            expr: sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [10m]))
+            expr: (sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [10m])) > 50) unless on (k8s_namespace_name, service_name) (3 * sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [10m] offset 1d)) >= sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [10m])))
             queryType: instant
             intervalMs: 60000
             maxDataPoints: 43200
@@ -821,14 +921,14 @@ data:
             - evaluator:
                 type: gt
                 params:
-                - 100
+                - 0
         noDataState: OK
         execErrState: Error
         for: 10m
         labels:
           severity: warning
         annotations:
-          summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }} logged >100 errors in 10m'
+          summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }} logged {{ $values.B }} errors in 10m (>3x the same time yesterday)'
           description: Open the service dashboard > Logs and filter level=error.
         isPaused: false
       - uid: hl-cert-expiring
@@ -882,7 +982,7 @@ data:
           description: cert-manager should renew at 30 days; check the cert-manager dashboard and its logs.
         isPaused: false
       - uid: hl-cronjob-stale
-        title: CronJob has not succeeded recently
+        title: CronJob missed its schedule
         condition: C
         data:
         - refId: A
@@ -892,7 +992,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: (time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) / 3600
+            expr: ((time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)) - 2 * (max by (namespace, cronjob) (kube_cronjob_next_schedule_time) - max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)) - 1800) unless on (namespace, cronjob) (kube_cronjob_spec_suspend == 1)
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -921,15 +1021,115 @@ data:
             - evaluator:
                 type: gt
                 params:
-                - 50
+                - 0
         noDataState: OK
         execErrState: Error
-        for: 30m
+        for: 10m
         labels:
           severity: warning
         annotations:
-          summary: '{{ $labels.namespace }}/{{ $labels.cronjob }}: no successful run for > 50h'
-          description: All homelab CronJobs run at least daily. Check the CronJob dashboard and failed Jobs on the overview.
+          summary: '{{ $labels.namespace }}/{{ $labels.cronjob }}: no successful run for more than two schedule intervals'
+          description: Value = seconds overdue. Check the CronJob dashboard (last success, failed jobs, logs).
+        isPaused: false
+      - uid: hl-cronjob-never-succeeded
+        title: CronJob has never succeeded
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: (max by (namespace, cronjob) (kube_cronjob_info) unless on (namespace, cronjob) kube_cronjob_status_last_successful_time) and on (namespace, cronjob) (time() - kube_cronjob_created > 2 * 86400)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.namespace }}/{{ $labels.cronjob }} exists for >2 days and never completed successfully'
+          description: ''
+        isPaused: false
+      - uid: hl-job-failed
+        title: Job failed
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: Job {{ $labels.namespace }}/{{ $labels.job_name }} failed (started in the last 24h)
+          description: 'Logs of the job pod are in Loki even after the pod is gone: {k8s_namespace_name="{{ $labels.namespace }}"} |= "" with k8s_pod_name=~"{{ $labels.job_name }}-.*".'
         isPaused: false
       - uid: hl-workload-unavailable
         title: Deployment has unavailable replicas
@@ -979,6 +1179,556 @@ data:
           severity: warning
         annotations:
           summary: '{{ $labels.namespace }}/{{ $labels.deployment }} has unavailable replicas for 15m'
+          description: ''
+        isPaused: false
+      - uid: hl-daemonset-not-ready
+        title: DaemonSet pods not ready
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max by (namespace, daemonset) (kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_number_ready)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.namespace }}/{{ $labels.daemonset }}: {{ $values.B }} pod(s) not ready (alloy = a node is not shipping logs)'
+          description: ''
+        isPaused: false
+      - uid: hl-statefulset-not-ready
+        title: StatefulSet replicas not ready
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max by (namespace, statefulset) (kube_statefulset_replicas - kube_statefulset_status_replicas_ready)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.namespace }}/{{ $labels.statefulset }} has replicas not ready (Loki/Prometheus/Tempo/Alertmanager/Argo CD controller)'
+          description: ''
+        isPaused: false
+      - uid: hl-node-disk-forecast
+        title: Node filesystem will fill within 24h
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: min by (instance, mountpoint) (predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"}[6h], 86400))
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 30m
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.instance }} {{ $labels.mountpoint }} will be full within a day at the current rate'
+          description: dell-r620 /var holds media, Loki, Prometheus and containerd; kubelet starts evicting at ~90%.
+        isPaused: false
+      - uid: hl-kernel-oom
+        title: Kernel OOM kill on node
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum by (instance) (increase(node_vmstat_oom_kill[15m]))
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: The kernel OOM-killed a process on {{ $labels.instance }}
+          description: Also catches child processes (e.g. ffmpeg) that container OOM metrics miss. Check node memory and the restarts on the overview.
+        isPaused: false
+      - uid: hl-cert-not-ready
+        title: cert-manager certificate not ready
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max by (exported_namespace, name) (certmanager_certificate_ready_status{condition="False"})
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} is not Ready
+          description: ''
+        isPaused: false
+      - uid: hl-cert-expiring-cm
+        title: cert-manager certificate expiring
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: min by (exported_namespace, name) ((certmanager_certificate_expiration_timestamp_seconds - time()) / 86400)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 21
+        noDataState: OK
+        execErrState: Error
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} expires in {{ $values.B }} days (renewal should have happened at 30d)
+          description: ''
+        isPaused: false
+      - uid: hl-postgres-down
+        title: Postgres down
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: min by (namespace) (pg_up)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: Postgres in {{ $labels.namespace }} is not answering the exporter
+          description: ''
+        isPaused: false
+      - uid: hl-stocks-ingestion-stalled
+        title: Stocks ingestion stalled
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: loki
+          model:
+            refId: A
+            expr: sum(count_over_time({k8s_namespace_name="stocks", service_name="ingestion"} |= "pipeline_complete" [3h]))
+            queryType: instant
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: Alerting
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Stocks ingestion has not completed a pipeline run in 3h (normally hourly)
+          description: Stocks overview > Pipeline activity. Ingestion logs (geo_risk_*_failed etc.) usually say why.
+        isPaused: false
+      - uid: hl-stocks-decisions-stalled
+        title: Stocks decisions stalled
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: loki
+          model:
+            refId: A
+            expr: sum(count_over_time({k8s_namespace_name="stocks", service_name="decision"} |= "decision.predicted" [26h]))
+            queryType: instant
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: Alerting
+        execErrState: Error
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: The stocks decision service made no prediction in 26h
+          description: ''
+        isPaused: false
+      - uid: hl-jetstream-backlog
+        title: NATS JetStream consumer backlog
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max by (stream_name, consumer_name) (jetstream_consumer_num_pending)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 500
+        noDataState: OK
+        execErrState: Error
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.consumer_name }} on stream {{ $labels.stream_name }} has {{ $values.B }} unprocessed messages'
+          description: The consumer is down or stuck - check the service that owns it (stocks overview > Pipeline activity).
+        isPaused: false
+      - uid: hl-jetstream-redeliveries
+        title: NATS JetStream redeliveries
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum by (stream_name, consumer_name) (increase(jetstream_consumer_num_redelivered[30m]))
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 20
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.consumer_name }} keeps failing to ack messages on {{ $labels.stream_name }}'
           description: ''
         isPaused: false
       - uid: hl-node-disk
@@ -1230,6 +1980,106 @@ data:
         annotations:
           summary: Alloy cannot ship logs to Loki
           description: Check the Loki and Alloy dashboards (Observability folder).
+        isPaused: false
+      - uid: hl-alloy-node-silent
+        title: A node stopped shipping logs
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum by (instance) (rate(otelcol_exporter_sent_log_records_total{component_id="otelcol.exporter.otlphttp.loki"}[10m]))
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 0.01
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Alloy on {{ $labels.instance }} has not sent logs to Loki for 10m
+          description: ''
+        isPaused: false
+      - uid: hl-loki-discarding
+        title: Loki is discarding log lines
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum by (reason) (rate(loki_discarded_samples_total[10m]))
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0.1
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Loki discards lines ({{ $labels.reason }}) - logs are being lost
+          description: too_far_behind = out-of-order delivery; rate_limited = raise limits in helm-chart-loki; line_too_long etc. Check the Loki dashboard.
         isPaused: false
       - uid: hl-scrape-down
         title: Prometheus target down

@@ -134,6 +134,7 @@
      },
      "decimals": 0,
      "mappings": [],
+     "noValue": "no pods",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -181,7 +182,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"argocd\", pod=~\"argocd-applicationset-controller-[a-z0-9]{6,10}-[a-z0-9]{5}\"}[24h])) or vector(0)",
+     "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"argocd\", pod=~\"argocd-applicationset-controller-[a-z0-9]{6,10}-[a-z0-9]{5}\"}[24h]))",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -196,13 +197,14 @@
     "type": "loki",
     "uid": "loki"
    },
-   "description": "log lines at error level or worse in the last hour",
+   "description": "log lines at error level or worse in the last hour ('no logs' = the service logged nothing at all)",
    "fieldConfig": {
     "defaults": {
      "color": {
       "mode": "thresholds"
      },
      "mappings": [],
+     "noValue": "no logs (1h)",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -250,7 +252,7 @@
       "type": "loki",
       "uid": "loki"
      },
-     "expr": "sum(count_over_time({k8s_namespace_name=\"argocd\", service_name=\"argocd-applicationset-controller\"} | detected_level=~\"error|fatal|critical\" [1h])) or vector(0)",
+     "expr": "sum(count_over_time({k8s_namespace_name=\"argocd\", service_name=\"argocd-applicationset-controller\"} | detected_level=~\"error|fatal|critical\" [1h])) or (sum(count_over_time({k8s_namespace_name=\"argocd\", service_name=\"argocd-applicationset-controller\"} [1h])) * 0)",
      "legendFormat": "",
      "queryType": "instant",
      "refId": "A"
@@ -271,6 +273,7 @@
       "mode": "thresholds"
      },
      "mappings": [],
+     "noValue": "no pods",
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -314,7 +317,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(kube_pod_container_status_last_terminated_reason{namespace=\"argocd\", pod=~\"argocd-applicationset-controller-[a-z0-9]{6,10}-[a-z0-9]{5}\", reason=\"OOMKilled\"}) or vector(0)",
+     "expr": "sum(kube_pod_container_status_last_terminated_reason{namespace=\"argocd\", pod=~\"argocd-applicationset-controller-[a-z0-9]{6,10}-[a-z0-9]{5}\", reason=\"OOMKilled\"}) or (count(kube_pod_container_info{namespace=\"argocd\", pod=~\"argocd-applicationset-controller-[a-z0-9]{6,10}-[a-z0-9]{5}\"}) * 0)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,

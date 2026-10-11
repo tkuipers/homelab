@@ -14,6 +14,10 @@ kube-prometheus-stack:
       # Talos does not expose etcd / kube-proxy metrics outside the node
       etcd: false
       kubeProxy: false
+    # Always firing on a 2-node homelab (limits are deliberately overcommitted)
+    disabled:
+      KubeCPUOvercommit: true
+      KubeMemoryOvercommit: true
 
   # --- control plane -------------------------------------------------------
   # Talos binds controller-manager/scheduler on 0.0.0.0 (see
