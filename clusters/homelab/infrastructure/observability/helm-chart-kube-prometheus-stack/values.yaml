@@ -217,12 +217,6 @@ kube-prometheus-stack:
         skip_org_role_sync: false
       unified_alerting:
         enabled: true
-      plugins:
-        # Core datasources are versioned separately from Grafana; install the
-        # catalog versions and keep them updated on every start so they don't
-        # lag behind between Grafana releases (the chart defaults auto-update off).
-        preinstall: prometheus,loki,tempo,grafana-postgresql-datasource,mysql,grafana-pyroscope-datasource,elasticsearch,jaeger,zipkin,influxdb,opentsdb,mssql
-        preinstall_auto_update: true
 
     sidecar:
       dashboards:
