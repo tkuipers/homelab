@@ -33,6 +33,60 @@ spec:
           type: RuntimeDefault
         fsGroup: 1000
       initContainers:
+        # Pod firewall (flannel can't enforce NetworkPolicies): only the egress proxy's user
+        # (1337) may leave the cluster. The agent and every command it runs reach the
+        # internet only through the proxy, which only allows hosts on the allow-list
+        # Tyler edits in the web UI.
+        - name: firewall
+          image: ghcr.io/tkuipers/homelab-agent:latest
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+              add: [NET_ADMIN, NET_RAW]
+          command:
+            - sh
+            - -ec
+            - |
+              iptables -A OUTPUT -o lo -j ACCEPT
+              iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+              iptables -A OUTPUT -d 10.96.0.0/12 -j ACCEPT   # services (kube-dns, API server, Grafana, Authelia)
+              iptables -A OUTPUT -d 10.244.0.0/16 -j ACCEPT  # pods
+              iptables -A OUTPUT -d 10.0.0.0/24 -j ACCEPT    # nodes (kubelet probes)
+              iptables -A OUTPUT -m owner --uid-owner 1337 -j ACCEPT
+              iptables -A OUTPUT -j REJECT
+              ip6tables -A OUTPUT -o lo -j ACCEPT
+              ip6tables -A OUTPUT -m owner --uid-owner 1337 -j ACCEPT
+              ip6tables -A OUTPUT -j REJECT
+              iptables -S OUTPUT
+        # Egress proxy (native sidecar), the pod's only way out: allow-listed hosts only.
+        - name: egress
+          image: ghcr.io/tkuipers/homelab-agent:latest
+          imagePullPolicy: Always
+          restartPolicy: Always
+          securityContext:
+            runAsUser: 1337
+            runAsGroup: 1337
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: MODE
+              value: proxy
+          startupProbe:
+            tcpSocket:
+              port: 3128
+            periodSeconds: 1
+            failureThreshold: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 48Mi
+            limits:
+              memory: 192Mi
         # Native sidecar (starts first, runs alongside): holds the SSH keys in an
         # ssh-agent and shares only its socket + the public signing key via /ssh.
         - name: keys
@@ -85,6 +139,15 @@ spec:
               value: git@github.com:tkuipers/homelab.git
             - name: SSH_AUTH_SOCK
               value: /ssh/agent.sock
+            # everything leaves through the egress sidecar; in-cluster traffic goes direct
+            - name: HTTPS_PROXY
+              value: http://127.0.0.1:3128
+            - name: HTTP_PROXY
+              value: http://127.0.0.1:3128
+            - name: NO_PROXY
+              value: localhost,127.0.0.1,.svc,.cluster.local,10.96.0.0/12,10.244.0.0/16
+            - name: NODE_USE_ENV_PROXY
+              value: "1"
             - name: SCAN_TIME
               value: "06:00"
             - name: SCAN_TZ
