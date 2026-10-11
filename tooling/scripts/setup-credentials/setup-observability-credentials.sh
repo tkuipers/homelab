@@ -10,6 +10,13 @@
 #     the Authelia configmap)               configmap.yaml, client 'grafana')
 #   - read-only Grafana service account token used by the grafana MCP server
 #     (optional, stored for convenience)
+#   - Grafana's secret_key (database encryption)  (Secret grafana-security)
+#   - passwords of the read-only 'grafana_ro'      (Secret grafana-datasources,
+#     users behind the Postgres/MySQL datasources   users created by
+#                                                    setup-grafana-db-readonly.sh)
+#     These are generated when missing from 1Password. --rotate rotates the DB
+#     passwords but never secret_key (changing it makes everything Grafana
+#     encrypted in its database unreadable).
 #
 # Usage:
 #   ./setup-observability-credentials.sh            # store current values in 1Password
@@ -42,6 +49,8 @@ AUTHELIA_CONFIGMAP="$REPO_ROOT/clusters/homelab/infrastructure/authelia/configma
 OBS_KUSTOMIZATION="$REPO_ROOT/clusters/homelab/infrastructure/observability/kustomization.yaml"
 TEMP_SECRETS_DIR="${TEMP_SECRETS_DIR:-$HOME/tmp/observability-temp-secrets}"
 AUTHELIA_IMAGE="authelia/authelia:4.39.28"
+# generated once, kept in 1Password (see header)
+GENERATED_FIELDS=(grafana-secret-key pg-stocks-password pg-polymarket-password mysql-stockguesser-password)
 
 MODE="store"
 ROTATE=false
@@ -57,6 +66,10 @@ done
 # kubectl: use the current context unless KUBECONFIG points at a real file
 kc() {
     if [ -f "${KUBECONFIG:-}" ]; then kubectl --kubeconfig="$KUBECONFIG" "$@"; else kubectl "$@"; fi
+}
+
+op_field() {
+    op read "op://$VAULT_NAME/$ITEM_NAME/$1" 2>/dev/null || true
 }
 
 secret_value() {
@@ -116,12 +129,24 @@ store() {
     mcp_token=""
     [ -f "$TEMP_SECRETS_DIR/grafana-mcp-readonly-token" ] && mcp_token="$(cat "$TEMP_SECRETS_DIR/grafana-mcp-readonly-token")"
 
+    local generated=() f v
+    for f in "${GENERATED_FIELDS[@]}"; do
+        v=""
+        op_item_exists "$ITEM_NAME" && v="$(op_field "$f")"
+        if [ -z "$v" ] || { [ "$ROTATE" = true ] && [ "$f" != grafana-secret-key ]; }; then
+            v="$(generate_password 32)"
+            log_info "Generated $f"
+        fi
+        generated+=("$f[password]=$v")
+    done
+
     log_info "Hashing the OIDC client secret (argon2id)..."
     oidc_hash="$(hash_client_secret "$oidc_secret")"
 
     echo
     log_info "About to:"
     echo "  1. create/update 1Password item '$ITEM_NAME' (vault $VAULT_NAME)"
+    echo "     (incl. generated: ${GENERATED_FIELDS[*]})"
     echo "  2. add grafana_client_secret(+_hash) to '$AUTHELIA_ITEM'"
     [ "$ROTATE" = true ] && echo "  3. write the new hash into $AUTHELIA_CONFIGMAP"
     echo "  4. enable secrets/external-secrets.yaml in the observability kustomization"
@@ -135,6 +160,7 @@ store() {
         "grafana-oidc-client-secret[password]=$oidc_secret"
         "grafana-oidc-client-secret-hash[password]=$oidc_hash"
         "website[url]=https://logs.tkuipers.ca"
+        "${generated[@]}"
     )
     [ -n "$mcp_token" ] && fields+=("grafana-mcp-readonly-token[password]=$mcp_token")
 
@@ -176,7 +202,7 @@ store() {
 # =============================================================================
 finalize() {
     log_info "Waiting for the ExternalSecrets to exist..."
-    for es in grafana-admin grafana-oidc; do
+    for es in grafana-admin grafana-oidc grafana-security grafana-datasources; do
         if ! kc -n "$NAMESPACE" get externalsecret "$es" &>/dev/null; then
             log_error "ExternalSecret $NAMESPACE/$es not found - has ArgoCD synced the kustomization change?"
             exit 1
@@ -187,7 +213,7 @@ finalize() {
     # remove the temporary ones and let ESO recreate them from 1Password.
     log_info "Deleting temporary secrets (label temp-secret=true) so ESO can own them"
     kc -n "$NAMESPACE" delete secret -l temp-secret=true --ignore-not-found
-    for es in grafana-admin grafana-oidc; do
+    for es in grafana-admin grafana-oidc grafana-security grafana-datasources; do
         kc -n "$NAMESPACE" annotate externalsecret "$es" force-sync="$(date +%s)" --overwrite >/dev/null
     done
     for i in $(seq 1 30); do
@@ -196,6 +222,11 @@ finalize() {
     done
     kc -n "$NAMESPACE" get secret grafana-admin grafana-oidc >/dev/null
     log_success "Secrets recreated by External Secrets Operator"
+
+    # the force-sync above refreshes existing Secrets asynchronously
+    sleep 10
+    log_info "Setting the read-only database users' passwords..."
+    "$SCRIPT_DIR/setup-grafana-db-readonly.sh"
 
     # Grafana only reads the admin password when the user is first created;
     # set it explicitly so the DB matches 1Password.
