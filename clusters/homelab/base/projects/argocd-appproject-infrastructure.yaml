@@ -6,7 +6,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  description: Core cluster infrastructure components (metallb, cert-manager, ingress, dns)
+  description: Core cluster infrastructure components (metallb, cert-manager, ingress, dns, observability)
 
   # Allow deploying to any namespace
   destinations:
@@ -41,15 +41,6 @@ spec:
         name: letsencrypt-staging
       - kind: Secret
         name: infrastructure-cert-manager-webhook-ca
-      # Datadog runtime state
-      - kind: ConfigMap
-        name: datadog-cluster-id
-      - kind: ConfigMap
-        name: infrastructure-datadog-leader-election
-      - kind: ConfigMap
-        name: infrastructure-datadogtoken
-      - kind: Secret
-        name: webhook-certificate
       # ingress-nginx runtime resources
       - kind: Secret
         name: infrastructure-ingress-nginx-admission

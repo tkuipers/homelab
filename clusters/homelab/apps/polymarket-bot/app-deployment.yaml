@@ -19,8 +19,6 @@ spec:
     metadata:
       labels:
         app: polymarket-bot
-      annotations:
-        ad.datadoghq.com/bot.logs: '[{"source":"python","service":"polymarket-bot"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
@@ -48,14 +46,6 @@ spec:
               value: /etc/polymarket-bot/config.yaml
             - name: WEB_PORT
               value: "8080"
-            - name: DD_AGENT_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: DD_SERVICE
-              value: polymarket-bot
-            - name: DD_ENV
-              value: production
           volumeMounts:
             - name: data
               mountPath: /app/data

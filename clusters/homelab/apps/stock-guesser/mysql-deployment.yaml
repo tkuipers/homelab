@@ -5,9 +5,6 @@ metadata:
   namespace: stock-guesser
   labels:
     app: stock-guesser-mysql
-    tags.datadoghq.com/env: homelab
-    tags.datadoghq.com/service: stock-guesser-mysql
-    tags.datadoghq.com/version: "8.0"
 spec:
   replicas: 1
   strategy:
@@ -19,11 +16,6 @@ spec:
     metadata:
       labels:
         app: stock-guesser-mysql
-        tags.datadoghq.com/env: homelab
-        tags.datadoghq.com/service: stock-guesser-mysql
-        tags.datadoghq.com/version: "8.0"
-      annotations:
-        ad.datadoghq.com/mysql.logs: '[{"source":"mysql","service":"stock-guesser-mysql"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1

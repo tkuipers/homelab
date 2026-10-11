@@ -16,8 +16,6 @@ spec:
     metadata:
       labels:
         app: stocks-decision
-      annotations:
-        ad.datadoghq.com/decision.logs: '[{"source":"python","service":"stocks-decision"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
@@ -56,14 +54,6 @@ spec:
                   key: minio-root-password
             - name: MINIO_MODELS_BUCKET
               value: models
-            - name: DD_AGENT_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: DD_SERVICE
-              value: stocks-decision
-            - name: DD_ENV
-              value: production
           readinessProbe:
             httpGet:
               path: /healthz

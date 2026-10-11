@@ -16,8 +16,6 @@ spec:
     metadata:
       labels:
         app: stocks-minio
-      annotations:
-        ad.datadoghq.com/minio.logs: '[{"source":"minio","service":"stocks-minio"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1

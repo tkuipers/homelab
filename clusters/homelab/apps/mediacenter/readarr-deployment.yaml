@@ -14,22 +14,6 @@ spec:
     metadata:
       labels:
         app: readarr
-      annotations:
-        # Datadog Prometheus scraping
-        ad.datadoghq.com/exportarr.checks: |
-          {
-            "openmetrics": {
-              "instances": [
-                {
-                  "openmetrics_endpoint": "http://%%host%%:9709/metrics",
-                  "namespace": "readarr",
-                  "metrics": [".*"]
-                }
-              ]
-            }
-          }
-        # Datadog logs
-        ad.datadoghq.com/readarr.logs: '[{"source":"readarr","service":"readarr"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620

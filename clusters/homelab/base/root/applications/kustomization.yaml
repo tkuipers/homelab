@@ -10,7 +10,6 @@ resources:
   - argocd-application-local-path-provisioner.yaml
   - argocd-application-external-dns.yaml
   - argocd-application-aws-ip-updater.yaml
-  - argocd-application-datadog.yaml
   - argocd-application-observability.yaml
   - argocd-application-kube-prometheus-stack.yaml
   - argocd-application-loki.yaml

@@ -14,8 +14,6 @@ spec:
     metadata:
       labels:
         app: stocks-api
-      annotations:
-        ad.datadoghq.com/api.logs: '[{"source":"python","service":"stocks-api"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
@@ -60,14 +58,6 @@ spec:
                 secretKeyRef:
                   name: stocks-secret
                   key: azure-maps-key
-            - name: DD_AGENT_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: DD_SERVICE
-              value: stocks-api
-            - name: DD_ENV
-              value: production
           readinessProbe:
             httpGet:
               path: /readyz

@@ -16,8 +16,6 @@ spec:
     metadata:
       labels:
         app: polymarket-postgres
-      annotations:
-        ad.datadoghq.com/postgres.logs: '[{"source":"postgresql","service":"polymarket-postgres"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1

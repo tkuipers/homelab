@@ -566,7 +566,7 @@ main() {
     echo
     
     log_info "Prerequisites before apps will sync:"
-    echo "  1. Run: ./tooling/scripts/setup-credentials/setup-datadog-credentials.sh"
+    echo "  1. Run: ./tooling/scripts/setup-credentials/setup-observability-credentials.sh"
     echo "  2. Ensure External Secrets Operator is running"
     echo "  3. Ensure ClusterSecretStore 'onepassword-store' exists"
 }

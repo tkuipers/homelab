@@ -16,8 +16,6 @@ spec:
     metadata:
       labels:
         app: stocks-nats
-      annotations:
-        ad.datadoghq.com/nats.logs: '[{"source":"nats","service":"stocks-nats"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1

@@ -14,22 +14,6 @@ spec:
     metadata:
       labels:
         app: jellyfin
-      annotations:
-        # Datadog logs for playback tracking
-        ad.datadoghq.com/jellyfin.logs: '[{"source":"jellyfin","service":"jellyfin"}]'
-        # Datadog Prometheus scraping for Jellyfin metrics (active streams, bandwidth)
-        ad.datadoghq.com/jellyfin.checks: |
-          {
-            "openmetrics": {
-              "instances": [
-                {
-                  "openmetrics_endpoint": "http://%%host%%:8096/metrics",
-                  "namespace": "jellyfin",
-                  "metrics": [".*"]
-                }
-              ]
-            }
-          }
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620

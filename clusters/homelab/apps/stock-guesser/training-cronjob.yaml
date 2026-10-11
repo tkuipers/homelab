@@ -17,8 +17,6 @@ spec:
         metadata:
           labels:
             app: stock-guesser-training
-          annotations:
-            ad.datadoghq.com/training.logs: '[{"source":"python","service":"stock-guesser-training"}]'
         spec:
           nodeSelector:
             kubernetes.io/hostname: omen-worker1
@@ -71,17 +69,6 @@ spec:
                   value: "0"
                 - name: CUDA_MODULE_LOADING
                   value: "LAZY"
-                # Datadog APM
-                - name: DATADOG_ENABLED
-                  value: "true"
-                - name: DD_AGENT_HOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: status.hostIP
-                - name: DD_SERVICE
-                  value: "stock-guesser-training"
-                - name: DD_ENV
-                  value: "production"
               volumeMounts:
                 - name: config
                   mountPath: /config

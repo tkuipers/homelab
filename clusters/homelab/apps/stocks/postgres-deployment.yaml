@@ -16,8 +16,6 @@ spec:
     metadata:
       labels:
         app: stocks-postgres
-      annotations:
-        ad.datadoghq.com/postgres.logs: '[{"source":"postgresql","service":"stocks-postgres"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1

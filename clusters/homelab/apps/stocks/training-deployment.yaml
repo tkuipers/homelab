@@ -16,8 +16,6 @@ spec:
     metadata:
       labels:
         app: stocks-training
-      annotations:
-        ad.datadoghq.com/training.logs: '[{"source":"python","service":"stocks-training"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
@@ -52,14 +50,6 @@ spec:
                   key: minio-root-password
             - name: MINIO_MODELS_BUCKET
               value: models
-            - name: DD_AGENT_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: DD_SERVICE
-              value: stocks-training
-            - name: DD_ENV
-              value: production
           readinessProbe:
             httpGet:
               path: /healthz

@@ -14,22 +14,6 @@ spec:
     metadata:
       labels:
         app: sonarr
-      annotations:
-        # Datadog Prometheus scraping
-        ad.datadoghq.com/exportarr.checks: |
-          {
-            "openmetrics": {
-              "instances": [
-                {
-                  "openmetrics_endpoint": "http://%%host%%:9707/metrics",
-                  "namespace": "sonarr",
-                  "metrics": [".*"]
-                }
-              ]
-            }
-          }
-        # Datadog logs
-        ad.datadoghq.com/sonarr.logs: '[{"source":"sonarr","service":"sonarr"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620

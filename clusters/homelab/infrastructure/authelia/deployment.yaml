@@ -5,9 +5,6 @@ metadata:
   namespace: authelia
   labels:
     app: authelia
-    tags.datadoghq.com/env: homelab
-    tags.datadoghq.com/service: authelia
-    tags.datadoghq.com/version: "1.0"
 spec:
   replicas: 1
   selector:
@@ -17,27 +14,6 @@ spec:
     metadata:
       labels:
         app: authelia
-        tags.datadoghq.com/env: homelab
-        tags.datadoghq.com/service: authelia
-        tags.datadoghq.com/version: "1.0"
-      annotations:
-        ad.datadoghq.com/authelia.logs: '[{"source":"authelia","service":"authelia"}]'
-        ad.datadoghq.com/authelia.checks: |
-          {
-            "openmetrics": {
-              "init_config": {},
-              "instances": [{
-                "openmetrics_endpoint": "http://%%host%%:9959/metrics",
-                "namespace": "authelia",
-                "metrics": [
-                  {"authelia_authn": {"type": "counter"}},
-                  {"authelia_authn_duration": {"type": "histogram"}},
-                  {"authelia_request": {"type": "counter"}},
-                  {"authelia_request_duration": {"type": "histogram"}}
-                ]
-              }]
-            }
-          }
     spec:
       enableServiceLinks: false
       nodeSelector:

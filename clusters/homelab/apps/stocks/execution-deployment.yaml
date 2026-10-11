@@ -16,8 +16,6 @@ spec:
     metadata:
       labels:
         app: stocks-execution
-      annotations:
-        ad.datadoghq.com/execution.logs: '[{"source":"python","service":"stocks-execution"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
@@ -57,14 +55,6 @@ spec:
                 secretKeyRef:
                   name: stocks-secret
                   key: minio-root-password
-            - name: DD_AGENT_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: DD_SERVICE
-              value: stocks-execution
-            - name: DD_ENV
-              value: production
           readinessProbe:
             httpGet:
               path: /healthz

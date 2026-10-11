@@ -14,8 +14,6 @@ spec:
     metadata:
       labels:
         app: stocks-console
-      annotations:
-        ad.datadoghq.com/console.logs: '[{"source":"python","service":"stocks-console"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
@@ -58,14 +56,6 @@ spec:
               value: https://stocks.tkuipers.ca
             - name: API_BASE_URL
               value: http://api:8000
-            - name: DD_AGENT_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: DD_SERVICE
-              value: stocks-console
-            - name: DD_ENV
-              value: production
           readinessProbe:
             httpGet:
               path: /healthz

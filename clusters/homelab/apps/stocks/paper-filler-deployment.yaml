@@ -16,8 +16,6 @@ spec:
     metadata:
       labels:
         app: stocks-paper-filler
-      annotations:
-        ad.datadoghq.com/paper-filler.logs: '[{"source":"python","service":"stocks-paper-filler"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
@@ -38,14 +36,6 @@ spec:
                   key: database-url
             - name: NATS_URL
               value: nats://nats:4222
-            - name: DD_AGENT_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: DD_SERVICE
-              value: stocks-paper-filler
-            - name: DD_ENV
-              value: production
           readinessProbe:
             httpGet:
               path: /healthz

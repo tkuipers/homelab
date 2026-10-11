@@ -1,0 +1,11 @@
+# Expose controller-manager and scheduler metrics on all interfaces so
+# Prometheus (observability namespace) can scrape them. Also applied via
+# sidero/serverclass-controlplane.yaml.
+cluster:
+  controllerManager:
+    extraArgs:
+      bind-address: "0.0.0.0"
+  scheduler:
+    extraArgs:
+      bind-address: "0.0.0.0"
+

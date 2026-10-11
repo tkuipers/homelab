@@ -14,8 +14,6 @@ spec:
     metadata:
       labels:
         app: kavita
-      annotations:
-        ad.datadoghq.com/kavita.logs: '[{"source":"kavita","service":"kavita"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620

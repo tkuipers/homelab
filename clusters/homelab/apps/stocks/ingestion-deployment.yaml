@@ -17,8 +17,6 @@ spec:
     metadata:
       labels:
         app: stocks-ingestion
-      annotations:
-        ad.datadoghq.com/ingestion.logs: '[{"source":"python","service":"stocks-ingestion"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
@@ -85,14 +83,6 @@ spec:
                 secretKeyRef:
                   name: stocks-secret
                   key: acled-password
-            - name: DD_AGENT_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: DD_SERVICE
-              value: stocks-ingestion
-            - name: DD_ENV
-              value: production
           readinessProbe:
             httpGet:
               path: /healthz

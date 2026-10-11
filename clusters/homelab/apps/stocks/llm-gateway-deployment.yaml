@@ -14,8 +14,6 @@ spec:
     metadata:
       labels:
         app: stocks-llm-gateway
-      annotations:
-        ad.datadoghq.com/llm-gateway.logs: '[{"source":"python","service":"stocks-llm-gateway"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
@@ -41,14 +39,6 @@ spec:
                 secretKeyRef:
                   name: stocks-secret
                   key: anthropic-api-key
-            - name: DD_AGENT_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: DD_SERVICE
-              value: stocks-llm-gateway
-            - name: DD_ENV
-              value: production
           readinessProbe:
             httpGet:
               path: /healthz

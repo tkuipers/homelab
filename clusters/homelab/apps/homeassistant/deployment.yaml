@@ -17,8 +17,6 @@ spec:
     metadata:
       labels:
         app: homeassistant
-      annotations:
-        ad.datadoghq.com/homeassistant.logs: '[{"source":"homeassistant","service":"homeassistant"}]'
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
