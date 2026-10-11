@@ -1,5 +1,7 @@
 # Backstop: texts Grafana alerts about the agent itself (agent down, daily scan
-# overdue), so they reach Tyler even when the agent can't. Same image, MODE=relay.
+# overdue), so they reach Tyler even when the agent can't. Also Twilio's fallback
+# webhook: texts sent while the agent is down are stored in its database
+# (sms_inbox) and handled when it's back. Same image, MODE=relay.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -49,6 +51,14 @@ spec:
               valueFrom: {secretKeyRef: {name: homelab-agent, key: sms-from, optional: true}}
             - name: SMS_ALLOWED_NUMBERS
               valueFrom: {secretKeyRef: {name: homelab-agent, key: sms-allowed-numbers, optional: true}}
+            - name: PGHOST
+              value: homelab-agent-postgres
+            - name: PGUSER
+              value: agent
+            - name: PGDATABASE
+              value: agent
+            - name: PGPASSWORD
+              valueFrom: {secretKeyRef: {name: homelab-agent-postgres, key: password}}
           resources:
             requests:
               cpu: 5m

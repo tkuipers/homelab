@@ -30,8 +30,9 @@ spec:
             port:
               number: 80
 ---
-# Twilio's incoming-SMS webhook: public, authenticated by Twilio's request
-# signature (checked by the agent), not by Authelia.
+# Twilio's incoming-SMS webhooks: public, authenticated by Twilio's request
+# signature (checked by the service), not by Authelia. The fallback goes to the
+# relay, which stores texts while the agent is down.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -52,5 +53,12 @@ spec:
         backend:
           service:
             name: homelab-agent
+            port:
+              number: 80
+      - path: /hooks/sms-fallback
+        pathType: Exact
+        backend:
+          service:
+            name: homelab-agent-relay
             port:
               number: 80
