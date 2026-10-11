@@ -40,6 +40,34 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+      # Exportarr sidecar for Prometheus metrics (indexer health/failures)
+      - name: exportarr
+        image: ghcr.io/onedr0p/exportarr:v2.0
+        args:
+          - prowlarr
+        env:
+        - name: PORT
+          value: "9710"
+        - name: URL
+          value: "http://localhost:9696"
+        - name: CONFIG
+          value: "/config/config.xml"
+        - name: PROWLARR__BACKFILL
+          value: "true"
+        ports:
+        - containerPort: 9710
+          name: metrics
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
       volumes:
       - name: config
         hostPath:

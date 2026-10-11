@@ -128,3 +128,21 @@ spec:
   podMetricsEndpoints:
     - port: metrics
       interval: 60s
+---
+# Jellyfin built-in metrics (enabled by the init container in
+# apps/mediacenter/jellyfin-deployment.yaml)
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: jellyfin
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [mediacenter]
+  selector:
+    matchLabels:
+      app: jellyfin
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 60s
