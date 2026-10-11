@@ -102,10 +102,11 @@ python3 tooling/observability/verify_dashboards.py     # every dashboard panel r
 (see the docstrings for the port-forwards / credentials they need)
 
 ### Secrets
-Grafana admin + OIDC client secret currently live in hand-made Secrets
-(`kubectl -n observability get secret -l temp-secret=true`).
-`tooling/scripts/setup-credentials/setup-observability-credentials.sh` moves
-them to 1Password and switches to ExternalSecrets (`secrets/`).
+Grafana admin + OIDC client secret come from the 1Password item
+"Observability Credentials" (Homelab vault) via ExternalSecrets (`secrets/`);
+the OIDC client secret's argon2 hash is in the Authelia configmap (client
+`grafana`). To rotate: `tooling/scripts/setup-credentials/setup-observability-credentials.sh --rotate`,
+commit + push, then `... finalize`.
 
 ### Gotchas
 - Loki only accepts lines up to ~1h older than the newest line of the same
