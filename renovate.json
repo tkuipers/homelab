@@ -18,6 +18,21 @@
       "matchPackageNames": [
         "/^ghcr.io/tkuipers//"
       ]
+    },
+    {
+      "description": "Authelia guards every app: merge its patch releases automatically (after 3 days, in case a release is pulled). Minor/major still come as PRs because they can need config changes.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "authelia/authelia"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "minimumReleaseAge": "3 days",
+      "automerge": true,
+      "ignoreTests": true
     }
   ],
   "hostRules": [
