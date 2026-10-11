@@ -247,12 +247,34 @@ kube-prometheus-stack:
             datasourceUid: loki
 
 # --- synthetic probes ----------------------------------------------------
-# Probes go through real DNS + ingress + TLS (+ Authelia), i.e. what a user
-# sees. Auth redirects/401s count as "up"; 5xx, timeouts and TLS errors don't.
+# probe=external: real DNS + ingress + TLS (+ Authelia) = what a user sees.
+#   Auth redirects/401s count as "up" - behind Authelia this does NOT reach
+#   the app. 5xx, timeouts and TLS errors are "down".
+# probe=internal: the app's own health endpoint via its Service.
 prometheus-blackbox-exporter:
   fullnameOverride: blackbox
   config:
     modules:
+      http_2xx:
+        prober: http
+        timeout: 10s
+        http:
+          preferred_ip_protocol: ip4
+          follow_redirects: true
+          tls_config:
+            insecure_skip_verify: true   # in-cluster self-signed (argocd-server)
+      http_alive:
+        prober: http
+        timeout: 10s
+        http:
+          preferred_ip_protocol: ip4
+          follow_redirects: false
+          valid_status_codes: [200, 201, 202, 204, 301, 302, 303, 307, 308, 400, 401, 403, 404, 405]
+      tcp_connect:
+        prober: tcp
+        timeout: 5s
+        tcp:
+          preferred_ip_protocol: ip4
       http_up_tls:
         prober: http
         timeout: 10s
@@ -276,138 +298,477 @@ prometheus-blackbox-exporter:
       url: https://adguard.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: adguard-home
         target_service: adguard-home
     - name: anki-tkuipers-ca
       url: https://anki.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: anki
         target_service: anki
     - name: argo-tkuipers-ca
       url: https://argo.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: argocd
         target_service: argocd-server
     - name: auth-tkuipers-ca
       url: https://auth.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: authelia
         target_service: authelia
     - name: hamh-tkuipers-ca
       url: https://hamh.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: homeassistant
         target_service: hamh
     - name: home-tkuipers-ca
       url: https://home.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: homeassistant
         target_service: homeassistant
     - name: tkuipers-ca
       url: https://tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: homepage
         target_service: homepage
     - name: resume-tkuipers-ca
       url: https://resume.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: homepage
         target_service: resume-proxy
     - name: bazarr-tkuipers-ca
       url: https://bazarr.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: bazarr
     - name: jellyfin-tkuipers-ca
       url: https://jellyfin.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: jellyfin
     - name: mediarequests-tkuipers-ca
       url: https://mediarequests.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: jellyseerr
     - name: kavita-tkuipers-ca
       url: https://kavita.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: kavita
     - name: prowlarr-tkuipers-ca
       url: https://prowlarr.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: prowlarr
     - name: radarr-tkuipers-ca
       url: https://radarr.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: radarr
     - name: readarr-tkuipers-ca
       url: https://readarr.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: readarr
     - name: sabnzbd-tkuipers-ca
       url: https://sabnzbd.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: sabnzbd
     - name: sonarr-tkuipers-ca
       url: https://sonarr.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: sonarr
     - name: transmission-tkuipers-ca
       url: https://transmission.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: mediacenter
         target_service: transmission
     - name: logs-tkuipers-ca
       url: https://logs.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: observability
         target_service: grafana
     - name: polymarket-tkuipers-ca
       url: https://polymarket.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: polymarket-bot
         target_service: bot
     - name: stocks-api-tkuipers-ca
       url: https://stocks-api.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: stocks
         target_service: api
     - name: stocks-tkuipers-ca
       url: https://stocks.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: stocks
         target_service: console
     - name: k8s-tkuipers-ca
       url: https://k8s.tkuipers.ca/
       module: http_up_tls
       additionalMetricsRelabels:
+        probe: external
         target_namespace: ingress-nginx
         target_service: kubernetes-api-proxy
-
+    # --- in-cluster health checks of the app itself via its Service (2xx from
+    # its health endpoint; "http_alive" = answers HTTP without a 5xx) ---
+    - name: int-mediacenter-jellyfin
+      url: http://jellyfin.mediacenter.svc:8096/health
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: jellyfin
+    - name: int-mediacenter-sonarr
+      url: http://sonarr.mediacenter.svc:8989/ping
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: sonarr
+    - name: int-mediacenter-radarr
+      url: http://radarr.mediacenter.svc:7878/ping
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: radarr
+    - name: int-mediacenter-readarr
+      url: http://readarr.mediacenter.svc:8787/ping
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: readarr
+    - name: int-mediacenter-prowlarr
+      url: http://prowlarr.mediacenter.svc:9696/ping
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: prowlarr
+    - name: int-mediacenter-bazarr
+      url: http://bazarr.mediacenter.svc:6767/
+      module: http_alive
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: bazarr
+    - name: int-mediacenter-jellyseerr
+      url: http://jellyseerr.mediacenter.svc:5055/api/v1/status
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: jellyseerr
+    - name: int-mediacenter-kavita
+      url: http://kavita.mediacenter.svc:5000/api/health
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: kavita
+    - name: int-mediacenter-sabnzbd
+      url: http://sabnzbd.mediacenter.svc:8080/
+      module: http_alive
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: sabnzbd
+    - name: int-mediacenter-transmission
+      url: http://transmission.mediacenter.svc:9091/transmission/web/
+      module: http_alive
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mediacenter
+        target_service: transmission
+    - name: int-homeassistant-homeassistant
+      url: http://homeassistant.homeassistant.svc:8123/manifest.json
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: homeassistant
+        target_service: homeassistant
+    - name: int-homeassistant-hamh
+      url: http://hamh.homeassistant.svc:8482/
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: homeassistant
+        target_service: hamh
+    - name: int-homeassistant-matter-server
+      url: matter-server.homeassistant.svc:5580
+      module: tcp_connect
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: homeassistant
+        target_service: matter-server
+    - name: int-homepage-homepage
+      url: http://homepage.homepage.svc/
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: homepage
+        target_service: homepage
+    - name: int-anki-anki
+      url: http://anki.anki.svc:8084/
+      module: http_alive
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: anki
+        target_service: anki
+    - name: int-adguard-home-adguard-home
+      url: http://adguard-home-web.adguard-home.svc/
+      module: http_alive
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: adguard-home
+        target_service: adguard-home
+    - name: int-authelia-authelia
+      url: http://authelia.authelia.svc/api/health
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: authelia
+        target_service: authelia
+    - name: int-authelia-authelia-redis
+      url: authelia-redis.authelia.svc:6379
+      module: tcp_connect
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: authelia
+        target_service: authelia-redis
+    - name: int-argocd-argocd-server
+      url: https://argocd-server.argocd.svc/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: argocd
+        target_service: argocd-server
+    - name: int-argocd-argocd-repo-server
+      url: http://argocd-repo-server.argocd.svc:8084/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: argocd
+        target_service: argocd-repo-server
+    - name: int-argocd-argocd-redis
+      url: argocd-redis.argocd.svc:6379
+      module: tcp_connect
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: argocd
+        target_service: argocd-redis
+    - name: int-default-op-connect
+      url: http://op-connect.default.svc:8080/health
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: default
+        target_service: op-connect
+    - name: int-ingress-nginx-infrastructure-ingress-nginx-controller
+      url: http://infrastructure-ingress-nginx-controller-metrics.ingress-nginx.svc:10254/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: ingress-nginx
+        target_service: infrastructure-ingress-nginx-controller
+    - name: int-polymarket-bot-bot
+      url: http://bot.polymarket-bot.svc:8080/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: polymarket-bot
+        target_service: bot
+    - name: int-polymarket-bot-postgres
+      url: postgres.polymarket-bot.svc:5432
+      module: tcp_connect
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: polymarket-bot
+        target_service: postgres
+    - name: int-stock-guesser-stock-guesser-app
+      url: http://stock-guesser-app.stock-guesser.svc/readyz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stock-guesser
+        target_service: stock-guesser-app
+    - name: int-stock-guesser-mysql
+      url: mysql.stock-guesser.svc:3306
+      module: tcp_connect
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stock-guesser
+        target_service: mysql
+    - name: int-stocks-api
+      url: http://api.stocks.svc:8000/readyz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: api
+    - name: int-stocks-audit-consumer
+      url: http://audit-consumer.stocks.svc:8080/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: audit-consumer
+    - name: int-stocks-console
+      url: http://console.stocks.svc:3000/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: console
+    - name: int-stocks-decision
+      url: http://decision.stocks.svc:8083/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: decision
+    - name: int-stocks-ingestion
+      url: http://ingestion.stocks.svc:8081/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: ingestion
+    - name: int-stocks-llm-gateway
+      url: http://llm-gateway.stocks.svc:8082/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: llm-gateway
+    - name: int-stocks-orchestrator
+      url: http://orchestrator.stocks.svc:8084/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: orchestrator
+    - name: int-stocks-paper-filler
+      url: http://paper-filler.stocks.svc:8086/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: paper-filler
+    - name: int-stocks-training
+      url: http://training.stocks.svc:8085/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: training
+    - name: int-stocks-minio
+      url: http://minio.stocks.svc:9000/minio/health/live
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: minio
+    - name: int-stocks-nats
+      url: http://nats.stocks.svc:8222/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: nats
+    - name: int-stocks-postgres
+      url: postgres.stocks.svc:5432
+      module: tcp_connect
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: postgres
+    - name: int-stocks-redis
+      url: redis.stocks.svc:6379
+      module: tcp_connect
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: stocks
+        target_service: redis
+    - name: int-observability-kps-grafana
+      url: http://kps-grafana.observability.svc/api/health
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: observability
+        target_service: kps-grafana
+    - name: int-observability-loki
+      url: http://loki.observability.svc:3100/ready
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: observability
+        target_service: loki
+    - name: int-observability-tempo
+      url: http://tempo.observability.svc:3200/ready
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: observability
+        target_service: tempo
+    - name: int-observability-prometheus-kps
+      url: http://kps-prometheus.observability.svc:9090/-/ready
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: observability
+        target_service: prometheus-kps
+    - name: int-observability-alertmanager-kps
+      url: http://kps-alertmanager.observability.svc:9093/-/ready
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: observability
+        target_service: alertmanager-kps
