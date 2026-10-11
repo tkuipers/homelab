@@ -18,7 +18,7 @@ logging {
 
 // Checkpoints (file offsets) and the on-disk export queue survive restarts.
 otelcol.storage.file "state" {
-	directory = "/var/lib/alloy/storage"
+	directory = "/var/lib/alloy/storage-v2"
 }
 
 // ---------------------------------------------------------------- pod logs --
