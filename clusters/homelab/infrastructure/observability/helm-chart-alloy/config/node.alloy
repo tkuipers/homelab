@@ -25,7 +25,9 @@ otelcol.storage.file "state" {
 
 otelcol.receiver.filelog "pods" {
 	include           = ["/var/log/pods/*/*/*.log"]
-	start_at          = "end"
+	// beginning: on first sight of a file read it whole (kubelet caps files at
+	// 10MiB); afterwards the checkpoint in otelcol.storage.file wins.
+	start_at          = "beginning"
 	include_file_path = true
 	max_log_size      = "1MiB"
 	storage           = otelcol.storage.file.state.handler
