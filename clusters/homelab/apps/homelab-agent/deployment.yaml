@@ -33,7 +33,8 @@ spec:
           type: RuntimeDefault
         fsGroup: 1000
       initContainers:
-        # ssh refuses keys readable by others; copy the deploy key with 0600
+        # ssh refuses keys readable by others, and keys without a final newline
+        # (1Password strips it): copy the deploy key with 0600 and a newline
         - name: ssh-key
           image: ghcr.io/tkuipers/homelab-agent:latest
           imagePullPolicy: Always
@@ -41,7 +42,10 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
-          command: ["sh", "-c", "mkdir -p /data/home/.ssh && install -m 600 /secrets/git/git-ssh-private-key /data/home/.ssh/id_ed25519"]
+          command:
+            - sh
+            - -c
+            - mkdir -p /data/home/.ssh && umask 077 && { cat /secrets/git/git-ssh-private-key; echo; } | sed '/^$/d' > /data/home/.ssh/id_ed25519
           volumeMounts:
             - name: data
               mountPath: /data
