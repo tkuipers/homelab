@@ -145,6 +145,9 @@ spec:
               value: tkuipers123@gmail.com
             - name: WORKSPACE_EXTERNAL_URL
               value: https://google-mcp.tkuipers.ca
+            # the redirect Google sends the browser to after consent (otherwise localhost:8000)
+            - name: GOOGLE_OAUTH_REDIRECT_URI
+              value: https://google-mcp.tkuipers.ca/oauth2callback
             - name: WORKSPACE_MCP_HOST
               value: 127.0.0.1  # only the gate reaches it
             - name: WORKSPACE_MCP_PORT
