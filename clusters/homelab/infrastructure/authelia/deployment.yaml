@@ -51,8 +51,9 @@ spec:
         # OIDC secrets (using _FILE suffix pointing to mounted secret files)
         - name: AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET_FILE
           value: /app/secrets/oidc-hmac-secret
-        - name: AUTHELIA_IDENTITY_PROVIDERS_OIDC_ISSUER_PRIVATE_KEY_FILE
-          value: /app/secrets/oidc-issuer-private-key
+        # issuer key: identity_providers.oidc.jwks in the configmap (template filter)
+        - name: X_AUTHELIA_CONFIG_FILTERS
+          value: template
         volumeMounts:
         - name: config
           mountPath: /config/configuration.yml

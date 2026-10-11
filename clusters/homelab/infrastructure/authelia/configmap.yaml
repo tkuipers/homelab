@@ -139,6 +139,15 @@ data:
     
     identity_providers:
       oidc:
+        # Issuer signing key, read from the mounted secret by the template
+        # filter (X_AUTHELIA_CONFIG_FILTERS=template). key_id pinned to the id
+        # Authelia derived for the old issuer_private_key so clients keep
+        # validating tokens across the switch.
+        jwks:
+          - key_id: '5a8052-rs256'
+            algorithm: 'RS256'
+            use: 'sig'
+            key: {{ secret "/app/secrets/oidc-issuer-private-key" | mindent 10 "|" | msquote }}
         cors:
           endpoints:
             - authorization
