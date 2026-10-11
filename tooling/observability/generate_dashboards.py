@@ -284,10 +284,15 @@ def health_stat(b: Board, s: Svc):
                mappings=[{"type": "value", "options": {"0": {"text": "no", "color": "green"}, "1": {"text": "SUSPENDED", "color": "orange"}}}])
 
 
-def standard(s: Svc) -> Board:
-    uid = f"svc-{s.ns}-{s.name}"
+def svc_uid(ns: str, name: str) -> str:
+    uid = f"svc-{ns}-{name}"
     if len(uid) > 40:  # grafana uid limit
         uid = uid[:31] + "-" + hashlib.sha1(uid.encode()).hexdigest()[:8]
+    return uid
+
+
+def standard(s: Svc) -> Board:
+    uid = svc_uid(s.ns, s.name)
     b = Board(uid, s.title, ["homelab", "service", s.ns], s.folder,
               time_from="now-7d" if s.kind == "cronjob" else "now-24h",
               description=s.description or f"{s.kind} {s.ns}/{s.name}")

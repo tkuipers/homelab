@@ -10,3 +10,5 @@ resources:
   - monitors/servicemonitors.yaml
   # Grafana dashboards (generated: tooling/observability/generate_dashboards.py)
   - dashboards
+  # Grafana-managed alert rules (generated: tooling/observability/generate_alerts.py)
+  - alerts/alert-rules.yaml
