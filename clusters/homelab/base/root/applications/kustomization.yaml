@@ -26,3 +26,4 @@ resources:
   - argocd-application-stocks.yaml
   - argocd-application-polymarket-bot.yaml
   - argocd-application-homeassistant.yaml
+  - argocd-application-homelab-agent.yaml

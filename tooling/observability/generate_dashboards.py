@@ -467,6 +467,26 @@ def adguard_panels(b: Board, s: Svc):
          ds=LOKI, bars=True, desc="queries AdGuard could not forward; with parallel upstreams a single failing upstream is harmless, all failing = DNS outage")
 
 
+def agent_panels(b: Board, s: Svc):
+    yes_no = [{"type": "value", "options": {"0": {"text": "NO", "color": "red"}, "1": {"text": "YES", "color": "green"}}}]
+    b.stat("Claude signed in", "max(homelab_agent_signed_in)", mappings=yes_no,
+           thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}],
+           desc="If NO: sign in at https://agent.tkuipers.ca/#/auth")
+    b.stat("Working now", "max(homelab_agent_busy)", desc="Conversations executing right now")
+    b.stat("Queued", "max(homelab_agent_queue_length)")
+    b.stat("Last daily scan", "time() - max(homelab_agent_last_scan_timestamp_seconds)", unit="s",
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 26 * 3600}, {"color": "red", "value": 30 * 3600}])
+    b.ts("Conversations started", [("sum by (kind) (increase(homelab_agent_runs_total[$__rate_interval]))", "{{kind}}")], bars=True)
+    b.ts("Outcomes", [("sum by (outcome) (increase(homelab_agent_run_outcomes_total[$__rate_interval]))", "{{outcome}}")], bars=True)
+    b.ts("Claude usage (USD equivalent)", [("sum by (kind) (increase(homelab_agent_cost_usd_total[$__rate_interval]))", "{{kind}}")], bars=True,
+         desc="Estimated from Claude Code's own accounting; on a subscription this is not billed per token")
+    b.ts("Texts", [("sum by (direction) (increase(homelab_agent_sms_total[$__rate_interval]))", "{{direction}}")], bars=True)
+    b.ts("SMS routing", [("sum by (method, result) (increase(homelab_agent_route_decisions_total[$__rate_interval]))", "{{method}} -> {{result}}"),
+                         ("sum(increase(homelab_agent_route_corrections_total[$__rate_interval]))", "moved by Tyler (misroute)")], bars=True,
+         desc="How incoming texts were routed. 'moved by Tyler' = he corrected a route with a bare #N: tune ROUTE_MIN_* if it grows")
+    b.ts("Top tools", [("topk(8, sum by (tool) (increase(homelab_agent_tool_calls_total[$__rate_interval])))", "{{tool}}")], bars=True)
+
+
 def authelia_panels(b: Board, s: Svc):
     b.ts("Authentication attempts", [('sum by (success, type) (increase(authelia_authn[$__rate_interval]))', "success={{success}} {{type}}")], bars=True)
     b.ts("Authorization decisions", [('sum by (type) (increase(authelia_authz[$__rate_interval]))', "{{type}}")], bars=True)
@@ -601,6 +621,9 @@ CATALOG: List[Svc] = [
     S("homeassistant", "homeassistant", "Home Assistant", ingress=["homeassistant"], probe="homeassistant", folder="Home Assistant"),
     S("homeassistant", "hamh", "Home Assistant Matter Hub (hamh)", ingress=["hamh"], probe="hamh", folder="Home Assistant"),
     S("homeassistant", "matter-server", "Matter server", folder="Home Assistant"),
+    S("homelab-agent", "homelab-agent", "Homelab agent", ingress=["homelab-agent"], probe="homelab-agent", folder="Apps",
+      extras=[agent_panels], description="Claude Code agent: daily scans, alert response, SMS. https://agent.tkuipers.ca"),
+    S("homelab-agent", "homelab-agent-relay", "Homelab agent SMS relay", probe="homelab-agent-relay", folder="Apps", quiet=True),
     S("homepage", "homepage", "Homepage (tkuipers.ca)", ingress=["homepage", "resume-proxy"], probe="homepage", access_logs=True, folder="Apps"),
 
     S("mediacenter", "jellyfin", "Jellyfin", ingress=["jellyfin"], probe="jellyfin", folder="Media", extras=[jellyfin_panels]),

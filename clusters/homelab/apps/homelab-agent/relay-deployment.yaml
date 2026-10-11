@@ -1,0 +1,61 @@
+# Backstop: texts Grafana alerts about the agent itself (agent down, daily scan
+# overdue), so they reach Tyler even when the agent can't. Same image, MODE=relay.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homelab-agent-relay
+  namespace: homelab-agent
+  labels:
+    app: homelab-agent-relay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homelab-agent-relay
+  template:
+    metadata:
+      labels:
+        app: homelab-agent-relay
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-secret
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: relay
+          image: ghcr.io/tkuipers/homelab-agent:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: MODE
+              value: relay
+            - name: WEBHOOK_TOKEN
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: webhook-token}}
+            - name: TWILIO_ACCOUNT_SID
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: twilio-account-sid, optional: true}}
+            - name: TWILIO_AUTH_TOKEN
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: twilio-auth-token, optional: true}}
+            - name: SMS_FROM
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: sms-from, optional: true}}
+            - name: SMS_ALLOWED_NUMBERS
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: sms-allowed-numbers, optional: true}}
+          resources:
+            requests:
+              cpu: 5m
+              memory: 48Mi
+            limits:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http

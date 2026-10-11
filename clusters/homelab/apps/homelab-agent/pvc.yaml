@@ -1,0 +1,13 @@
+# Conversations, Claude Code sessions, the agent's notes and the per-conversation
+# git worktrees of the homelab repo.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: homelab-agent-data
+  namespace: homelab-agent
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi

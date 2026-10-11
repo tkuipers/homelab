@@ -140,7 +140,51 @@ kube-prometheus-stack:
                 storage: 40Gi
 
   alertmanager:
+    # The kube-prometheus-stack PrometheusRules alert through this Alertmanager;
+    # warnings and criticals go to the homelab agent (Grafana-managed rules are
+    # routed by Grafana itself, see alerts/alert-rules.yaml). Inhibit rules are
+    # the chart defaults.
+    config:
+      global:
+        resolve_timeout: 5m
+      inhibit_rules:
+        - source_matchers: ['severity = critical']
+          target_matchers: ['severity =~ warning|info']
+          equal: [namespace, alertname]
+        - source_matchers: ['severity = warning']
+          target_matchers: ['severity = info']
+          equal: [namespace, alertname]
+        - source_matchers: ['alertname = InfoInhibitor']
+          target_matchers: ['severity = info']
+          equal: [namespace]
+        - target_matchers: ['alertname = InfoInhibitor']
+      route:
+        group_by: [namespace, alertname]
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 12h
+        receiver: homelab-agent
+        routes:
+          - receiver: "null"
+            matchers: ['alertname =~ "Watchdog|InfoInhibitor"']
+          - receiver: "null"
+            matchers: ['severity !~ "warning|critical"']
+      receivers:
+        - name: "null"
+        - name: homelab-agent
+          webhook_configs:
+            - url: http://homelab-agent.homelab-agent.svc/hooks/alertmanager
+              send_resolved: true
+              http_config:
+                authorization:
+                  type: Bearer
+                  credentials_file: /etc/alertmanager/secrets/homelab-agent-webhook/token
+      templates:
+        - /etc/alertmanager/config/*.tmpl
     alertmanagerSpec:
+      # mounted at /etc/alertmanager/secrets/<name>/ (ExternalSecret in ../secrets)
+      secrets:
+        - homelab-agent-webhook
       resources:
         requests:
           cpu: 10m
@@ -195,6 +239,11 @@ kube-prometheus-stack:
         readOnly: true
         optional: true
     envValueFrom:
+      # bearer token for the homelab agent contact points (alerts/alert-rules.yaml)
+      AGENT_WEBHOOK_TOKEN:
+        secretKeyRef:
+          name: homelab-agent-webhook
+          key: token
       GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
         secretKeyRef:
           name: grafana-oidc
@@ -466,6 +515,14 @@ prometheus-blackbox-exporter:
         probe: external
         target_namespace: adguard-home
         target_service: adguard-home
+    - name: agent-tkuipers-ca
+      url: https://agent.tkuipers.ca/
+
+      module: http_authelia
+      additionalMetricsRelabels:
+        probe: external
+        target_namespace: homelab-agent
+        target_service: homelab-agent
     - name: anki-tkuipers-ca
       url: https://anki.tkuipers.ca/sync/hostKey
 
@@ -651,6 +708,20 @@ prometheus-blackbox-exporter:
         probe: internal
         target_namespace: mediacenter
         target_service: jellyfin
+    - name: int-homelab-agent-homelab-agent
+      url: http://homelab-agent.homelab-agent.svc/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: homelab-agent
+        target_service: homelab-agent
+    - name: int-homelab-agent-homelab-agent-relay
+      url: http://homelab-agent-relay.homelab-agent.svc/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: homelab-agent
+        target_service: homelab-agent-relay
     - name: int-mediacenter-sonarr
       url: http://sonarr.mediacenter.svc:8989/ping
       module: http_2xx

@@ -2482,6 +2482,158 @@ data:
           description: ''
           dashboard: https://logs.tkuipers.ca/d/svc-observability-loki
         isPaused: false
+    - orgId: 1
+      name: Homelab agent
+      folder: Alerts
+      interval: 1m
+      rules:
+      - uid: agent-down
+        title: Homelab agent down
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum(kube_deployment_status_replicas_available{namespace="homelab-agent", deployment="homelab-agent"})
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+          namespace: homelab-agent
+          notify: relay
+        annotations:
+          summary: homelab-agent/homelab-agent has no available replicas
+          description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
+          dashboard: https://logs.tkuipers.ca/d/svc-homelab-agent-homelab-agent
+        isPaused: false
+      - uid: agent-scan-overdue
+        title: Homelab agent daily scan overdue
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: time() - max(homelab_agent_last_scan_timestamp_seconds)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 108000
+        noDataState: OK
+        execErrState: Error
+        for: 30m
+        labels:
+          severity: warning
+          namespace: homelab-agent
+          notify: relay
+        annotations:
+          summary: The homelab agent's daily scan hasn't finished for {{ humanizeDuration $values.B.Value }}
+          description: 'Agent web UI: https://agent.tkuipers.ca (Claude signed in? runs stuck?)'
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=homelab-agent
+        isPaused: false
     deleteRules:
     - orgId: 1
       uid: hl-probe-down
+  homelab-notifications.yaml: |
+    apiVersion: 1
+    contactPoints:
+    - orgId: 1
+      name: homelab-agent
+      receivers:
+      - uid: homelab-agent
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: http://homelab-agent.homelab-agent.svc/hooks/grafana
+          authorization_scheme: Bearer
+          authorization_credentials: $AGENT_WEBHOOK_TOKEN
+          httpMethod: POST
+    - orgId: 1
+      name: homelab-agent-relay
+      receivers:
+      - uid: homelab-agent-relay
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: http://homelab-agent-relay.homelab-agent.svc/hooks/grafana
+          authorization_scheme: Bearer
+          authorization_credentials: $AGENT_WEBHOOK_TOKEN
+          httpMethod: POST
+    policies:
+    - orgId: 1
+      receiver: homelab-agent
+      group_by:
+      - grafana_folder
+      - alertname
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      routes:
+      - receiver: homelab-agent-relay
+        object_matchers:
+        - - notify
+          - '='
+          - relay
+        repeat_interval: 6h

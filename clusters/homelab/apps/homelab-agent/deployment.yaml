@@ -1,0 +1,123 @@
+# The agent: web UI (agent.tkuipers.ca), alert webhooks, SMS, daily scan, and the
+# Claude Code conversations. Source: github.com/tkuipers/homelab-agent (private).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homelab-agent
+  namespace: homelab-agent
+  labels:
+    app: homelab-agent
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate   # one writer for /data
+  selector:
+    matchLabels:
+      app: homelab-agent
+  template:
+    metadata:
+      labels:
+        app: homelab-agent
+    spec:
+      serviceAccountName: homelab-agent
+      imagePullSecrets:
+        - name: ghcr-secret
+      # plenty of memory for parallel Claude Code sessions
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 1000
+      initContainers:
+        # ssh refuses keys readable by others; copy the deploy key with 0600
+        - name: ssh-key
+          image: ghcr.io/tkuipers/homelab-agent:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          command: ["sh", "-c", "mkdir -p /data/home/.ssh && install -m 600 /secrets/git/git-ssh-private-key /data/home/.ssh/id_ed25519"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: git-key
+              mountPath: /secrets/git
+              readOnly: true
+      containers:
+        - name: agent
+          image: ghcr.io/tkuipers/homelab-agent:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PUBLIC_URL
+              value: https://agent.tkuipers.ca
+            - name: AUTHELIA_VERIFY_URL
+              value: http://authelia.authelia.svc.cluster.local/api/authz/auth-request
+            - name: GRAFANA_URL
+              value: http://kps-grafana.observability.svc
+            - name: REPO_URL
+              value: git@github.com:tkuipers/homelab.git
+            - name: GIT_SSH_COMMAND
+              value: ssh -i /data/home/.ssh/id_ed25519 -o IdentitiesOnly=yes
+            - name: SCAN_TIME
+              value: "06:00"
+            - name: SCAN_TZ
+              value: America/Toronto
+            - name: AGENT_MAX_PARALLEL
+              value: "3"
+            - name: GRAFANA_SERVICE_ACCOUNT_TOKEN
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: grafana-token}}
+            - name: WEBHOOK_TOKEN
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: webhook-token}}
+            - name: TWILIO_ACCOUNT_SID
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: twilio-account-sid, optional: true}}
+            - name: TWILIO_AUTH_TOKEN
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: twilio-auth-token, optional: true}}
+            - name: SMS_FROM
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: sms-from, optional: true}}
+            - name: SMS_ALLOWED_NUMBERS
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: sms-allowed-numbers, optional: true}}
+            - name: TYPESAFE_API_KEY
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: typesafe-api-key, optional: true}}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              memory: 6Gi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: homelab-agent-data
+        - name: git-key
+          secret:
+            secretName: homelab-agent
+            defaultMode: 0440
+            items:
+              - key: git-ssh-private-key
+                path: git-ssh-private-key

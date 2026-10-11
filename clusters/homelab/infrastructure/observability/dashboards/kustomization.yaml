@@ -87,6 +87,18 @@ configMapGenerator:
     options:
       annotations:
         grafana_folder: "Home Assistant"
+  - name: dash-apps-svc-homelab-agent-homelab-agent
+    files:
+      - apps--svc-homelab-agent-homelab-agent.json
+    options:
+      annotations:
+        grafana_folder: "Apps"
+  - name: dash-apps-svc-homelab-agent-homelab-agent-relay
+    files:
+      - apps--svc-homelab-agent-homelab-agent-relay.json
+    options:
+      annotations:
+        grafana_folder: "Apps"
   - name: dash-apps-svc-homepage-homepage
     files:
       - apps--svc-homepage-homepage.json

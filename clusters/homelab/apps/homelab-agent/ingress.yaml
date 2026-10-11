@@ -1,0 +1,56 @@
+# Web UI behind Authelia (the agent also checks the Authelia session itself,
+# because pods can reach the Service directly).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: homelab-agent
+  namespace: homelab-agent
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/auth-url: http://authelia.authelia.svc.cluster.local/api/authz/auth-request
+    nginx.ingress.kubernetes.io/auth-signin: https://auth.tkuipers.ca/?rd=https://$host$escaped_request_uri
+    # live transcripts are server-sent events
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - agent.tkuipers.ca
+    secretName: agent-tkuipers-ca-tls
+  rules:
+  - host: agent.tkuipers.ca
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: homelab-agent
+            port:
+              number: 80
+---
+# Twilio's incoming-SMS webhook: public, authenticated by Twilio's request
+# signature (checked by the agent), not by Authelia.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: homelab-agent-sms
+  namespace: homelab-agent
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - agent.tkuipers.ca
+    secretName: agent-tkuipers-ca-tls
+  rules:
+  - host: agent.tkuipers.ca
+    http:
+      paths:
+      - path: /hooks/sms
+        pathType: Exact
+        backend:
+          service:
+            name: homelab-agent
+            port:
+              number: 80

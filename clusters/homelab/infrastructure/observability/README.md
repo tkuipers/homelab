@@ -105,13 +105,19 @@ Noisy rule? Fix the level at the source or add a level correction in
 `helm-chart-alloy/config/log-parsing.alloy` (section "level corrections") -
 don't silence the rule.
 
-**No contact point is configured yet** - alerts are visible in Grafana only.
-To get paged, configure the same channel (ntfy / Pushover / Discord / email)
-in **both** places: a Grafana contact point + notification policy, and a
-receiver in the kps Alertmanager config (`alertmanager.config` in the kps
-values); send `Watchdog` to a dead-man's switch (e.g. healthchecks.io) - the
-whole stack runs on dell-r620, so that is the only way to hear about that
-node dying.
+**Where alerts go: the homelab agent** (`clusters/homelab/apps/homelab-agent`,
+https://agent.tkuipers.ca). Both alert paths deliver to it by webhook: the
+Grafana contact point + notification policy (generated with the rules,
+`generate_alerts.py`, second key of `alerts/alert-rules.yaml`) and the kps
+Alertmanager config (`alertmanager.config` in the kps values: warnings and
+criticals; `Watchdog` and info are dropped). The agent investigates, fixes what
+it safely can (commits to main) and texts Tyler only when it needs him; every
+run is visible in its web UI. Alerts about the agent itself (group "Homelab
+agent", label `notify=relay`) go to its small SMS relay instead. The webhook
+bearer token is in 1Password ("Homelab Agent Credentials", ExternalSecret
+`homelab-agent-webhook`).
+`Watchdog` still has no dead-man's switch: the whole stack runs on dell-r620,
+so a dead node goes unnoticed until someone looks (e.g. healthchecks.io).
 
 ### Verification
 ```
