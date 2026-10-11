@@ -76,9 +76,10 @@ spec:
           env:
             - name: MODE
               value: proxy
+          # the proxy listens on loopback only (other pods must not use it), so probe from inside
           startupProbe:
-            tcpSocket:
-              port: 3128
+            exec:
+              command: ["bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3128"]
             periodSeconds: 1
             failureThreshold: 30
           resources:
