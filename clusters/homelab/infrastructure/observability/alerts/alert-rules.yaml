@@ -1281,6 +1281,106 @@ data:
           summary: Scrape target {{ $labels.namespace }}/{{ $labels.job }} is down
           description: ''
         isPaused: false
+      - uid: hl-loki-storage-budget
+        title: Loki storage budget at risk
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum(rate(loki_ingester_chunk_stored_bytes_total[6h])) * 86400 * 60 / 1e9
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 90
+        noDataState: OK
+        execErrState: Error
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: Loki would store ~{{ $values.B }} GB over its 60d retention (volume is 100Gi)
+          description: Find the noisy service on the Prometheus/observability dashboard ('Loki ingest by namespace') and lower its log level or drop the lines in Alloy, or lower retention_period in helm-chart-loki/values.yaml.
+        isPaused: false
+      - uid: hl-prometheus-tsdb-full
+        title: Prometheus TSDB near its size limit
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max(prometheus_tsdb_storage_blocks_bytes + prometheus_tsdb_wal_storage_size_bytes) / 36e9
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0.95
+        noDataState: OK
+        execErrState: Error
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: Prometheus storage is at its 36GB retentionSize (oldest data is being dropped early)
+          description: ''
+        isPaused: false
       - uid: hl-loki-no-logs
         title: No logs arriving in Loki
         condition: C
