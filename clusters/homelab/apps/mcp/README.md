@@ -45,3 +45,17 @@ in the agent (Settings > MCP servers), where Tyler chooses per persona whether i
 - The agent attaches it to the Assistant as the system server `browser` (`BROWSER_MCP_URL`).
   Clicks, Enter, typing with submit, form fills and uploads that commit something or touch a
   password or card field wait for Tyler's approval, judged from the live page.
+
+## arr-mcp (Sonarr and Radarr)
+
+- [aplaceforallmystuff/mcp-arr](https://github.com/aplaceforallmystuff/mcp-arr) 1.7.3, the
+  upstream image pinned by digest in `arr.yaml`, Streamable HTTP. Only Sonarr and Radarr are
+  configured (series/movies, search and add, queue, calendar, episodes, config review, TRaSH guides).
+- API keys: the ones Prowlarr, Jellyseerr and exportarr already use, read at start from each app's
+  `config.xml` (hostPath on dell-r620, only that file, read-only), like the arr-integration-job.
+  So it has its own namespace `mcp-arr` (privileged for hostPath; the containers run restricted)
+  and is pinned to dell-r620. Restart it if an API key is regenerated. Adding Prowlarr: mount its
+  config.xml and set `PROWLARR_URL`/`PROWLARR_API_KEY` the same way.
+- Same gate as Gmail: listens on 127.0.0.1, the `gate` sidecar requires the token (secret
+  `arr-mcp-gate`, generated here, pushed to 1Password "Arr MCP Gate", read by the agent). No ingress.
+- The agent registers it as the system server `arr` (`ARR_MCP_URL`) for Ops and the Assistant.

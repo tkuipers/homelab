@@ -1,0 +1,217 @@
+# Sonarr and Radarr for the homelab agent: aplaceforallmystuff/mcp-arr (upstream image pinned by
+# digest), Streamable HTTP. Like the Gmail server it has no auth of its own, so it listens on
+# 127.0.0.1 and the gate sidecar (the agent image, MODE=mcpgate) requires a shared bearer token,
+# generated here, pushed to 1Password ("Arr MCP Gate") and read back by the agent's MCP secrets.
+#
+# The API keys are the ones Prowlarr, Jellyseerr and exportarr already use: read at start from
+# each app's config.xml (hostPath on dell-r620, mounted read-only, only that file), the same way
+# the arr-integration-job does. Its own namespace because hostPath needs a privileged one.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-arr
+  labels:
+    # hostPath (the two config.xml files); the containers themselves run restricted
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ghcr-credentials
+  namespace: mcp-arr
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: onepassword-store
+    kind: ClusterSecretStore
+  target:
+    name: ghcr-secret
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: |
+          {
+            "auths": {
+              "ghcr.io": {
+                "username": "{{ .username }}",
+                "password": "{{ .token }}",
+                "auth": "{{ printf "%s:%s" .username .token | b64enc }}"
+              }
+            }
+          }
+  data:
+    - secretKey: username
+      remoteRef: {key: "GitHub Container Registry", property: username, conversionStrategy: Default, decodingStrategy: None, metadataPolicy: None}
+    - secretKey: token
+      remoteRef: {key: "GitHub Container Registry", property: token, conversionStrategy: Default, decodingStrategy: None, metadataPolicy: None}
+---
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: arr-mcp-gate
+  namespace: mcp-arr
+spec:
+  length: 48
+  digits: 8
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: arr-mcp-gate
+  namespace: mcp-arr
+spec:
+  refreshInterval: "0"  # generated once
+  target:
+    name: arr-mcp-gate
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      data:
+        arr-mcp-authorization: "Bearer {{ .password }}"
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: arr-mcp-gate
+---
+# the agent (homelab-agent namespace) reads it from 1Password with its other MCP secrets
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: arr-mcp-gate
+  namespace: mcp-arr
+spec:
+  refreshInterval: 1h
+  deletionPolicy: None
+  updatePolicy: Replace
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: onepassword-store
+  selector:
+    secret:
+      name: arr-mcp-gate
+  data:
+    - conversionStrategy: None
+      match:
+        secretKey: arr-mcp-authorization
+        remoteRef:
+          remoteKey: Arr MCP Gate
+          property: arr-mcp-authorization
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arr-mcp
+  namespace: mcp-arr
+  labels:
+    app: arr-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arr-mcp
+  template:
+    metadata:
+      labels:
+        app: arr-mcp
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620  # where the *arr config lives
+      imagePullSecrets:
+        - name: ghcr-secret
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mcp-arr
+          # 1.7.3
+          image: ghcr.io/aplaceforallmystuff/mcp-arr@sha256:ace72c56448e8695e1d2d060e7437470e3f883fcc9316f1294e3a7f682e1efa1
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          command:
+            - sh
+            - -c
+            - |
+              key() { sed -n 's:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p' "$1"; }
+              export SONARR_API_KEY="$(key /arr/sonarr/config.xml)" RADARR_API_KEY="$(key /arr/radarr/config.xml)"
+              [ -n "$SONARR_API_KEY" ] && [ -n "$RADARR_API_KEY" ] || { echo "no ApiKey in config.xml" >&2; exit 1; }
+              exec node dist/index.js
+          env:
+            - name: MCP_TRANSPORT
+              value: http
+            - name: HOST
+              value: 127.0.0.1  # only the gate reaches it
+            - name: PORT
+              value: "3000"
+            - name: SONARR_URL
+              value: http://sonarr.mediacenter.svc.cluster.local:8989
+            - name: RADARR_URL
+              value: http://radarr.mediacenter.svc.cluster.local:7878
+          volumeMounts:
+            - name: sonarr-config
+              mountPath: /arr/sonarr/config.xml
+              readOnly: true
+            - name: radarr-config
+              mountPath: /arr/radarr/config.xml
+              readOnly: true
+          resources:
+            requests: {cpu: 5m, memory: 64Mi}
+            limits: {memory: 256Mi}
+        - name: gate
+          image: ghcr.io/tkuipers/homelab-agent
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: MODE
+              value: mcpgate
+            - name: GATE_UPSTREAM_PORT
+              value: "3000"
+            - name: GATE_OPEN_PATHS
+              value: ""  # every request needs the token
+            - name: GATE_AUTHORIZATION
+              valueFrom: {secretKeyRef: {name: arr-mcp-gate, key: arr-mcp-authorization}}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /gate/healthz, port: http}
+          resources:
+            requests: {cpu: 5m, memory: 48Mi}
+            limits: {memory: 128Mi}
+      volumes:
+        - name: sonarr-config
+          hostPath: {path: /var/persist/sonarr-config/config.xml, type: File}
+        - name: radarr-config
+          hostPath: {path: /var/persist/radarr-config/config.xml, type: File}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arr-mcp
+  namespace: mcp-arr
+spec:
+  selector:
+    app: arr-mcp
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

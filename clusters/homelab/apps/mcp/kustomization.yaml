@@ -6,6 +6,7 @@ resources:
   - google-workspace.yaml
   - google-workspace-assistant.yaml
   - browser.yaml
+  - arr.yaml
 # pinned by homelab-agent's CI (deploy job)
 images:
   - name: ghcr.io/tkuipers/homelab-agent
