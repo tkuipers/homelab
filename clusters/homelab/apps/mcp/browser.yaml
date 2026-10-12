@@ -97,7 +97,8 @@ metadata:
   name: browser-mcp-gate
   namespace: mcp-browser
 spec:
-  refreshInterval: 1h
+  # short: the generated token can be rewritten right after creation, and the agent must get the final value
+  refreshInterval: 10m
   deletionPolicy: None
   updatePolicy: Replace
   secretStoreRefs:
