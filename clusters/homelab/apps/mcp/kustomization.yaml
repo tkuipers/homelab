@@ -4,6 +4,7 @@ resources:
   - namespace.yaml
   - ghcr-credentials-external-secret.yaml
   - google-workspace.yaml
+  - browser.yaml
 # pinned by homelab-agent's CI (deploy job)
 images:
   - name: ghcr.io/tkuipers/homelab-agent
