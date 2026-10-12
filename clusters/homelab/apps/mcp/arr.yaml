@@ -4,7 +4,7 @@
 # generated here, pushed to 1Password ("Arr MCP Gate") and read back by the agent's MCP secrets.
 #
 # The API keys are the ones Prowlarr, Jellyseerr and exportarr already use: read at start from
-# each app's config.xml (hostPath on dell-r620, mounted read-only, only that file), the same way
+# each app's config.xml (hostPath on dell-r620, read-only, by an init container), the same way
 # the arr-integration-job does. Its own namespace because hostPath needs a privileged one.
 apiVersion: v1
 kind: Namespace
@@ -134,6 +134,32 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      # copies just the two API keys out of the config directories (single-file hostPath mounts
+      # fail on Talos), so the server never sees the rest of the *arr config
+      initContainers:
+        - name: api-keys
+          image: ghcr.io/aplaceforallmystuff/mcp-arr@sha256:ace72c56448e8695e1d2d060e7437470e3f883fcc9316f1294e3a7f682e1efa1
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          command:
+            - sh
+            - -ec
+            - |
+              for app in sonarr radarr; do
+                key=$(sed -n 's:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p' /arr/$app/config.xml)
+                [ -n "$key" ] || { echo "no ApiKey in $app config.xml" >&2; exit 1; }
+                printf %s "$key" > /keys/$app
+              done
+          volumeMounts:
+            - {name: sonarr-config, mountPath: /arr/sonarr, readOnly: true}
+            - {name: radarr-config, mountPath: /arr/radarr, readOnly: true}
+            - {name: keys, mountPath: /keys}
+          resources:
+            requests: {cpu: 5m, memory: 16Mi}
+            limits: {memory: 64Mi}
       containers:
         - name: mcp-arr
           # 1.7.3
@@ -146,11 +172,7 @@ spec:
           command:
             - sh
             - -c
-            - |
-              key() { sed -n 's:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p' "$1"; }
-              export SONARR_API_KEY="$(key /arr/sonarr/config.xml)" RADARR_API_KEY="$(key /arr/radarr/config.xml)"
-              [ -n "$SONARR_API_KEY" ] && [ -n "$RADARR_API_KEY" ] || { echo "no ApiKey in config.xml" >&2; exit 1; }
-              exec node dist/index.js
+            - SONARR_API_KEY=$(cat /keys/sonarr) RADARR_API_KEY=$(cat /keys/radarr) exec node dist/index.js
           env:
             - name: MCP_TRANSPORT
               value: http
@@ -163,12 +185,7 @@ spec:
             - name: RADARR_URL
               value: http://radarr.mediacenter.svc.cluster.local:7878
           volumeMounts:
-            - name: sonarr-config
-              mountPath: /arr/sonarr/config.xml
-              readOnly: true
-            - name: radarr-config
-              mountPath: /arr/radarr/config.xml
-              readOnly: true
+            - {name: keys, mountPath: /keys, readOnly: true}
           resources:
             requests: {cpu: 5m, memory: 64Mi}
             limits: {memory: 256Mi}
@@ -199,9 +216,11 @@ spec:
             limits: {memory: 128Mi}
       volumes:
         - name: sonarr-config
-          hostPath: {path: /var/persist/sonarr-config/config.xml, type: File}
+          hostPath: {path: /var/persist/sonarr-config, type: Directory}
         - name: radarr-config
-          hostPath: {path: /var/persist/radarr-config/config.xml, type: File}
+          hostPath: {path: /var/persist/radarr-config, type: Directory}
+        - name: keys
+          emptyDir: {medium: Memory, sizeLimit: 1Mi}
 ---
 apiVersion: v1
 kind: Service

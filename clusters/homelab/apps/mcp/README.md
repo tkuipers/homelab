@@ -52,7 +52,8 @@ in the agent (Settings > MCP servers), where Tyler chooses per persona whether i
   upstream image pinned by digest in `arr.yaml`, Streamable HTTP. Only Sonarr and Radarr are
   configured (series/movies, search and add, queue, calendar, episodes, config review, TRaSH guides).
 - API keys: the ones Prowlarr, Jellyseerr and exportarr already use, read at start from each app's
-  `config.xml` (hostPath on dell-r620, only that file, read-only), like the arr-integration-job.
+  `config.xml` (hostPath on dell-r620, read-only) by an init container that hands only the keys to
+  the server (in-memory emptyDir), like the arr-integration-job.
   So it has its own namespace `mcp-arr` (privileged for hostPath; the containers run restricted)
   and is pinned to dell-r620. Restart it if an API key is regenerated. Adding Prowlarr: mount its
   config.xml and set `PROWLARR_URL`/`PROWLARR_API_KEY` the same way.
