@@ -1,4 +1,4 @@
-# Sonarr and Radarr for the homelab agent: aplaceforallmystuff/mcp-arr (upstream image pinned by
+# Sonarr, Radarr and Prowlarr for the homelab agent: aplaceforallmystuff/mcp-arr (upstream image pinned by
 # digest), Streamable HTTP. Like the Gmail server it has no auth of its own, so it listens on
 # 127.0.0.1 and the gate sidecar (the agent image, MODE=mcpgate) requires a shared bearer token,
 # generated here, pushed to 1Password ("Arr MCP Gate") and read back by the agent's MCP secrets.
@@ -148,7 +148,7 @@ spec:
             - sh
             - -ec
             - |
-              for app in sonarr radarr; do
+              for app in sonarr radarr prowlarr; do
                 key=$(sed -n 's:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p' /arr/$app/config.xml)
                 [ -n "$key" ] || { echo "no ApiKey in $app config.xml" >&2; exit 1; }
                 printf %s "$key" > /keys/$app
@@ -156,6 +156,7 @@ spec:
           volumeMounts:
             - {name: sonarr-config, mountPath: /arr/sonarr, readOnly: true}
             - {name: radarr-config, mountPath: /arr/radarr, readOnly: true}
+            - {name: prowlarr-config, mountPath: /arr/prowlarr, readOnly: true}
             - {name: keys, mountPath: /keys}
           resources:
             requests: {cpu: 5m, memory: 16Mi}
@@ -172,7 +173,7 @@ spec:
           command:
             - sh
             - -c
-            - SONARR_API_KEY=$(cat /keys/sonarr) RADARR_API_KEY=$(cat /keys/radarr) exec node dist/index.js
+            - SONARR_API_KEY=$(cat /keys/sonarr) RADARR_API_KEY=$(cat /keys/radarr) PROWLARR_API_KEY=$(cat /keys/prowlarr) exec node dist/index.js
           env:
             - name: MCP_TRANSPORT
               value: http
@@ -184,6 +185,8 @@ spec:
               value: http://sonarr.mediacenter.svc.cluster.local:8989
             - name: RADARR_URL
               value: http://radarr.mediacenter.svc.cluster.local:7878
+            - name: PROWLARR_URL
+              value: http://prowlarr.mediacenter.svc.cluster.local:9696
           volumeMounts:
             - {name: keys, mountPath: /keys, readOnly: true}
           resources:
@@ -219,6 +222,8 @@ spec:
           hostPath: {path: /var/persist/sonarr-config, type: Directory}
         - name: radarr-config
           hostPath: {path: /var/persist/radarr-config, type: Directory}
+        - name: prowlarr-config
+          hostPath: {path: /var/persist/prowlarr-config, type: Directory}
         - name: keys
           emptyDir: {medium: Memory, sizeLimit: 1Mi}
 ---
