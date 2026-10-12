@@ -1,0 +1,248 @@
+# Web browser for the homelab agent: Microsoft's Playwright MCP (headless Chromium), so the
+# Assistant can do things on websites (book a table, look something up behind a form).
+#
+# - Open internet, but never the cluster or the LAN: a firewall init container rejects every
+#   private, link-local and CGNAT destination except the cluster DNS. That needs NET_ADMIN, which
+#   the restricted mcp namespace forbids, hence its own privileged namespace (like homelab-agent);
+#   the long-running containers drop every capability and run as non-root.
+# - --isolated: every MCP session (one per agent conversation turn) gets a fresh, logged-out
+#   browser context kept in memory; nothing persists between conversations.
+# - No auth of its own, so it listens on 127.0.0.1 and the gate sidecar (the agent image,
+#   MODE=mcpgate) requires the shared bearer token. Generated here, pushed to 1Password
+#   "Browser MCP Gate", read back by the agent with its MCP secrets.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-browser
+  labels:
+    # the firewall init container needs NET_ADMIN
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ghcr-credentials
+  namespace: mcp-browser
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: onepassword-store
+    kind: ClusterSecretStore
+  target:
+    name: ghcr-secret
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: |
+          {
+            "auths": {
+              "ghcr.io": {
+                "username": "{{ .username }}",
+                "password": "{{ .token }}",
+                "auth": "{{ printf "%s:%s" .username .token | b64enc }}"
+              }
+            }
+          }
+  data:
+    - secretKey: username
+      remoteRef: {key: "GitHub Container Registry", property: username, conversionStrategy: Default, decodingStrategy: None, metadataPolicy: None}
+    - secretKey: token
+      remoteRef: {key: "GitHub Container Registry", property: token, conversionStrategy: Default, decodingStrategy: None, metadataPolicy: None}
+---
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: browser-mcp-gate
+  namespace: mcp-browser
+spec:
+  length: 48
+  digits: 8
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: browser-mcp-gate
+  namespace: mcp-browser
+spec:
+  refreshInterval: "0"  # generated once
+  target:
+    name: browser-mcp-gate
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      data:
+        browser-mcp-authorization: "Bearer {{ .password }}"
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: browser-mcp-gate
+---
+# the agent (homelab-agent namespace) reads it from 1Password with its other MCP secrets
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: browser-mcp-gate
+  namespace: mcp-browser
+spec:
+  refreshInterval: 1h
+  deletionPolicy: None
+  updatePolicy: Replace
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: onepassword-store
+  selector:
+    secret:
+      name: browser-mcp-gate
+  data:
+    - conversionStrategy: None
+      match:
+        secretKey: browser-mcp-authorization
+        remoteRef:
+          remoteKey: Browser MCP Gate
+          property: browser-mcp-authorization
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: browser-mcp
+  namespace: mcp-browser
+  labels:
+    app: browser-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: browser-mcp
+  template:
+    metadata:
+      labels:
+        app: browser-mcp
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-secret
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Pod firewall (flannel can't enforce NetworkPolicies): the internet yes, the cluster
+        # (services, pods, nodes) and the LAN no. Replies to the agent's requests are ESTABLISHED.
+        - name: firewall
+          image: ghcr.io/tkuipers/homelab-agent
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+              add: [NET_ADMIN, NET_RAW]
+          command:
+            - sh
+            - -ec
+            - |
+              iptables -A OUTPUT -o lo -j ACCEPT
+              iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+              for ns in $(awk '/^nameserver/ {print $2}' /etc/resolv.conf); do
+                iptables -A OUTPUT -d "$ns" -p udp --dport 53 -j ACCEPT
+                iptables -A OUTPUT -d "$ns" -p tcp --dport 53 -j ACCEPT
+              done
+              for net in 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4; do
+                iptables -A OUTPUT -d "$net" -j REJECT
+              done
+              ip6tables -A OUTPUT -o lo -j ACCEPT
+              ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+              for net in ::/128 ::ffff:0:0/96 64:ff9b::/96 fc00::/7 fe80::/10 ff00::/8; do
+                ip6tables -A OUTPUT -d "$net" -j REJECT
+              done
+              iptables -S OUTPUT
+              ip6tables -S OUTPUT
+      containers:
+        - name: playwright
+          # pinned by digest; bump both together
+          image: mcr.microsoft.com/playwright/mcp:v0.0.83@sha256:690763cbb437ee7233f538a953bb5390bf03791eb5c965b471e59d17a6132fcb
+          # the image's entrypoint already runs headless Chromium without its sandbox (the container is the sandbox)
+          args:
+            - --host=127.0.0.1  # only the gate reaches it
+            - --port=8931
+            - --allowed-hosts=*  # requests come through the gate with the Service's Host header
+            - --isolated
+            - --output-dir=/tmp/playwright
+            # longer than an approval may take (2h), so the page is still there when Tyler says yes
+            - --idle-timeout=9000000
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: HOME
+              value: /home/node
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/node
+            - name: shm
+              mountPath: /dev/shm
+          resources:
+            requests: {cpu: 50m, memory: 256Mi}
+            limits: {memory: 2Gi}
+        - name: gate
+          image: ghcr.io/tkuipers/homelab-agent
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: MODE
+              value: mcpgate
+            - name: GATE_UPSTREAM_PORT
+              value: "8931"
+            - name: GATE_OPEN_PATHS
+              value: ""  # every request needs the token
+            - name: GATE_AUTHORIZATION
+              valueFrom: {secretKeyRef: {name: browser-mcp-gate, key: browser-mcp-authorization}}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /gate/healthz, port: http}
+          resources:
+            requests: {cpu: 5m, memory: 48Mi}
+            limits: {memory: 128Mi}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 1Gi}
+        - name: home
+          emptyDir: {sizeLimit: 1Gi}
+        - name: shm
+          emptyDir: {medium: Memory, sizeLimit: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: browser-mcp
+  namespace: mcp-browser
+spec:
+  selector:
+    app: browser-mcp
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
