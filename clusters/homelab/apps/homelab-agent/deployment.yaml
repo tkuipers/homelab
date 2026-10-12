@@ -187,9 +187,9 @@ spec:
             - name: BROWSER_MCP_URL
               value: http://browser-mcp.mcp-browser.svc/mcp
             - name: SCAN_TIME
-              value: "06:00"
+              value: "02:00"
             - name: SCAN_TZ
-              value: America/Toronto
+              value: America/Edmonton
             - name: AGENT_MAX_PARALLEL
               value: "3"
             - name: GRAFANA_SERVICE_ACCOUNT_TOKEN
