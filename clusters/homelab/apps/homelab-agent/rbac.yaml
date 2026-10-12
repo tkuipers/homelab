@@ -83,6 +83,13 @@ rules:
   - apiGroups: [monitoring.coreos.com]
     resources: [servicemonitors, podmonitors, prometheusrules, probes]
     verbs: [patch, update]
+  # one-off cleanup (2026-10-12): kube-system Services left by the old
+  # "kube-prometheus-stack" release; the kubelet one matches the kps-kubelet
+  # ServiceMonitor too, so every kubelet/cAdvisor target is scraped twice
+  - apiGroups: [""]
+    resources: [services]
+    resourceNames: [kube-prometheus-stack-kubelet, kube-prometheus-stack-coredns, kube-prometheus-stack-kube-controller-manager, kube-prometheus-stack-kube-etcd, kube-prometheus-stack-kube-proxy, kube-prometheus-stack-kube-scheduler]
+    verbs: [delete]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
