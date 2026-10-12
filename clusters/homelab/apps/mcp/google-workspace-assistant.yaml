@@ -1,0 +1,202 @@
+# Gmail for the assistant's own Google account (tyler.kuipers.ai@gmail.com): a second
+# google_workspace_mcp, same image and OAuth client as google-workspace.yaml, with its own
+# credentials volume, gate token ("Google MCP Gate Assistant" in 1Password) and callback host.
+# A separate server so Tyler can give the two accounts different Off / Ask / Auto settings and
+# the agent can't mix them up.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: google-mcp-assistant-gate
+  namespace: mcp
+spec:
+  length: 48
+  digits: 8
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: google-mcp-assistant-gate
+  namespace: mcp
+spec:
+  refreshInterval: "0"  # generated once
+  target:
+    name: google-mcp-assistant-gate
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      data:
+        google-mcp-assistant-authorization: "Bearer {{ .password }}"
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: google-mcp-assistant-gate
+---
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: google-mcp-assistant-gate
+  namespace: mcp
+spec:
+  # re-push regularly: a generated secret can be created twice at first and 1Password must end
+  # up with the value the gate actually uses
+  refreshInterval: 10m
+  deletionPolicy: None
+  updatePolicy: Replace
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: onepassword-store
+  selector:
+    secret:
+      name: google-mcp-assistant-gate
+  data:
+    - conversionStrategy: None
+      match:
+        secretKey: google-mcp-assistant-authorization
+        remoteRef:
+          remoteKey: Google MCP Gate Assistant
+          property: google-mcp-assistant-authorization
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: google-workspace-mcp-assistant
+  namespace: mcp
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: google-workspace-mcp-assistant
+  namespace: mcp
+  labels:
+    app: google-workspace-mcp-assistant
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # one writer on the credentials volume
+  selector:
+    matchLabels:
+      app: google-workspace-mcp-assistant
+  template:
+    metadata:
+      labels:
+        app: google-workspace-mcp-assistant
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-secret
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: workspace-mcp
+          image: ghcr.io/tkuipers/workspace-mcp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: GOOGLE_OAUTH_CLIENT_ID
+              valueFrom: {secretKeyRef: {name: google-workspace-mcp-oauth, key: client-id}}
+            - name: GOOGLE_OAUTH_CLIENT_SECRET
+              valueFrom: {secretKeyRef: {name: google-workspace-mcp-oauth, key: client-secret}}
+            - name: USER_GOOGLE_EMAIL
+              value: tyler.kuipers.ai@gmail.com
+            - name: WORKSPACE_EXTERNAL_URL
+              value: https://google-mcp-assistant.tkuipers.ca
+            # the redirect Google sends the browser to after consent (otherwise localhost:8000)
+            - name: GOOGLE_OAUTH_REDIRECT_URI
+              value: https://google-mcp-assistant.tkuipers.ca/oauth2callback
+            - name: WORKSPACE_MCP_HOST
+              value: 127.0.0.1  # only the gate reaches it
+            - name: WORKSPACE_MCP_PORT
+              value: "8000"
+            - name: WORKSPACE_MCP_CREDENTIALS_DIR
+              value: /data/credentials
+            - name: HOME
+              value: /data
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests: {cpu: 10m, memory: 128Mi}
+            limits: {memory: 512Mi}
+        - name: gate
+          image: ghcr.io/tkuipers/homelab-agent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: MODE
+              value: mcpgate
+            - name: GATE_UPSTREAM_PORT
+              value: "8000"
+            - name: GATE_AUTHORIZATION
+              valueFrom: {secretKeyRef: {name: google-mcp-assistant-gate, key: google-mcp-assistant-authorization}}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: {path: /gate/healthz, port: http}
+          resources:
+            requests: {cpu: 5m, memory: 48Mi}
+            limits: {memory: 128Mi}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: google-workspace-mcp-assistant
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: google-mcp-assistant
+  namespace: mcp
+spec:
+  selector:
+    app: google-workspace-mcp-assistant
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: google-mcp-assistant
+  namespace: mcp
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/auth-url: http://authelia.authelia.svc.cluster.local/api/authz/auth-request
+    nginx.ingress.kubernetes.io/auth-signin: https://auth.tkuipers.ca/?rd=https://$host$escaped_request_uri
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts: [google-mcp-assistant.tkuipers.ca]
+    secretName: google-mcp-assistant-tkuipers-ca-tls
+  rules:
+  - host: google-mcp-assistant.tkuipers.ca
+    http:
+      paths:
+      - path: /oauth2callback
+        pathType: Exact
+        backend:
+          service:
+            name: google-mcp-assistant
+            port:
+              number: 80

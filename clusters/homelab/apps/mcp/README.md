@@ -19,6 +19,15 @@ in the agent (Settings > MCP servers), where Tyler chooses per persona whether i
 - First sign-in: ask the agent to use Gmail; it calls `start_google_auth` and sends the link.
   The refresh token is stored on the PVC (local-path: the pod stays on its first node).
 
+## google-workspace-mcp-assistant (the assistant's own Gmail)
+
+- A second instance for `tyler.kuipers.ai@gmail.com`, the account the agent uses for "Sign in
+  with Google" on booking sites. Same image and OAuth client, its own volume, gate token
+  (1Password "Google MCP Gate Assistant") and callback host `google-mcp-assistant.tkuipers.ca`
+  (add `https://google-mcp-assistant.tkuipers.ca/oauth2callback` to the OAuth client's redirect URIs).
+- Registered in the agent as `gmail_assistant`, separate from `gmail`, so the two accounts get
+  their own Off / Ask / Auto settings.
+
 ## browser-mcp (web browser)
 
 - [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) 0.0.83, the upstream
