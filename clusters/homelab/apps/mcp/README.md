@@ -24,11 +24,15 @@ in the agent (Settings > MCP servers), where Tyler chooses per persona whether i
 - [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) 0.0.83, the upstream
   image pinned by digest in `browser.yaml`: headless Chromium, `--isolated` (every session starts
   fresh and logged out; nothing is kept).
-- Its own namespace `mcp-browser` (privileged): a firewall init container lets it reach the
-  internet but nothing private (cluster, LAN) except the cluster DNS. The running containers drop
-  all capabilities and run as non-root.
+- Only allow-listed hosts: Chromium goes through the `egress` proxy sidecar, which uses the agent's
+  allow-list and Jev vetting (blocked hosts show up in the agent's UI to allow).
+- Its own namespace `mcp-browser` (privileged) for the firewall init container: only the proxy's
+  user gets out, never to private ranges (cluster, LAN) or our public IP (`agent.tkuipers.ca` and
+  checkip, resolved when the pod starts; restart the pod if the public IP changes). The running
+  containers drop all capabilities and run as non-root.
 - Same gate as Gmail: listens on 127.0.0.1, the `gate` sidecar requires the token (secret
   `browser-mcp-gate`, generated here, pushed to 1Password "Browser MCP Gate", read by the agent).
-  Nothing is exposed through an ingress.
-- The agent attaches it to the Assistant as the system server `browser` (`BROWSER_MCP_URL`); clicks
-  that book, pay, confirm or submit wait for Tyler's approval (policy rule `browser-commit`).
+  The proxy shows the same token to the agent's `/internal/egress` API. No ingress.
+- The agent attaches it to the Assistant as the system server `browser` (`BROWSER_MCP_URL`).
+  Clicks, Enter, typing with submit, form fills and uploads that commit something or touch a
+  password or card field wait for Tyler's approval, judged from the live page.

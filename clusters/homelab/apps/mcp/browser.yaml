@@ -1,15 +1,19 @@
 # Web browser for the homelab agent: Microsoft's Playwright MCP (headless Chromium), so the
 # Assistant can do things on websites (book a table, look something up behind a form).
 #
-# - Open internet, but never the cluster or the LAN: a firewall init container rejects every
-#   private, link-local and CGNAT destination except the cluster DNS. That needs NET_ADMIN, which
-#   the restricted mcp namespace forbids, hence its own privileged namespace (like homelab-agent);
-#   the long-running containers drop every capability and run as non-root.
-# - --isolated: every MCP session (one per agent conversation turn) gets a fresh, logged-out
-#   browser context kept in memory; nothing persists between conversations.
-# - No auth of its own, so it listens on 127.0.0.1 and the gate sidecar (the agent image,
-#   MODE=mcpgate) requires the shared bearer token. Generated here, pushed to 1Password
-#   "Browser MCP Gate", read back by the agent with its MCP secrets.
+# - Only allow-listed hosts: Chromium goes through an egress proxy sidecar (the agent image,
+#   MODE=proxy) that uses the agent's allow-list and Jev vetting, like the agent itself. A
+#   firewall init container lets only the proxy's user out, and never to private, link-local or
+#   CGNAT ranges or our own public IP (agent.tkuipers.ca, resolved at start), so nothing in the
+#   pod reaches the cluster or the LAN, even through the router. Its only in-cluster
+#   destinations: the cluster DNS and the agent's egress API. NET_ADMIN for the firewall is why
+#   this has its own privileged namespace (the mcp namespace is restricted); the long-running
+#   containers drop every capability and run as non-root.
+# - --isolated: every MCP session (one per agent turn) gets a fresh, logged-out browser context
+#   kept in memory; nothing persists between conversations.
+# - No auth of its own, so it listens on 127.0.0.1 and the gate sidecar (MODE=mcpgate) requires
+#   the shared bearer token. Generated here, pushed to 1Password "Browser MCP Gate", read back by
+#   the agent with its MCP secrets; the proxy shows the same token to the agent's egress API.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -135,8 +139,9 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-        # Pod firewall (flannel can't enforce NetworkPolicies): the internet yes, the cluster
-        # (services, pods, nodes) and the LAN no. Replies to the agent's requests are ESTABLISHED.
+        # Pod firewall (flannel can't enforce NetworkPolicies): only the proxy's user (1337) leaves
+        # the pod, to the internet but never to private ranges or our public IP. Replies to the
+        # agent's requests are ESTABLISHED.
         - name: firewall
           image: ghcr.io/tkuipers/homelab-agent
           securityContext:
@@ -146,24 +151,39 @@ spec:
             capabilities:
               drop: [ALL]
               add: [NET_ADMIN, NET_RAW]
+          env:
+            - name: PUBLIC_NAME
+              value: agent.tkuipers.ca  # resolves to our public IP (dynamic DNS)
+            - name: AGENT_SERVICE
+              value: homelab-agent.homelab-agent.svc.cluster.local
           command:
             - sh
             - -ec
             - |
+              public4=$( (getent ahostsv4 "$PUBLIC_NAME" | awk '{print $1}'; curl -4fsS -m 10 https://checkip.amazonaws.com || true) | sort -u)
+              public6=$(getent ahostsv6 "$PUBLIC_NAME" | awk '$1 !~ /^::ffff:/ {print $1}' | sort -u)
+              [ -n "$public4" ] || { echo "can't find our public IP; refusing to start without blocking it"; exit 1; }
+              agent=$(getent ahostsv4 "$AGENT_SERVICE" | awk '{print $1}' | sort -u)
+              [ -n "$agent" ] || { echo "can't resolve $AGENT_SERVICE"; exit 1; }
               iptables -A OUTPUT -o lo -j ACCEPT
               iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
               for ns in $(awk '/^nameserver/ {print $2}' /etc/resolv.conf); do
-                iptables -A OUTPUT -d "$ns" -p udp --dport 53 -j ACCEPT
-                iptables -A OUTPUT -d "$ns" -p tcp --dport 53 -j ACCEPT
+                iptables -A OUTPUT -m owner --uid-owner 1337 -d "$ns" -p udp --dport 53 -j ACCEPT
+                iptables -A OUTPUT -m owner --uid-owner 1337 -d "$ns" -p tcp --dport 53 -j ACCEPT
               done
-              for net in 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4; do
+              for ip in $agent; do iptables -A OUTPUT -m owner --uid-owner 1337 -d "$ip" -p tcp --dport 80 -j ACCEPT; done
+              for net in 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4 $public4; do
                 iptables -A OUTPUT -d "$net" -j REJECT
               done
+              iptables -A OUTPUT -m owner --uid-owner 1337 -j ACCEPT
+              iptables -A OUTPUT -j REJECT
               ip6tables -A OUTPUT -o lo -j ACCEPT
               ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-              for net in ::/128 ::ffff:0:0/96 64:ff9b::/96 fc00::/7 fe80::/10 ff00::/8; do
+              for net in ::/128 ::ffff:0:0/96 64:ff9b::/96 fc00::/7 fe80::/10 ff00::/8 $public6; do
                 ip6tables -A OUTPUT -d "$net" -j REJECT
               done
+              ip6tables -A OUTPUT -m owner --uid-owner 1337 -j ACCEPT
+              ip6tables -A OUTPUT -j REJECT
               iptables -S OUTPUT
               ip6tables -S OUTPUT
       containers:
@@ -179,6 +199,7 @@ spec:
             - --output-dir=/tmp/playwright
             # longer than an approval may take (2h), so the page is still there when Tyler says yes
             - --idle-timeout=9000000
+            - --proxy-server=http://127.0.0.1:3128  # the egress proxy: allow-listed hosts only
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
@@ -200,6 +221,26 @@ spec:
           resources:
             requests: {cpu: 50m, memory: 256Mi}
             limits: {memory: 2Gi}
+        # Egress proxy: the agent's allow-list and Jev vetting, through the agent's egress API
+        - name: egress
+          image: ghcr.io/tkuipers/homelab-agent
+          securityContext:
+            runAsUser: 1337
+            runAsGroup: 1337
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: MODE
+              value: proxy
+            - name: AGENT_INTERNAL_URL
+              value: http://homelab-agent.homelab-agent.svc.cluster.local
+            - name: AGENT_INTERNAL_AUTHORIZATION
+              valueFrom: {secretKeyRef: {name: browser-mcp-gate, key: browser-mcp-authorization}}
+          resources:
+            requests: {cpu: 10m, memory: 48Mi}
+            limits: {memory: 192Mi}
         - name: gate
           image: ghcr.io/tkuipers/homelab-agent
           securityContext:

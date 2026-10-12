@@ -4,7 +4,7 @@ resources:
   - namespace.yaml
   - ghcr-credentials-external-secret.yaml
   - google-workspace.yaml
-  # - browser.yaml  # held back until the audit fixes land (egress allow-list, fact-based approvals, public IP)
+  - browser.yaml
 # pinned by homelab-agent's CI (deploy job)
 images:
   - name: ghcr.io/tkuipers/homelab-agent
