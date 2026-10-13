@@ -179,3 +179,19 @@ spec:
     - port: http
       path: /metrics
       interval: 60s
+---
+# GPU on omen-worker1 (infrastructure/nvidia-device-plugin/gpu-exporter.yaml)
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: nvidia-gpu
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [nvidia-device-plugin]
+  selector:
+    matchLabels:
+      name: nvidia-gpu-exporter
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s

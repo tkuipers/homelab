@@ -1,0 +1,47 @@
+# GPU metrics (utilisation, memory, temperature, power, clocks) for the GTX
+# 1060 on omen-worker1. nvidia_gpu_exporter reads nvidia-smi, which the nvidia
+# runtime mounts in; it works on GeForce cards (DCGM targets datacenter GPUs).
+# It sees the GPU through NVIDIA_VISIBLE_DEVICES without requesting
+# nvidia.com/gpu, so it never takes the GPU away from training jobs.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nvidia-gpu-exporter
+  namespace: nvidia-device-plugin
+spec:
+  selector:
+    matchLabels:
+      name: nvidia-gpu-exporter
+  template:
+    metadata:
+      labels:
+        name: nvidia-gpu-exporter
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      runtimeClassName: nvidia
+      containers:
+        - name: exporter
+          image: utkuozdemir/nvidia_gpu_exporter:1.15.1
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: utility
+          ports:
+            - name: metrics
+              containerPort: 9835
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 24Mi
+            limits:
+              memory: 64Mi

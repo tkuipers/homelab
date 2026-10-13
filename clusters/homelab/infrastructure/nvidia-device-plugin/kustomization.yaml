@@ -4,3 +4,4 @@ resources:
   - namespace.yaml
   - runtimeclass.yaml
   - daemonset.yaml
+  - gpu-exporter.yaml
