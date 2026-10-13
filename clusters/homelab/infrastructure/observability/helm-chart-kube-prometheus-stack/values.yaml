@@ -383,11 +383,31 @@ kube-prometheus-stack:
         access: proxy
         url: http://tempo.observability.svc:3200
         jsonData:
+          # span -> its log lines. trace_id is structured metadata (not in the
+          # line), so filterByTraceID's line filter would never match. Scoped
+          # by namespace only: ingress-nginx's service.name differs from its
+          # Loki service_name.
           tracesToLogsV2:
             datasourceUid: loki
             spanStartTimeShift: -5m
             spanEndTimeShift: 5m
-            filterByTraceID: true
+            tags:
+              - key: k8s.namespace.name
+                value: k8s_namespace_name
+            customQuery: true
+            query: '{$${__tags}} | trace_id="$${__span.traceId}"'
+          tracesToMetrics:
+            datasourceUid: prometheus
+            tags:
+              - key: service.name
+                value: service
+              - key: k8s.namespace.name
+                value: k8s_namespace_name
+            queries:
+              - name: Request rate
+                query: 'sum by (span_name) (rate(traces_spanmetrics_calls_total{$$__tags}[5m]))'
+              - name: Error rate
+                query: 'sum by (span_name) (rate(traces_spanmetrics_calls_total{$$__tags, status_code="STATUS_CODE_ERROR"}[5m]))'
           serviceMap:
             datasourceUid: prometheus
           nodeGraph:

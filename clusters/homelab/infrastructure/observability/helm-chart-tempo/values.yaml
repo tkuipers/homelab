@@ -1,11 +1,12 @@
-# Tempo - trace storage. Traces arrive via Alloy (OTLP). Today the main
-# producer is ingress-nginx (one span per request through the ingress).
+# Tempo - trace storage. Traces arrive via Alloy (OTLP): ingress-nginx (one
+# span per request), our own services (OpenTelemetry SDKs), Beyla (eBPF spans
+# for third-party apps), Argo CD and Grafana.
 tempo:
   fullnameOverride: tempo
 
   tempo:
     reportingEnabled: false
-    # 8Gi budget (PV). ~5 days of ingress traces with plenty of headroom.
+    # 8Gi budget (PV), 5 days. Check tempo disk use on the Tempo dashboard.
     retention: 120h
     metricsGenerator:
       enabled: true
@@ -19,6 +20,14 @@ tempo:
             # local-blocks backs TraceQL metrics queries (`| rate()` etc.,
             # used by Grafana's Traces Drilldown) over recent data.
             - local-blocks
+          # namespace on span metrics / service graph series (label
+          # k8s_namespace_name, like Loki): service names alone are ambiguous
+          # (stocks "api", "postgres" in several namespaces)
+          processor:
+            span_metrics:
+              dimensions: [k8s.namespace.name]
+            service_graphs:
+              dimensions: [k8s.namespace.name]
     receivers:
       otlp:
         protocols:
