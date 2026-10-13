@@ -11,6 +11,8 @@ resources:
   - secrets/external-secrets.yaml
   # Scrape configs for things not covered by their own charts
   - monitors/servicemonitors.yaml
+  # Exporters for third-party apps without built-in metrics
+  - exporters/redis-exporter.yaml
   # Grafana dashboards (generated: tooling/observability/generate_dashboards.py)
   - dashboards
   # Grafana-managed alert rules (generated: tooling/observability/generate_alerts.py)

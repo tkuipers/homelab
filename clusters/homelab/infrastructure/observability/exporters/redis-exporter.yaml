@@ -1,0 +1,100 @@
+# One redis_exporter for every Redis (stocks, authelia): Prometheus scrapes
+# /scrape?target=redis://..., so the Redis pods themselves stay untouched (no
+# sidecar, no restart of an in-memory Redis). Series carry
+# target_namespace / target_service like the blackbox probes.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-exporter
+  namespace: observability
+  labels:
+    app: redis-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-exporter
+  template:
+    metadata:
+      labels:
+        app: redis-exporter
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 59000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.93.0
+          ports:
+            - name: metrics
+              containerPort: 9121
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9121
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-exporter
+  namespace: observability
+  labels:
+    app: redis-exporter
+spec:
+  selector:
+    app: redis-exporter
+  ports:
+    - name: metrics
+      port: 9121
+      targetPort: 9121
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: redis
+  namespace: observability
+spec:
+  selector:
+    matchLabels:
+      app: redis-exporter
+  endpoints:
+    # the exporter's own metrics
+    - port: metrics
+      interval: 60s
+    - port: metrics
+      path: /scrape
+      interval: 30s
+      params:
+        target: [redis://redis.stocks.svc:6379]
+      relabelings:
+        - targetLabel: target_namespace
+          replacement: stocks
+        - targetLabel: target_service
+          replacement: redis
+        - targetLabel: instance
+          replacement: redis.stocks.svc:6379
+    - port: metrics
+      path: /scrape
+      interval: 30s
+      params:
+        target: [redis://authelia-redis.authelia.svc:6379]
+      relabelings:
+        - targetLabel: target_namespace
+          replacement: authelia
+        - targetLabel: target_service
+          replacement: authelia-redis
+        - targetLabel: instance
+          replacement: authelia-redis.authelia.svc:6379
