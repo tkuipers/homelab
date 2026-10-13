@@ -48,6 +48,11 @@ alloy:
         memory: 256Mi
       limits:
         memory: 1Gi
+  # OTLP senders reach the Alloy on their own node: k8sattributes only knows
+  # local pods (filter node = K8S_NODE_NAME), so cross-node spans lost their
+  # pod/namespace/workload attributes.
+  service:
+    internalTrafficPolicy: Local
   controller:
     type: daemonset
     volumes:

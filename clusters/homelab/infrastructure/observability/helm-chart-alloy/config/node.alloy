@@ -131,10 +131,16 @@ otelcol.processor.transform "resource" {
 		]
 	}
 
+	// apps name themselves (OTEL_SERVICE_NAME); fall back to the owning
+	// workload like logs do when an SDK reports unknown_service
 	trace_statements {
 		context    = "resource"
 		statements = [
 			`set(attributes["k8s.cluster.name"], "homelab")`,
+			`set(attributes["service.namespace"], attributes["k8s.namespace.name"]) where attributes["service.namespace"] == nil and attributes["k8s.namespace.name"] != nil`,
+			`set(attributes["service.name"], attributes["k8s.deployment.name"]) where (attributes["service.name"] == nil or IsMatch(attributes["service.name"], "^unknown_service")) and attributes["k8s.deployment.name"] != nil`,
+			`set(attributes["service.name"], attributes["k8s.statefulset.name"]) where (attributes["service.name"] == nil or IsMatch(attributes["service.name"], "^unknown_service")) and attributes["k8s.statefulset.name"] != nil`,
+			`set(attributes["service.name"], attributes["k8s.cronjob.name"]) where (attributes["service.name"] == nil or IsMatch(attributes["service.name"], "^unknown_service")) and attributes["k8s.cronjob.name"] != nil`,
 		]
 	}
 
