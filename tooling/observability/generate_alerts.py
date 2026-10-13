@@ -201,7 +201,7 @@ HOMELAB = [
          '(sum by (k8s_namespace_name, service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", status_code="STATUS_CODE_ERROR", service!="ingress-nginx"}[15m])) > 0.5 / 60)'
          ' / sum by (k8s_namespace_name, service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", service!="ingress-nginx"}[15m]))',
          "gt", 0.25, for_="15m", ns="k8s_namespace_name", svc="service",
-         summary="{{ $labels.k8s_namespace_name }}/{{ $labels.service }}: {{ humanizePercentage $values.B.Value }} of the requests / messages it handled failed (15m)",
+         summary="{{ $labels.k8s_namespace_name }}/{{ $labels.service }}: share of requests / messages that failed in 15m: {{ $values.B }}",
          description="From the service's own spans, so it covers in-cluster calls and NATS consumers the ingress 5xx alert can't see. Service dashboard > Traces: 'Recent traces with errors' shows which operation and why (span status / exception)."),
     rule("hl-job-stalled", "Background loop stopped",
          '((sum by (k8s_namespace_name, service, span_name) (increase(traces_spanmetrics_calls_total{k8s_namespace_name!="", span_name=~"' + LOOP_SPANS + '"}[6h])) > 0)'

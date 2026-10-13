@@ -1117,7 +1117,7 @@ data:
           namespace: '{{ $$labels.k8s_namespace_name }}'
           service: '{{ $$labels.service }}'
         annotations:
-          summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service }}: {{ humanizePercentage $values.B.Value }} of the requests / messages it handled failed (15m)'
+          summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service }}: share of requests / messages that failed in 15m: {{ $values.B }}'
           description: 'From the service''s own spans, so it covers in-cluster calls and NATS consumers the ingress 5xx alert can''t see. Service dashboard > Traces: ''Recent traces with errors'' shows which operation and why (span status / exception).'
           dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.k8s_namespace_name }}
         isPaused: false
