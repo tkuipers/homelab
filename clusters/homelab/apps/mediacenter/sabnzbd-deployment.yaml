@@ -63,6 +63,21 @@ spec:
         volumeMounts:
         - name: config
           mountPath: /config
+      - name: export-api-key
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - |
+          sed -n 's/^api_key *= *//p' /config/sabnzbd.ini | head -1 | tr -d '\r\n' > /keys/api-key
+          chmod 0444 /keys/api-key
+          [ -s /keys/api-key ] || echo "no API key found yet (first start?); exportarr will fail until the next restart"
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+        - name: exportarr-key
+          mountPath: /keys
       containers:
       # Gluetun VPN sidecar - provides network for SABnzbd
       - name: gluetun
@@ -149,7 +164,38 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "2000m"
+      # Exportarr sidecar for Prometheus metrics (API key copied from the app's config by
+      # the export-api-key init container; exportarr only parses *arr config.xml itself)
+      - name: exportarr
+        image: ghcr.io/onedr0p/exportarr:v2.0
+        args:
+          - sabnzbd
+        env:
+        - name: PORT
+          value: "9707"
+        - name: URL
+          value: "http://localhost:8080"
+        - name: API_KEY_FILE
+          value: /keys/api-key
+        ports:
+        - containerPort: 9707
+          name: metrics
+        volumeMounts:
+        - name: exportarr-key
+          mountPath: /keys
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "300m"
       volumes:
+      - name: exportarr-key
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Mi
       - name: config
         hostPath:
           path: /var/persist/sabnzbd-config
