@@ -80,11 +80,14 @@ spec:
       params:
         target: [redis://redis.stocks.svc:6379]
       relabelings:
-        - targetLabel: target_namespace
+        - action: replace
+          targetLabel: target_namespace
           replacement: stocks
-        - targetLabel: target_service
+        - action: replace
+          targetLabel: target_service
           replacement: redis
-        - targetLabel: instance
+        - action: replace
+          targetLabel: instance
           replacement: redis.stocks.svc:6379
     - port: metrics
       path: /scrape
@@ -92,9 +95,12 @@ spec:
       params:
         target: [redis://authelia-redis.authelia.svc:6379]
       relabelings:
-        - targetLabel: target_namespace
+        - action: replace
+          targetLabel: target_namespace
           replacement: authelia
-        - targetLabel: target_service
+        - action: replace
+          targetLabel: target_service
           replacement: authelia-redis
-        - targetLabel: instance
+        - action: replace
+          targetLabel: instance
           replacement: authelia-redis.authelia.svc:6379
