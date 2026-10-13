@@ -15,6 +15,7 @@ resources:
   - argocd-application-loki.yaml
   - argocd-application-tempo.yaml
   - argocd-application-alloy.yaml
+  - argocd-application-beyla.yaml
   - argocd-application-authelia.yaml
   - argocd-application-nvidia-device-plugin.yaml
   - argocd-application-adguard-home.yaml

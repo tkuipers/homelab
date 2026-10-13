@@ -33,6 +33,11 @@ UI: **https://logs.tkuipers.ca** (Authelia SSO; local admin at `/login?disableAu
    ```
 4. Traces: every request through ingress-nginx is a span in Tempo; ingress
    log lines carry `trace_id`, which links to the trace (Loki derived field).
+   Own services (stocks, polymarket-bot) send OpenTelemetry spans that join
+   the ingress trace (and follow NATS events across stocks services); their
+   JSON log lines carry `trace_id` too. Third-party apps get spans from Beyla.
+   Apps export OTLP to `http://alloy.observability.svc:4318` with
+   `OTEL_SERVICE_NAME` = workload name.
 5. Stocks: *Stocks - overview* has a **Pipeline activity** row (ingestion
    runs, decisions, JetStream consumer backlog/redeliveries, Postgres) -
    pods can be Ready while the pipeline is stuck.
@@ -45,6 +50,7 @@ UI: **https://logs.tkuipers.ca** (Authelia SSO; local admin at `/login?disableAu
 | Loki | `helm-chart-loki` / `infrastructure-loki` | logs, single binary, filesystem; OTLP ingestion |
 | Tempo | `helm-chart-tempo` / `infrastructure-tempo` | traces + span metrics/service graph |
 | Alloy | `helm-chart-alloy` / `infrastructure-alloy` | DaemonSet: tails `/var/log/pods`, parses, ships to Loki; OTLP receiver (`alloy.observability.svc:4317/4318`). `alloy-events`: Kubernetes events → Loki |
+| Beyla | `helm-chart-beyla` / `infrastructure-beyla` | DaemonSet, eBPF auto-instrumentation: spans for third-party apps (namespaces listed in its values: mediacenter, homeassistant, anki, authelia, mcp*) without code changes; observe-only (no context propagation) |
 | this dir (kustomize) | `infrastructure-observability` | namespace, storage, ServiceMonitors/PodMonitors, dashboards, alert rules, (ExternalSecrets) |
 
 Exporters living next to the apps: exportarr (sonarr/radarr/readarr/prowlarr),

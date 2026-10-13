@@ -1,0 +1,12 @@
+apiVersion: v2
+name: beyla
+description: Umbrella chart for Grafana Beyla (eBPF auto-instrumentation for third-party apps)
+type: application
+version: 1.0.0
+
+dependencies:
+  # DaemonSet: traces HTTP/gRPC/SQL/Redis of selected namespaces from the kernel,
+  # no code changes. Our own services use OpenTelemetry SDKs instead.
+  - name: beyla
+    version: "1.16.11"
+    repository: "https://grafana.github.io/helm-charts"

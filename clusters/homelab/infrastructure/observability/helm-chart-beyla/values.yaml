@@ -1,0 +1,62 @@
+# Beyla traces apps we can't (or won't) instrument in code: the *arr stack,
+# Jellyfin, Home Assistant, Authelia, the MCP servers... It hooks their
+# HTTP/gRPC/SQL/Redis calls with eBPF and sends spans over OTLP to the Alloy on
+# its node, which forwards them to Tempo (span metrics + service graph come from
+# Tempo's metrics generator, like every other trace).
+#
+# Own services (stocks, polymarket-bot, homelab-agent) carry OpenTelemetry SDKs
+# and are deliberately not in the list below (Beyla would also skip them on its
+# own: exclude_otel_instrumented_services defaults to true).
+beyla:
+  fullnameOverride: beyla
+
+  # Observe only: context propagation would rewrite third-party traffic
+  # (traceparent headers via tc/eBPF, NET_ADMIN, hostNetwork). Without it each
+  # app's requests are their own traces.
+  contextPropagation:
+    enabled: false
+  # Capabilities instead of a fully privileged container (BPF, PERFMON,
+  # SYS_PTRACE, SYS_ADMIN, ...; see the chart's daemon-set template).
+  privileged: false
+
+  preset: application
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 192Mi
+    limits:
+      memory: 1Gi
+
+  config:
+    data:
+      log_level: info
+      attributes:
+        kubernetes:
+          enable: true
+          cluster_name: homelab
+      discovery:
+        instrument:
+          - k8s_namespace: mediacenter
+          - k8s_namespace: homeassistant
+          - k8s_namespace: anki
+          - k8s_namespace: authelia
+          - k8s_namespace: mcp
+          - k8s_namespace: mcp-arr
+          - k8s_namespace: mcp-browser
+      # Group unknown URL paths (/api/v3/series/123 -> /api/v3/series/*) so
+      # span names stay low-cardinality for span metrics.
+      routes:
+        unmatched: heuristic
+      # Health probes are noise (failures still show up in probe metrics).
+      filter:
+        application:
+          url.path:
+            not_match: "{/ping,/health,/healthz,/api/health,/gate/healthz,/api/v1/status,/manifest.json}"
+      otel_traces_export:
+        endpoint: http://alloy.observability.svc:4318
+        protocol: http/protobuf
+      # traces only; RED metrics come from Tempo's span metrics (port 0 =
+      # disabled; a null would not remove the chart's default)
+      prometheus_export:
+        port: 0
