@@ -9,4 +9,7 @@ metadata:
 data:
   # Run server without TLS (behind ingress)
   server.insecure: "true"
-
+  # Traces (server, repo-server, application-controller) -> Alloy -> Tempo.
+  # This dir is applied by hand (no Argo app); restart the three after a change.
+  otlp.address: alloy.observability.svc:4317
+  otlp.insecure: "true"
