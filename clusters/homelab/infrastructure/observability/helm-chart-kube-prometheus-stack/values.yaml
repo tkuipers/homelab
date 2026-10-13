@@ -290,6 +290,15 @@ kube-prometheus-stack:
       analytics:
         reporting_enabled: false
         check_for_updates: false
+      # Traces -> Alloy -> Tempo. Sampling is parent-based: requests through
+      # the ingress arrive sampled and are always traced; root spans (alert
+      # rule evaluation, ~15k queries/h) are kept at 2%.
+      tracing.opentelemetry:
+        sampler_type: probabilistic
+        sampler_param: 0.02
+      tracing.opentelemetry.otlp:
+        address: alloy.observability.svc:4317
+        propagation: w3c
       users:
         default_theme: dark
       auth:
