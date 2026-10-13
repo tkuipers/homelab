@@ -514,6 +514,13 @@ prometheus-blackbox-exporter:
           method: POST
           follow_redirects: false
           valid_status_codes: [400]
+      http_faro:            # Faro receiver: /collect only takes POST, so a GET answers 405
+        prober: http
+        timeout: 10s
+        http:
+          preferred_ip_protocol: ip4
+          follow_redirects: false
+          valid_status_codes: [405]
       # LAN DNS (AdGuard): resolves an external name with a non-empty answer
       dns_a:
         prober: dns
@@ -689,6 +696,14 @@ prometheus-blackbox-exporter:
         probe: external
         target_namespace: mediacenter
         target_service: transmission
+    - name: faro-tkuipers-ca
+      url: https://faro.tkuipers.ca/collect
+
+      module: http_faro
+      additionalMetricsRelabels:
+        probe: external
+        target_namespace: observability
+        target_service: alloy-faro
     - name: logs-tkuipers-ca
       url: https://logs.tkuipers.ca/
 

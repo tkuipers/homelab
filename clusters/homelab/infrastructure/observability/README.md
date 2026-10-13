@@ -50,6 +50,7 @@ UI: **https://logs.tkuipers.ca** (Authelia SSO; local admin at `/login?disableAu
 | Loki | `helm-chart-loki` / `infrastructure-loki` | logs, single binary, filesystem; OTLP ingestion |
 | Tempo | `helm-chart-tempo` / `infrastructure-tempo` | traces + span metrics/service graph |
 | Alloy | `helm-chart-alloy` / `infrastructure-alloy` | DaemonSet: tails `/var/log/pods`, parses, ships to Loki; OTLP receiver (`alloy.observability.svc:4317/4318`). `alloy-events`: Kubernetes events → Loki |
+| Alloy (Faro) | `helm-chart-alloy` (release `alloy-faro`) | public `https://faro.tkuipers.ca/collect`: browser telemetry from tkuipers.ca's Grafana Faro Web SDK (page views, web vitals, JS errors) -> Loki as `homepage`/`homepage-browser` (`kind`, `level` structured metadata). CORS tkuipers.ca only, rate limited; panels on the Homepage dashboard |
 | Beyla | `helm-chart-beyla` / `infrastructure-beyla` | DaemonSet, eBPF auto-instrumentation: spans for third-party apps (namespaces listed in its values: mediacenter, homeassistant, anki, authelia, mcp*) without code changes; observe-only (no context propagation) |
 | this dir (kustomize) | `infrastructure-observability` | namespace, storage, ServiceMonitors/PodMonitors, dashboards, alert rules, (ExternalSecrets) |
 

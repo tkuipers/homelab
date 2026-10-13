@@ -529,6 +529,25 @@ def traces_row(b: Board, s: Svc):
                    w=12, desc="traces this service is part of that took more than 1s in total (requests, messages, background jobs)")
 
 
+def browser_panels(b: Board, s: Svc):
+    """tkuipers.ca as visitors' browsers see it (Grafana Faro -> alloy-faro -> Loki)."""
+    # production only (tests post app_environment=selftest)
+    sel = '{k8s_namespace_name="homepage", service_name="homepage-browser"} |= "app_environment=production"'
+    b.ts("Page views (browser)", [
+        (f'sum(count_over_time({sel} | kind="event" |= "event_name=page_view" [$__auto])) or vector(0)', "page views"),
+        (f'sum(count_over_time({sel} | kind="event" |= "event_name=session_start" [$__auto])) or vector(0)', "new sessions"),
+    ], ds=LOKI, bars=True, w=8)
+    b.ts("JavaScript errors (browser)", [
+        (f'sum by (type) (count_over_time({sel} | kind="exception" | logfmt | keep type [$__auto])) or vector(0)', "{{type}}"),
+    ], ds=LOKI, bars=True, stack=True, w=8, desc="uncaught exceptions and console errors in visitors' browsers")
+    b.ts("Web vitals p75 (LCP, FCP, TTFB, INP)", [
+        (f'quantile_over_time(0.75, {sel} | kind="measurement" | logfmt | unwrap {m} [$__auto]) by (k8s_namespace_name)', m)
+        for m in ("lcp", "fcp", "ttfb", "inp")
+    ], ds=LOKI, unit="ms", w=8, desc="75th percentile of Faro's web-vitals measurements (Google's 'good': LCP < 2500ms, INP < 200ms)")
+    b.logs("Browser errors", f'{sel} | kind="exception"', h=10, time_from="7d",
+           desc="JavaScript exceptions from visitors' browsers, newest first")
+
+
 def tracing_panels(b: Board, s: Svc):
     """Trace pipeline (Beyla dashboard): who sends spans and whether they arrive."""
     b.ts("Spans / s by service (span metrics)", [
@@ -781,7 +800,8 @@ CATALOG: List[Svc] = [
     S("homelab-agent", "homelab-agent-relay", "Homelab agent SMS relay", probe="homelab-agent-relay", folder="Apps", quiet=True),
     S("homelab-agent", "homelab-agent-postgres", "Homelab agent Postgres", folder="Apps", extras=[postgres_panels]),
     S("homelab-agent", "homelab-agent-postgres-backup", "Homelab agent Postgres backup (CronJob)", kind="cronjob", folder="Apps"),
-    S("homepage", "homepage", "Homepage (tkuipers.ca)", ingress=["homepage", "resume-proxy"], probe="homepage", access_logs=True, folder="Apps"),
+    S("homepage", "homepage", "Homepage (tkuipers.ca)", ingress=["homepage", "resume-proxy"], probe="homepage", access_logs=True, folder="Apps",
+      extras=[browser_panels]),
 
     S("mediacenter", "jellyfin", "Jellyfin", ingress=["jellyfin"], probe="jellyfin", folder="Media", extras=[jellyfin_panels]),
     S("mediacenter", "jellyseerr", "Jellyseerr", ingress=["jellyseerr"], probe="jellyseerr", folder="Media"),
@@ -865,6 +885,8 @@ CATALOG: List[Svc] = [
     S("observability", "tempo", "Tempo", kind="statefulset", folder="Observability"),
     S("observability", "alloy", "Alloy (node collector)", kind="daemonset", folder="Observability"),
     S("observability", "alloy-events", "Alloy (k8s events)", folder="Observability"),
+    S("observability", "alloy-faro", "Alloy (Faro browser telemetry)", ingress=["alloy-faro"], probe="alloy-faro", folder="Observability",
+      description="public receiver https://faro.tkuipers.ca/collect for tkuipers.ca's Grafana Faro Web SDK; the data is on the Homepage dashboard"),
     S("observability", "beyla", "Beyla (eBPF traces) + trace pipeline", kind="daemonset", folder="Observability", extras=[tracing_panels],
       description="eBPF auto-instrumentation for third-party apps (helm-chart-beyla), and the whole trace pipeline: senders -> Alloy -> Tempo"),
     S("observability", "alertmanager-kps", "Alertmanager", kind="statefulset", folder="Observability"),

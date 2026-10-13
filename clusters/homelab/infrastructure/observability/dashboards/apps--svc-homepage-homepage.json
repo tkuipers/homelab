@@ -1373,6 +1373,270 @@
    },
    "id": 20,
    "panels": [],
+   "title": "Service metrics",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 44
+   },
+   "id": 21,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum(count_over_time({k8s_namespace_name=\"homepage\", service_name=\"homepage-browser\"} |= \"app_environment=production\" | kind=\"event\" |= \"event_name=page_view\" [$__auto])) or vector(0)",
+     "legendFormat": "page views",
+     "queryType": "range",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum(count_over_time({k8s_namespace_name=\"homepage\", service_name=\"homepage-browser\"} |= \"app_environment=production\" | kind=\"event\" |= \"event_name=session_start\" [$__auto])) or vector(0)",
+     "legendFormat": "new sessions",
+     "queryType": "range",
+     "refId": "B"
+    }
+   ],
+   "title": "Page views (browser)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "uncaught exceptions and console errors in visitors' browsers",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 44
+   },
+   "id": 22,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "sum by (type) (count_over_time({k8s_namespace_name=\"homepage\", service_name=\"homepage-browser\"} |= \"app_environment=production\" | kind=\"exception\" | logfmt | keep type [$__auto])) or vector(0)",
+     "legendFormat": "{{type}}",
+     "queryType": "range",
+     "refId": "A"
+    }
+   ],
+   "title": "JavaScript errors (browser)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "75th percentile of Faro's web-vitals measurements (Google's 'good': LCP < 2500ms, INP < 200ms)",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "ms"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 44
+   },
+   "id": 23,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "quantile_over_time(0.75, {k8s_namespace_name=\"homepage\", service_name=\"homepage-browser\"} |= \"app_environment=production\" | kind=\"measurement\" | logfmt | unwrap lcp [$__auto]) by (k8s_namespace_name)",
+     "legendFormat": "lcp",
+     "queryType": "range",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "quantile_over_time(0.75, {k8s_namespace_name=\"homepage\", service_name=\"homepage-browser\"} |= \"app_environment=production\" | kind=\"measurement\" | logfmt | unwrap fcp [$__auto]) by (k8s_namespace_name)",
+     "legendFormat": "fcp",
+     "queryType": "range",
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "quantile_over_time(0.75, {k8s_namespace_name=\"homepage\", service_name=\"homepage-browser\"} |= \"app_environment=production\" | kind=\"measurement\" | logfmt | unwrap ttfb [$__auto]) by (k8s_namespace_name)",
+     "legendFormat": "ttfb",
+     "queryType": "range",
+     "refId": "C"
+    },
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "quantile_over_time(0.75, {k8s_namespace_name=\"homepage\", service_name=\"homepage-browser\"} |= \"app_environment=production\" | kind=\"measurement\" | logfmt | unwrap inp [$__auto]) by (k8s_namespace_name)",
+     "legendFormat": "inp",
+     "queryType": "range",
+     "refId": "D"
+    }
+   ],
+   "title": "Web vitals p75 (LCP, FCP, TTFB, INP)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "description": "JavaScript exceptions from visitors' browsers, newest first",
+   "gridPos": {
+    "h": 10,
+    "w": 24,
+    "x": 0,
+    "y": 52
+   },
+   "id": 24,
+   "options": {
+    "dedupStrategy": "none",
+    "enableLogDetails": true,
+    "prettifyLogMessage": false,
+    "showCommonLabels": false,
+    "showLabels": false,
+    "showTime": true,
+    "sortOrder": "Descending",
+    "wrapLogMessage": true
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     },
+     "expr": "{k8s_namespace_name=\"homepage\", service_name=\"homepage-browser\"} |= \"app_environment=production\" | kind=\"exception\"",
+     "legendFormat": "",
+     "maxLines": 500,
+     "queryType": "range",
+     "refId": "A"
+    }
+   ],
+   "timeFrom": "7d",
+   "title": "Browser errors",
+   "type": "logs"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 62
+   },
+   "id": 25,
+   "panels": [],
    "title": "Resources",
    "type": "row"
   },
@@ -1463,9 +1727,9 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 44
+    "y": 63
    },
-   "id": 21,
+   "id": 26,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1602,9 +1866,9 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 44
+    "y": 63
    },
-   "id": 22,
+   "id": 27,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1682,9 +1946,9 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 44
+    "y": 63
    },
-   "id": 23,
+   "id": 28,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1718,9 +1982,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 52
+    "y": 71
    },
-   "id": 24,
+   "id": 29,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -1735,9 +1999,9 @@
     "h": 16,
     "w": 24,
     "x": 0,
-    "y": 53
+    "y": 72
    },
-   "id": 25,
+   "id": 30,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,
