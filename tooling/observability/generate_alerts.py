@@ -107,10 +107,10 @@ POD_TO_SERVICE = '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" 
 # (NATS consumers, single-writer apps) leaves its service without a pod while
 # the new image is pulled - 3-4 min for the stocks images - which is not an
 # outage. A pod that stays unready past 8 min, or crash loops (same pod), alerts.
-# "$$1": Grafana env-interpolates the query model of provisioned rules too.
+# Plain "$1": Grafana env-interpolates rule labels, not the query model.
 RECENT_POD = ('label_replace(label_replace(min by (namespace, pod) (time() - kube_pod_created) < 480, '
-              '"target_namespace", "$$1", "namespace", "(.*)"), '
-              '"target_service", "$$1", "pod", "(.+?)(?:(?:-[a-z0-9]{8,10})?-[a-z0-9]{5}|-[0-9]+)")')
+              '"target_namespace", "$1", "namespace", "(.*)"), '
+              '"target_service", "$1", "pod", "(.+?)(?:(?:-[a-z0-9]{8,10})?-[a-z0-9]{5}|-[0-9]+)")')
 
 SERVICE_MONITORS = [
     deploy_down("dd-homepage-pod-health", "Homepage pod health", "homepage", "homepage"),

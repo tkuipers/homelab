@@ -603,7 +603,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: min by (target_namespace, target_service, instance) (probe_success{probe="internal"}) unless on (target_namespace, target_service) label_replace(label_replace(min by (namespace, pod) (time() - kube_pod_created) < 480, "target_namespace", "$$1", "namespace", "(.*)"), "target_service", "$$1", "pod", "(.+?)(?:(?:-[a-z0-9]{8,10})?-[a-z0-9]{5}|-[0-9]+)")
+            expr: min by (target_namespace, target_service, instance) (probe_success{probe="internal"}) unless on (target_namespace, target_service) label_replace(label_replace(min by (namespace, pod) (time() - kube_pod_created) < 480, "target_namespace", "$1", "namespace", "(.*)"), "target_service", "$1", "pod", "(.+?)(?:(?:-[a-z0-9]{8,10})?-[a-z0-9]{5}|-[0-9]+)")
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
