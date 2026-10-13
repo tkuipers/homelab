@@ -14,3 +14,8 @@ dependencies:
     alias: alloy-events
     version: "1.13.1"
     repository: "https://grafana.github.io/helm-charts"
+  # Single replica: public Faro receiver for browser telemetry (tkuipers.ca)
+  - name: alloy
+    alias: alloy-faro
+    version: "1.13.1"
+    repository: "https://grafana.github.io/helm-charts"

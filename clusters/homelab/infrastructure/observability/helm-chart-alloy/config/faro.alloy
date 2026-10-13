@@ -1,0 +1,66 @@
+// Browser telemetry from tkuipers.ca (Grafana Faro Web SDK): page views, web
+// vitals, JavaScript errors and console errors. Public endpoint
+// https://faro.tkuipers.ca/collect (ingress in templates/faro-ingress.yaml),
+// so: CORS only for the site, rate limited, small payloads, no sourcemap
+// downloads (the receiver would fetch from whatever origin a payload names).
+
+faro.receiver "web" {
+	server {
+		listen_address           = "0.0.0.0"
+		listen_port              = 12347
+		cors_allowed_origins     = ["https://tkuipers.ca", "https://www.tkuipers.ca"]
+		max_allowed_payload_size = "256KiB"
+
+		rate_limiting {
+			enabled    = true
+			rate       = 20
+			burst_size = 50
+		}
+	}
+
+	sourcemaps {
+		download = false
+	}
+
+	// stream labels like the cluster's other logs, so the service dashboard
+	// and the generic log alerts see it
+	extra_log_labels = {
+		k8s_namespace_name = "homepage",
+		service_name       = "homepage-browser",
+	}
+
+	output {
+		logs = [loki.process.faro.receiver]
+	}
+}
+
+// kind (log / exception / measurement / event) and level as structured
+// metadata; exceptions are level error.
+loki.process "faro" {
+	stage.logfmt {
+		mapping = {
+			"kind"  = "",
+			"level" = "",
+		}
+	}
+
+	stage.template {
+		source   = "level"
+		template = `{{ if eq .kind "exception" }}error{{ else if .level }}{{ .level }}{{ else }}info{{ end }}`
+	}
+
+	stage.structured_metadata {
+		values = {
+			kind  = "",
+			level = "",
+		}
+	}
+
+	forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+	endpoint {
+		url = "http://loki.observability.svc:3100/loki/api/v1/push"
+	}
+}

@@ -2,6 +2,8 @@
 #   alloy        - DaemonSet, tails every container log on the node and
 #                  receives OTLP (config/node.alloy + config/log-parsing.alloy)
 #   alloy-events - Deployment (1 replica), Kubernetes events (config/events.alloy)
+#   alloy-faro   - Deployment (1 replica), public Faro receiver for browser
+#                  telemetry from tkuipers.ca (config/faro.alloy, faro-ingress)
 # Config files are rendered into ConfigMaps by templates/config.yaml.
 
 alloy:
@@ -110,5 +112,35 @@ alloy-events:
     replicas: 1
   rbac:
     create: true
+  serviceMonitor:
+    enabled: true
+
+alloy-faro:
+  fullnameOverride: alloy-faro
+  crds:
+    create: false
+  alloy:
+    configMap:
+      create: false
+      name: alloy-faro-config
+      key: config.alloy
+    stabilityLevel: public-preview
+    enableReporting: false
+    extraPorts:
+      - name: faro
+        port: 12347
+        targetPort: 12347
+        protocol: TCP
+    resources:
+      requests:
+        cpu: 10m
+        memory: 48Mi
+      limits:
+        memory: 256Mi
+  controller:
+    type: deployment
+    replicas: 1
+  rbac:
+    create: false
   serviceMonitor:
     enabled: true

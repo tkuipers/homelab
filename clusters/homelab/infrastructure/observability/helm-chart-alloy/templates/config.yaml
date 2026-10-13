@@ -14,3 +14,11 @@ metadata:
 data:
   config.alloy: |-
 {{ .Files.Get "config/events.alloy" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-faro-config
+data:
+  config.alloy: |-
+{{ .Files.Get "config/faro.alloy" | indent 4 }}

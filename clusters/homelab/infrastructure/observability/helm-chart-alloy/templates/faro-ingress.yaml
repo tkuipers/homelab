@@ -1,0 +1,29 @@
+# Public (no Authelia): visitors' browsers post Faro telemetry here. Only the
+# collect endpoint is routed; nginx rate-limits per client IP on top of the
+# receiver's global limit.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alloy-faro
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/limit-rpm: "120"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+    nginx.ingress.kubernetes.io/proxy-body-size: 256k
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - faro.tkuipers.ca
+      secretName: faro-tkuipers-ca-tls
+  rules:
+    - host: faro.tkuipers.ca
+      http:
+        paths:
+          - path: /collect
+            pathType: Exact
+            backend:
+              service:
+                name: alloy-faro
+                port:
+                  number: 12347
