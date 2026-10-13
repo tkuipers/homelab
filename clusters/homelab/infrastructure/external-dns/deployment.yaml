@@ -19,6 +19,10 @@ spec:
       containers:
       - name: external-dns
         image: registry.k8s.io/external-dns/external-dns:v0.20.0
+        # metrics (default --metrics-address=:7979); declared so the PodMonitor finds it
+        ports:
+        - name: metrics
+          containerPort: 7979
         args:
         - --source=ingress
         - --source=service
