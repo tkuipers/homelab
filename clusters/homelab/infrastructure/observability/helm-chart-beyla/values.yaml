@@ -31,6 +31,13 @@ beyla:
   config:
     data:
       log_level: info
+      # Observe only, part 2: no agents injected into processes (the Node.js
+      # injector switches on the app's inspector via SIGUSR1; the Java one
+      # attaches a javaagent).
+      nodejs:
+        enabled: false
+      javaagent:
+        enabled: false
       attributes:
         kubernetes:
           enable: true
