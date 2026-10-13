@@ -16,6 +16,9 @@ tempo:
           processors:
             - service-graphs
             - span-metrics
+            # local-blocks backs TraceQL metrics queries (`| rate()` etc.,
+            # used by Grafana's Traces Drilldown) over recent data.
+            - local-blocks
     receivers:
       otlp:
         protocols:
