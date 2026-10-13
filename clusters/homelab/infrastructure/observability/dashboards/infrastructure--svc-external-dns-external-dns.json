@@ -670,6 +670,353 @@
    },
    "id": 10,
    "panels": [],
+   "title": "Service metrics",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "runs every minute (--interval=1m)",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 300
+       },
+       {
+        "color": "red",
+        "value": 900
+       }
+      ]
+     },
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 23
+   },
+   "id": 11,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "time() - max(external_dns_controller_last_sync_timestamp_seconds)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Since last sync",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "Route 53 (registry) and Kubernetes (source) errors",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "decimals": 0,
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 23
+   },
+   "id": 12,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(increase(external_dns_registry_errors_total[1h])) + sum(increase(external_dns_source_errors_total[1h]))",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Errors (1h)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 8,
+    "y": 23
+   },
+   "id": 13,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(external_dns_registry_records)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Records managed",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 80,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 23
+   },
+   "id": 14,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(increase(external_dns_registry_errors_total[$__rate_interval])) or vector(0)",
+     "instant": false,
+     "legendFormat": "registry (Route 53)",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(increase(external_dns_source_errors_total[$__rate_interval])) or vector(0)",
+     "instant": false,
+     "legendFormat": "source (Kubernetes)",
+     "range": true,
+     "refId": "B"
+    }
+   ],
+   "title": "Errors",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 31
+   },
+   "id": 15,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(external_dns_source_endpoints_total)",
+     "instant": false,
+     "legendFormat": "wanted (source)",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(external_dns_registry_endpoints_total)",
+     "instant": false,
+     "legendFormat": "in Route 53",
+     "range": true,
+     "refId": "B"
+    }
+   ],
+   "title": "Endpoints",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 39
+   },
+   "id": 16,
+   "panels": [],
    "title": "Resources",
    "type": "row"
   },
@@ -760,9 +1107,9 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 23
+    "y": 40
    },
-   "id": 11,
+   "id": 17,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -899,9 +1246,9 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 23
+    "y": 40
    },
-   "id": 12,
+   "id": 18,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -979,9 +1326,9 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 23
+    "y": 40
    },
-   "id": 13,
+   "id": 19,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1015,9 +1362,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 31
+    "y": 48
    },
-   "id": 14,
+   "id": 20,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -1032,9 +1379,9 @@
     "h": 16,
     "w": 24,
     "x": 0,
-    "y": 32
+    "y": 49
    },
-   "id": 15,
+   "id": 21,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,

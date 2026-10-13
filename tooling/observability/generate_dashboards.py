@@ -607,6 +607,77 @@ def arr(app):
     return fn
 
 
+def redis_panels(b: Board, s: Svc):
+    """redis_exporter (observability/exporters/redis-exporter.yaml), one target per Redis."""
+    t = f'target_namespace="{s.ns}", target_service="{s.name}"'
+    b.stat("Redis up", f'max(redis_up{{{t}}})', mappings=UPDOWN, thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}])
+    b.stat("Memory vs maxmemory", f'max(redis_memory_used_bytes{{{t}}}) / (max(redis_memory_max_bytes{{{t}}}) > 0)', unit="percentunit",
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.8}, {"color": "red", "value": 0.95}],
+           no_value="no maxmemory", desc="at maxmemory Redis evicts keys (allkeys-lru) or refuses writes, depending on its policy")
+    b.stat("Keys", f'sum(redis_db_keys{{{t}}})', no_value="empty")
+    b.ts("Memory", [(f'max(redis_memory_used_bytes{{{t}}})', "used"), (f'max(redis_memory_used_rss_bytes{{{t}}})', "rss"),
+                    (f'max(redis_memory_max_bytes{{{t}}}) > 0', "maxmemory")], unit="bytes", w=8)
+    b.ts("Commands / s and hit ratio", [
+        (f'sum(rate(redis_commands_processed_total{{{t}}}[$__rate_interval]))', "commands/s"),
+        (f'sum(rate(redis_keyspace_hits_total{{{t}}}[$__rate_interval])) / (sum(rate(redis_keyspace_hits_total{{{t}}}[$__rate_interval])) + sum(rate(redis_keyspace_misses_total{{{t}}}[$__rate_interval])))', "hit ratio"),
+    ], w=8)
+    b.ts("Clients / evictions", [
+        (f'max(redis_connected_clients{{{t}}})', "clients"),
+        (f'sum(increase(redis_evicted_keys_total{{{t}}}[$__rate_interval])) or vector(0)', "evicted keys"),
+        (f'sum(increase(redis_rejected_connections_total{{{t}}}[$__rate_interval])) or vector(0)', "rejected connections"),
+    ], w=8)
+
+
+def sabnzbd_panels(b: Board, s: Svc):
+    b.stat("API reachable", 'max(sabnzbd_status)', mappings=UPDOWN, thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}])
+    b.stat("Paused", 'max(sabnzbd_paused)', mappings=[{"type": "value", "options": {"0": {"text": "no", "color": "green"}, "1": {"text": "PAUSED", "color": "orange"}}}])
+    b.stat("Queue", 'max(sabnzbd_queue_length)', desc="jobs in the download queue")
+    b.stat("Download disk used", 'max(sabnzbd_disk_used_bytes{folder="download"}) / max(sabnzbd_disk_total_bytes{folder="download"})', unit="percentunit",
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.85}, {"color": "red", "value": 0.95}])
+    b.ts("Download speed", [('max(sabnzbd_speed_bps)', "speed")], unit="Bps", w=8)
+    b.ts("Remaining in queue", [('max(sabnzbd_remaining_bytes)', "remaining"), ('max(sabnzbd_time_estimate_seconds)', "ETA (s)")], unit="bytes", w=8)
+    b.ts("Article success by news server", [
+        ('sum by (server) (increase(sabnzbd_server_articles_success[1h])) / sum by (server) (increase(sabnzbd_server_articles_total[1h]))', "{{server}}"),
+    ], unit="percentunit", w=8, desc="share of articles fetched successfully (missing articles = incomplete downloads)")
+
+
+def bazarr_panels(b: Board, s: Svc):
+    b.stat("API reachable", 'max(bazarr_system_status)', mappings=UPDOWN, thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}])
+    b.stat("Health issues", 'sum(bazarr_system_health_issues) or vector(0)', thresholds=RED_IF_ABOVE_0)
+    b.ts("Missing subtitles", [('sum(bazarr_subtitles_missing_total)', "episodes"), ('sum(bazarr_movie_subtitles_missing_total)', "movies")], w=12)
+    b.ts("Subtitles downloaded", [('sum(bazarr_subtitles_downloaded_total)', "episodes"), ('sum(bazarr_movie_subtitles_downloaded_total)', "movies")], w=12)
+
+
+def gpu_panels(b: Board, s: Svc):
+    """nvidia_gpu_exporter on omen-worker1 (nvidia-device-plugin/gpu-exporter.yaml)."""
+    b.stat("GPU utilisation", 'max(nvidia_smi_utilization_gpu_ratio)', unit="percentunit")
+    b.stat("GPU memory used", 'max(nvidia_smi_memory_used_bytes) / max(nvidia_smi_memory_total_bytes)', unit="percentunit",
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.9}])
+    b.stat("Temperature", 'max(nvidia_smi_temperature_gpu)', unit="celsius",
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 75}, {"color": "red", "value": 85}])
+    b.stat("Exporter collecting", 'min(nvidia_smi_last_collect_success)', mappings=UPDOWN,
+           thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}], desc="nvidia-smi answered on the last scrape")
+    b.ts("Utilisation", [('max(nvidia_smi_utilization_gpu_ratio)', "GPU"), ('max(nvidia_smi_utilization_memory_ratio)', "memory controller")], unit="percentunit", w=8)
+    b.ts("Memory", [('max(nvidia_smi_memory_used_bytes)', "used"), ('max(nvidia_smi_memory_total_bytes)', "total")], unit="bytes", w=8)
+    b.ts("Temperature / power", [('max(nvidia_smi_temperature_gpu)', "°C"), ('max(nvidia_smi_power_draw_watts)', "W"),
+                                 ('max(nvidia_smi_enforced_power_limit_watts)', "W limit")], w=8)
+    b.ts("GPU jobs (pods holding the GPU)", [
+        ('count by (namespace, pod) (kube_pod_container_resource_requests{resource="nvidia_com_gpu"} and on (namespace, pod) (kube_pod_status_phase{phase="Running"} == 1))', "{{namespace}}/{{pod}}"),
+    ], w=24, bars=True, desc="Running pods that requested nvidia.com/gpu (one GPU: one job at a time)")
+
+
+def external_dns_panels(b: Board, s: Svc):
+    b.stat("Since last sync", 'time() - max(external_dns_controller_last_sync_timestamp_seconds)', unit="s",
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 300}, {"color": "red", "value": 900}],
+           desc="runs every minute (--interval=1m)")
+    b.stat("Errors (1h)", 'sum(increase(external_dns_registry_errors_total[1h])) + sum(increase(external_dns_source_errors_total[1h]))',
+           thresholds=RED_IF_ABOVE_0, decimals=0, desc="Route 53 (registry) and Kubernetes (source) errors")
+    b.stat("Records managed", 'sum(external_dns_registry_records)')
+    b.ts("Errors", [('sum(increase(external_dns_registry_errors_total[$__rate_interval])) or vector(0)', "registry (Route 53)"),
+                    ('sum(increase(external_dns_source_errors_total[$__rate_interval])) or vector(0)', "source (Kubernetes)")], bars=True, w=12)
+    b.ts("Endpoints", [('sum(external_dns_source_endpoints_total)', "wanted (source)"), ('sum(external_dns_registry_endpoints_total)', "in Route 53")], w=12)
+
+
 def adguard_panels(b: Board, s: Svc):
     b.ts("Probes: LAN DNS (10.0.0.71:53) and web UI", [('min by (instance) (probe_success{probe="internal", target_namespace="adguard-home"})', "{{instance}}")],
          desc="1 = up, 0 = down. dns_a = resolves github.com through the LoadBalancer IP the LAN uses; 0 = LAN DNS is broken")
@@ -809,9 +880,9 @@ CATALOG: List[Svc] = [
     S("mediacenter", "radarr", "Radarr", ingress=["radarr"], probe="radarr", folder="Media", extras=[arr("radarr")]),
     S("mediacenter", "readarr", "Readarr", ingress=["readarr"], probe="readarr", folder="Media", extras=[arr("readarr")]),
     S("mediacenter", "prowlarr", "Prowlarr", ingress=["prowlarr"], probe="prowlarr", folder="Media", extras=[arr("prowlarr")]),
-    S("mediacenter", "bazarr", "Bazarr", ingress=["bazarr"], probe="bazarr", folder="Media"),
+    S("mediacenter", "bazarr", "Bazarr", ingress=["bazarr"], probe="bazarr", folder="Media", extras=[bazarr_panels]),
     S("mediacenter", "kavita", "Kavita", ingress=["kavita"], probe="kavita", folder="Media"),
-    S("mediacenter", "sabnzbd", "SABnzbd (+gluetun VPN)", ingress=["sabnzbd"], probe="sabnzbd", folder="Media"),
+    S("mediacenter", "sabnzbd", "SABnzbd (+gluetun VPN)", ingress=["sabnzbd"], probe="sabnzbd", folder="Media", extras=[sabnzbd_panels]),
     S("mediacenter", "transmission", "Transmission (+gluetun VPN)", ingress=["transmission"], probe="transmission", folder="Media"),
     S("mediacenter", "transmission-cleanup", "Transmission cleanup (CronJob)", kind="cronjob", folder="Media"),
 
@@ -837,13 +908,13 @@ CATALOG: List[Svc] = [
     S("stocks", "minio", "Stocks MinIO", folder="Stocks"),
     S("stocks", "nats", "Stocks NATS", folder="Stocks"),
     S("stocks", "postgres", "Stocks Postgres", folder="Stocks", extras=[postgres_panels]),
-    S("stocks", "redis", "Stocks Redis", folder="Stocks", quiet=True),
+    S("stocks", "redis", "Stocks Redis", folder="Stocks", quiet=True, extras=[redis_panels]),
     S("stocks", "postgres-backup", "Stocks Postgres backup (CronJob)", kind="cronjob", folder="Stocks"),
 
     # --- infrastructure ----------------------------------------------------
     S("adguard-home", "adguard-home", "AdGuard Home (DNS)", ingress=["adguard-home"], probe="adguard-home", folder="Infrastructure", extras=[adguard_panels]),
     S("authelia", "authelia", "Authelia (SSO)", ingress=["authelia"], probe="authelia", folder="Infrastructure", extras=[authelia_panels]),
-    S("authelia", "authelia-redis", "Authelia Redis", folder="Infrastructure"),
+    S("authelia", "authelia-redis", "Authelia Redis", folder="Infrastructure", extras=[redis_panels]),
     S("aws-ip-updater", "aws-ip-updater", "AWS dynamic DNS updater (CronJob)", kind="cronjob", folder="Infrastructure"),
     S("cert-manager", "infrastructure-cert-manager", "cert-manager", folder="Infrastructure", extras=[cert_manager_panels]),
     S("cert-manager", "infrastructure-cert-manager-cainjector", "cert-manager cainjector", folder="Infrastructure"),
@@ -852,13 +923,15 @@ CATALOG: List[Svc] = [
     S("nfs-provisioner", "csi-smb-node", "CSI SMB node", kind="daemonset", folder="Infrastructure"),
     S("nfs-provisioner", "samba-server-dell-r620", "Samba server (dell-r620)", folder="Infrastructure", quiet=True),
     S("nfs-provisioner", "samba-server-omen-worker1", "Samba server (omen-worker1)", folder="Infrastructure", quiet=True),
-    S("external-dns", "external-dns", "external-dns", folder="Infrastructure"),
+    S("external-dns", "external-dns", "external-dns", folder="Infrastructure", extras=[external_dns_panels]),
     S("ingress-nginx", "infrastructure-ingress-nginx-controller", "Ingress NGINX", access_logs=True, probe="kubernetes-api-proxy", folder="Infrastructure",
       extras=[ingress_global], traces="ingress-nginx", description="All HTTP traffic into the cluster. Per-service views live in each service dashboard."),
     S("local-path-storage", "local-path-provisioner", "local-path provisioner", folder="Infrastructure", quiet=True),
     S("metallb-system", "infrastructure-metallb-controller", "MetalLB controller", folder="Infrastructure", extras=[metallb_panels]),
     S("metallb-system", "infrastructure-metallb-speaker", "MetalLB speaker", kind="daemonset", folder="Infrastructure"),
     S("nvidia-device-plugin", "nvidia-device-plugin", "NVIDIA device plugin", kind="daemonset", folder="Infrastructure", quiet=True),
+    S("nvidia-device-plugin", "nvidia-gpu-exporter", "GPU (omen-worker1)", kind="daemonset", folder="Infrastructure", quiet=True, extras=[gpu_panels],
+      description="GTX 1060 on omen-worker1, shared by the training jobs (nvidia_gpu_exporter)"),
     S("default", "external-secrets", "External Secrets Operator", folder="Infrastructure", extras=[eso_panels], quiet=True),
     S("default", "external-secrets-cert-controller", "External Secrets cert controller", folder="Infrastructure"),
     S("default", "external-secrets-webhook", "External Secrets webhook", folder="Infrastructure"),

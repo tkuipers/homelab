@@ -417,6 +417,12 @@ configMapGenerator:
     options:
       annotations:
         grafana_folder: "Infrastructure"
+  - name: dash-infrastructure-svc-nvidia-device-plugin-nvidia-af71c9b6
+    files:
+      - infrastructure--svc-nvidia-device-plugin-nvidia-af71c9b6.json
+    options:
+      annotations:
+        grafana_folder: "Infrastructure"
   - name: dash-infrastructure-svc-default-external-secrets
     files:
       - infrastructure--svc-default-external-secrets.json

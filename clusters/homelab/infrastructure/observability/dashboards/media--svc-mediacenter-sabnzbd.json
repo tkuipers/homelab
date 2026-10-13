@@ -1777,6 +1777,488 @@
    },
    "id": 28,
    "panels": [],
+   "title": "Service metrics",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "color": "red",
+         "text": "DOWN"
+        },
+        "1": {
+         "color": "green",
+         "text": "UP"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 77
+   },
+   "id": 29,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(sabnzbd_status)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "API reachable",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "color": "green",
+         "text": "no"
+        },
+        "1": {
+         "color": "orange",
+         "text": "PAUSED"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 77
+   },
+   "id": 30,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(sabnzbd_paused)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Paused",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "jobs in the download queue",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 8,
+    "y": 77
+   },
+   "id": 31,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(sabnzbd_queue_length)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Queue",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.85
+       },
+       {
+        "color": "red",
+        "value": 0.95
+       }
+      ]
+     },
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 12,
+    "y": 77
+   },
+   "id": 32,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(sabnzbd_disk_used_bytes{folder=\"download\"}) / max(sabnzbd_disk_total_bytes{folder=\"download\"})",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Download disk used",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "Bps"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 77
+   },
+   "id": 33,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(sabnzbd_speed_bps)",
+     "instant": false,
+     "legendFormat": "speed",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Download speed",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 85
+   },
+   "id": 34,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(sabnzbd_remaining_bytes)",
+     "instant": false,
+     "legendFormat": "remaining",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(sabnzbd_time_estimate_seconds)",
+     "instant": false,
+     "legendFormat": "ETA (s)",
+     "range": true,
+     "refId": "B"
+    }
+   ],
+   "title": "Remaining in queue",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "share of articles fetched successfully (missing articles = incomplete downloads)",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 85
+   },
+   "id": 35,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (server) (increase(sabnzbd_server_articles_success[1h])) / sum by (server) (increase(sabnzbd_server_articles_total[1h]))",
+     "instant": false,
+     "legendFormat": "{{server}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Article success by news server",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 93
+   },
+   "id": 36,
+   "panels": [],
    "title": "Resources",
    "type": "row"
   },
@@ -1867,9 +2349,9 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 77
+    "y": 94
    },
-   "id": 29,
+   "id": 37,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -2006,9 +2488,9 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 77
+    "y": 94
    },
-   "id": 30,
+   "id": 38,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -2086,9 +2568,9 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 77
+    "y": 94
    },
-   "id": 31,
+   "id": 39,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -2122,9 +2604,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 85
+    "y": 102
    },
-   "id": 32,
+   "id": 40,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -2139,9 +2621,9 @@
     "h": 16,
     "w": 24,
     "x": 0,
-    "y": 86
+    "y": 103
    },
-   "id": 33,
+   "id": 41,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,

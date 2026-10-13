@@ -1777,6 +1777,301 @@
    },
    "id": 28,
    "panels": [],
+   "title": "Service metrics",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "color": "red",
+         "text": "DOWN"
+        },
+        "1": {
+         "color": "green",
+         "text": "UP"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 77
+   },
+   "id": 29,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(bazarr_system_status)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "API reachable",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 77
+   },
+   "id": 30,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(bazarr_system_health_issues) or vector(0)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Health issues",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 8,
+    "y": 77
+   },
+   "id": 31,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(bazarr_subtitles_missing_total)",
+     "instant": false,
+     "legendFormat": "episodes",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(bazarr_movie_subtitles_missing_total)",
+     "instant": false,
+     "legendFormat": "movies",
+     "range": true,
+     "refId": "B"
+    }
+   ],
+   "title": "Missing subtitles",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 85
+   },
+   "id": 32,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(bazarr_subtitles_downloaded_total)",
+     "instant": false,
+     "legendFormat": "episodes",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(bazarr_movie_subtitles_downloaded_total)",
+     "instant": false,
+     "legendFormat": "movies",
+     "range": true,
+     "refId": "B"
+    }
+   ],
+   "title": "Subtitles downloaded",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 93
+   },
+   "id": 33,
+   "panels": [],
    "title": "Resources",
    "type": "row"
   },
@@ -1867,9 +2162,9 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 77
+    "y": 94
    },
-   "id": 29,
+   "id": 34,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -2006,9 +2301,9 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 77
+    "y": 94
    },
-   "id": 30,
+   "id": 35,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -2086,9 +2381,9 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 77
+    "y": 94
    },
-   "id": 31,
+   "id": 36,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -2122,9 +2417,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 85
+    "y": 102
    },
-   "id": 32,
+   "id": 37,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -2139,9 +2434,9 @@
     "h": 16,
     "w": 24,
     "x": 0,
-    "y": 86
+    "y": 103
    },
-   "id": 33,
+   "id": 38,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,

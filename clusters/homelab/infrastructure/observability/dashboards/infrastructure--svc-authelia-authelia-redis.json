@@ -1210,6 +1210,477 @@
    },
    "id": 20,
    "panels": [],
+   "title": "Service metrics",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "color": "red",
+         "text": "DOWN"
+        },
+        "1": {
+         "color": "green",
+         "text": "UP"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 56
+   },
+   "id": 21,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(redis_up{target_namespace=\"authelia\", target_service=\"authelia-redis\"})",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Redis up",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "at maxmemory Redis evicts keys (allkeys-lru) or refuses writes, depending on its policy",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "-1": {
+         "color": "text",
+         "text": "no maxmemory"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.8
+       },
+       {
+        "color": "red",
+        "value": 0.95
+       }
+      ]
+     },
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 56
+   },
+   "id": 22,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "(max(redis_memory_used_bytes{target_namespace=\"authelia\", target_service=\"authelia-redis\"}) / (max(redis_memory_max_bytes{target_namespace=\"authelia\", target_service=\"authelia-redis\"}) > 0)) or vector(-1)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Memory vs maxmemory",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "mappings": [
+      {
+       "options": {
+        "-1": {
+         "color": "text",
+         "text": "empty"
+        }
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     },
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 8,
+    "y": 56
+   },
+   "id": 23,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "justifyMode": "center",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "(sum(redis_db_keys{target_namespace=\"authelia\", target_service=\"authelia-redis\"})) or vector(-1)",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Keys",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 12,
+    "y": 56
+   },
+   "id": 24,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(redis_memory_used_bytes{target_namespace=\"authelia\", target_service=\"authelia-redis\"})",
+     "instant": false,
+     "legendFormat": "used",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(redis_memory_used_rss_bytes{target_namespace=\"authelia\", target_service=\"authelia-redis\"})",
+     "instant": false,
+     "legendFormat": "rss",
+     "range": true,
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(redis_memory_max_bytes{target_namespace=\"authelia\", target_service=\"authelia-redis\"}) > 0",
+     "instant": false,
+     "legendFormat": "maxmemory",
+     "range": true,
+     "refId": "C"
+    }
+   ],
+   "title": "Memory",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 64
+   },
+   "id": 25,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(redis_commands_processed_total{target_namespace=\"authelia\", target_service=\"authelia-redis\"}[$__rate_interval]))",
+     "instant": false,
+     "legendFormat": "commands/s",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(redis_keyspace_hits_total{target_namespace=\"authelia\", target_service=\"authelia-redis\"}[$__rate_interval])) / (sum(rate(redis_keyspace_hits_total{target_namespace=\"authelia\", target_service=\"authelia-redis\"}[$__rate_interval])) + sum(rate(redis_keyspace_misses_total{target_namespace=\"authelia\", target_service=\"authelia-redis\"}[$__rate_interval])))",
+     "instant": false,
+     "legendFormat": "hit ratio",
+     "range": true,
+     "refId": "B"
+    }
+   ],
+   "title": "Commands / s and hit ratio",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 64
+   },
+   "id": 26,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "max(redis_connected_clients{target_namespace=\"authelia\", target_service=\"authelia-redis\"})",
+     "instant": false,
+     "legendFormat": "clients",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(increase(redis_evicted_keys_total{target_namespace=\"authelia\", target_service=\"authelia-redis\"}[$__rate_interval])) or vector(0)",
+     "instant": false,
+     "legendFormat": "evicted keys",
+     "range": true,
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(increase(redis_rejected_connections_total{target_namespace=\"authelia\", target_service=\"authelia-redis\"}[$__rate_interval])) or vector(0)",
+     "instant": false,
+     "legendFormat": "rejected connections",
+     "range": true,
+     "refId": "C"
+    }
+   ],
+   "title": "Clients / evictions",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 72
+   },
+   "id": 27,
+   "panels": [],
    "title": "Resources",
    "type": "row"
   },
@@ -1300,9 +1771,9 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 56
+    "y": 73
    },
-   "id": 21,
+   "id": 28,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1439,9 +1910,9 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 56
+    "y": 73
    },
-   "id": 22,
+   "id": 29,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1519,9 +1990,9 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 56
+    "y": 73
    },
-   "id": 23,
+   "id": 30,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1555,9 +2026,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 64
+    "y": 81
    },
-   "id": 24,
+   "id": 31,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -1572,9 +2043,9 @@
     "h": 16,
     "w": 24,
     "x": 0,
-    "y": 65
+    "y": 82
    },
-   "id": 25,
+   "id": 32,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,
