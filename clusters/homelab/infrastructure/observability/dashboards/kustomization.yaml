@@ -555,6 +555,12 @@ configMapGenerator:
     options:
       annotations:
         grafana_folder: "Observability"
+  - name: dash-observability-svc-observability-beyla
+    files:
+      - observability--svc-observability-beyla.json
+    options:
+      annotations:
+        grafana_folder: "Observability"
   - name: dash-observability-svc-observability-alertmanager-kps
     files:
       - observability--svc-observability-alertmanager-kps.json

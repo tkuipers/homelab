@@ -1316,6 +1316,467 @@
    },
    "id": 19,
    "panels": [],
+   "title": "Traces (Tempo)",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "requests served and messages handled per second, from the service's spans (top 10 operations)",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     },
+     "min": 0,
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 44
+   },
+   "id": 20,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "topk(10, sum by (span_name) (rate(traces_spanmetrics_calls_total{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval])))",
+     "instant": false,
+     "legendFormat": "{{span_name}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Work / s by operation",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "server/consumer spans with error status (HTTP 5xx, failed handler) over all of them",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 44
+   },
+   "id": 21,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "(sum(rate(traces_spanmetrics_calls_total{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\", status_code=\"STATUS_CODE_ERROR\"}[$__rate_interval])) or vector(0)) / sum(rate(traces_spanmetrics_calls_total{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval]))",
+     "instant": false,
+     "legendFormat": "error share",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Errors (share of requests / messages)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 44
+   },
+   "id": 22,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval])))",
+     "instant": false,
+     "legendFormat": "p50",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval])))",
+     "instant": false,
+     "legendFormat": "p95",
+     "range": true,
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.99, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER\"}[$__rate_interval])))",
+     "instant": false,
+     "legendFormat": "p99",
+     "range": true,
+     "refId": "C"
+    }
+   ],
+   "title": "Latency (requests / messages)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "spans the service creates around its own work: scheduler jobs and polling loops, agent turns and tool calls, framework internals",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 52
+   },
+   "id": 23,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "topk(10, sum by (span_name) (rate(traces_spanmetrics_calls_total{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind=\"SPAN_KIND_INTERNAL\"}[$__rate_interval])))",
+     "instant": false,
+     "legendFormat": "{{span_name}}",
+     "range": true,
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(traces_spanmetrics_calls_total{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind=\"SPAN_KIND_INTERNAL\", status_code=\"STATUS_CODE_ERROR\"}[$__rate_interval])) or vector(0)",
+     "instant": false,
+     "legendFormat": "failed (all)",
+     "range": true,
+     "refId": "B"
+    }
+   ],
+   "title": "Internal operations / s (jobs, loops, tool calls)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "server, consumer and internal spans (background jobs: agent turns, scans, ...)",
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 52
+   },
+   "id": 24,
+   "options": {
+    "cellHeight": "sm",
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "topk(15, histogram_quantile(0.95, sum by (le, span_kind, span_name) (rate(traces_spanmetrics_latency_bucket{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind!=\"SPAN_KIND_CLIENT\"}[1h]))) > 0)",
+     "format": "table",
+     "instant": true,
+     "legendFormat": "__auto",
+     "range": false,
+     "refId": "A"
+    }
+   ],
+   "title": "Slowest operations (p95, last 1h)",
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value": "p95 (s)"
+      }
+     }
+    }
+   ],
+   "type": "table"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "what the service calls while working: databases, other services, external APIs, published messages",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     },
+     "min": 0,
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 60
+   },
+   "id": 25,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "topk(10, sum by (span_name) (rate(traces_spanmetrics_calls_total{service=\"homeassistant\", k8s_namespace_name=\"homeassistant\", span_kind=~\"SPAN_KIND_CLIENT|SPAN_KIND_PRODUCER\"}[$__rate_interval])))",
+     "instant": false,
+     "legendFormat": "{{span_name}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Calls out / s by target (client spans)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "tempo",
+    "uid": "tempo"
+   },
+   "description": "click a trace ID to open it; spans link to their log lines",
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 60
+   },
+   "id": 26,
+   "options": {
+    "cellHeight": "sm",
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "tempo",
+      "uid": "tempo"
+     },
+     "limit": 20,
+     "query": "{resource.service.name=\"homeassistant\" && resource.k8s.namespace.name=\"homeassistant\" && status=error}",
+     "queryType": "traceql",
+     "refId": "A",
+     "tableType": "traces"
+    }
+   ],
+   "title": "Recent traces with errors",
+   "type": "table"
+  },
+  {
+   "datasource": {
+    "type": "tempo",
+    "uid": "tempo"
+   },
+   "description": "traces this service is part of that took more than 1s in total (requests, messages, background jobs)",
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 68
+   },
+   "id": 27,
+   "options": {
+    "cellHeight": "sm",
+    "showHeader": true
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "tempo",
+      "uid": "tempo"
+     },
+     "limit": 20,
+     "query": "{resource.service.name=\"homeassistant\" && resource.k8s.namespace.name=\"homeassistant\" && trace:duration > 1s}",
+     "queryType": "traceql",
+     "refId": "A",
+     "tableType": "traces"
+    }
+   ],
+   "title": "Slowest recent traces",
+   "type": "table"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 76
+   },
+   "id": 28,
+   "panels": [],
    "title": "Resources",
    "type": "row"
   },
@@ -1406,9 +1867,9 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 44
+    "y": 77
    },
-   "id": 20,
+   "id": 29,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1545,9 +2006,9 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 44
+    "y": 77
    },
-   "id": 21,
+   "id": 30,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1625,9 +2086,9 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 44
+    "y": 77
    },
-   "id": 22,
+   "id": 31,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1661,9 +2122,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 52
+    "y": 85
    },
-   "id": 23,
+   "id": 32,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -1678,9 +2139,9 @@
     "h": 16,
     "w": 24,
     "x": 0,
-    "y": 53
+    "y": 86
    },
-   "id": 24,
+   "id": 33,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,

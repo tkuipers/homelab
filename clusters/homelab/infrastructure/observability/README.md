@@ -89,7 +89,9 @@ python3 tooling/observability/generate_dashboards.py   # -> dashboards/
 python3 tooling/observability/generate_alerts.py       # -> alerts/
 ```
 New service: add a `Svc(...)` line to `CATALOG` in the generator, re-run,
-commit. Grafana's sidecar loads the ConfigMaps (label `grafana_dashboard`,
+commit. Services that send traces (`SDK_TRACED`, `BEYLA_NAMESPACES`) get a
+*Traces* row: work/errors/latency from span metrics, calls out, slowest
+operations, and Tempo tables of error / slow traces. Grafana's sidecar loads the ConfigMaps (label `grafana_dashboard`,
 folder from annotation `grafana_folder`). Hand edits in the UI are not saved.
 
 **Alerts** - two evaluators:
@@ -101,6 +103,10 @@ folder from annotation `grafana_folder`). Hand edits in the UI are not saved.
   2h - catches things that are broken all the time), plus functional ones
   (stocks pipeline, JetStream, VPN tunnel, *arr health, backups via CronJob
   rules). Probe rules alert on *no data* too (blackbox exporter gone).
+  From traces (Tempo span metrics): *Requests or messages failing* (>25% of
+  a service's server/consumer spans failed), *Background loop stopped*
+  (polymarket-bot loops, decision loss monitor: `LOOP_SPANS`), *Traces not
+  reaching Tempo*, *Tempo discarding spans*.
 - *Prometheus* (kube-prometheus-stack default rules, routed by the kps
   Alertmanager): node/kubelet/apiserver/Prometheus internals, KubeJobNotCompleted
   etc. Rules that duplicate a Grafana rule are disabled in the kps values

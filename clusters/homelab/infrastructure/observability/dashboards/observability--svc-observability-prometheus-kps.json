@@ -1228,14 +1228,72 @@
    "type": "timeseries"
   },
   {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "the trace pipeline in detail: Beyla dashboard",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 1,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     },
+     "min": 0,
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 55
+   },
+   "id": 20,
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (reason) (rate(tempo_discarded_spans_total[$__rate_interval])) or vector(0)",
+     "instant": false,
+     "legendFormat": "{{reason}}",
+     "range": true,
+     "refId": "A"
+    }
+   ],
+   "title": "Tempo spans discarded / s",
+   "type": "timeseries"
+  },
+  {
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 55
+    "y": 63
    },
-   "id": 20,
+   "id": 21,
    "panels": [],
    "title": "Resources",
    "type": "row"
@@ -1327,9 +1385,9 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 56
+    "y": 64
    },
-   "id": 21,
+   "id": 22,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1466,9 +1524,9 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 56
+    "y": 64
    },
-   "id": 22,
+   "id": 23,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1546,9 +1604,9 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 56
+    "y": 64
    },
-   "id": 23,
+   "id": 24,
    "options": {
     "legend": {
      "displayMode": "list",
@@ -1582,9 +1640,9 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 64
+    "y": 72
    },
-   "id": 24,
+   "id": 25,
    "panels": [],
    "title": "Logs",
    "type": "row"
@@ -1599,9 +1657,9 @@
     "h": 16,
     "w": 24,
     "x": 0,
-    "y": 65
+    "y": 73
    },
-   "id": 25,
+   "id": 26,
    "options": {
     "dedupStrategy": "none",
     "enableLogDetails": true,

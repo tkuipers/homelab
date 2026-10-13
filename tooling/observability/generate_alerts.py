@@ -40,6 +40,9 @@ OUT = os.path.join(ROOT, "clusters/homelab/infrastructure/observability/alerts")
 
 GRAFANA = "https://logs.tkuipers.ca"
 
+# Root spans of loops that run every few minutes (polymarket-bot, stocks decision).
+LOOP_SPANS = "scanner.scan|monitor.check_positions|reconciler.reconcile|bankroll.snapshot|decision.loss_monitor"
+
 
 def rule(uid, title, expr, op, threshold, for_="5m", ds="prometheus", severity="warning",
          summary="", description="", dashboard=None, window=600, no_data="OK", ns=None, svc=None,
@@ -193,6 +196,30 @@ HOMELAB = [
          "gt", 2, ds="loki", for_="15m", ns="k8s_namespace_name", svc="service_name",
          summary="{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }}: gluetun restarted the VPN {{ $values.B }} times in 30m",
          description="The VPN tunnel fails its health check, so the app behind it has no working network although the pod is Ready. gluetun logs say why (DNS, auth, server)."),
+    # ---- traces (Tempo span metrics; senders: our SDKs, Beyla, ingress, Argo CD, Grafana) ----
+    rule("hl-span-errors", "Requests or messages failing (traces)",
+         '(sum by (k8s_namespace_name, service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", status_code="STATUS_CODE_ERROR", service!="ingress-nginx"}[15m])) > 0.5 / 60)'
+         ' / sum by (k8s_namespace_name, service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", service!="ingress-nginx"}[15m]))',
+         "gt", 0.25, for_="15m", ns="k8s_namespace_name", svc="service",
+         summary="{{ $labels.k8s_namespace_name }}/{{ $labels.service }}: {{ humanizePercentage $values.B.Value }} of the requests / messages it handled failed (15m)",
+         description="From the service's own spans, so it covers in-cluster calls and NATS consumers the ingress 5xx alert can't see. Service dashboard > Traces: 'Recent traces with errors' shows which operation and why (span status / exception)."),
+    rule("hl-job-stalled", "Background loop stopped",
+         '((sum by (k8s_namespace_name, service, span_name) (increase(traces_spanmetrics_calls_total{k8s_namespace_name!="", span_name=~"' + LOOP_SPANS + '"}[6h])) > 0)'
+         ' unless (sum by (k8s_namespace_name, service, span_name) (increase(traces_spanmetrics_calls_total{k8s_namespace_name!="", span_name=~"' + LOOP_SPANS + '"}[30m])) > 0))'
+         ' and on () (sum(rate(tempo_distributor_spans_received_total[10m])) > 0)',
+         "gt", 0, for_="10m", ns="k8s_namespace_name", svc="service",
+         summary="{{ $labels.k8s_namespace_name }}/{{ $labels.service }}: no '{{ $labels.span_name }}' run for 30 minutes",
+         description="These loops run every 1-10 minutes and each run is a span. The pod can be Ready while the loop task died or hangs (stuck HTTP call, deadlock). Logs of the service; a restart restarts the loop."),
+    rule("hl-spans-not-exported", "Traces not reaching Tempo",
+         'sum by (instance) (rate(otelcol_exporter_send_failed_spans_total[10m]))',
+         "gt", 0, for_="15m", static_ns="observability", dashboard=svc_uid("observability", "beyla"),
+         summary="Alloy ({{ $labels.instance }}) fails to export spans to Tempo",
+         description="Tempo down or refusing writes. Beyla dashboard (trace pipeline) and Tempo's logs."),
+    rule("hl-tempo-discarding", "Tempo discarding spans",
+         'sum by (reason) (rate(tempo_discarded_spans_total[15m]))',
+         "gt", 0.1, for_="15m", static_ns="observability", dashboard=svc_uid("observability", "beyla"),
+         summary="Tempo discards spans ({{ $labels.reason }}, {{ $values.B }}/s)",
+         description="Reasons: rate_limited / live_traces_exceeded (raise ingestion limits in helm-chart-tempo), trace_too_large (a service puts too many spans in one trace - see which in Traces Drilldown)."),
     rule("hl-cert-expiring", "TLS certificate expiring",
          'min by (instance) ((probe_ssl_earliest_cert_expiry - time()) / 86400)', "lt", 14, for_="1h", static_ns="cert-manager",
          dashboard=svc_uid("cert-manager", "infrastructure-cert-manager"),

@@ -19,6 +19,9 @@ Conventions / data sources
     k8s_namespace_name, service_name (= owning workload), k8s_container_name,
     k8s_pod_name. Parsed fields (status, method, path, logger, ...) are
     structured metadata, level is detected_level.
+  - Tempo (uid tempo): traces. Their RED metrics come from Tempo's metrics
+    generator as traces_spanmetrics_* in Prometheus (labels service,
+    k8s_namespace_name, span_name, span_kind, status_code).
 """
 import hashlib
 import json
@@ -32,6 +35,7 @@ OUT = os.path.join(ROOT, "clusters/homelab/infrastructure/observability/dashboar
 
 PROM = {"type": "prometheus", "uid": "prometheus"}
 LOKI = {"type": "loki", "uid": "loki"}
+TEMPO = {"type": "tempo", "uid": "tempo"}
 
 KPS_VALUES = os.path.join(ROOT, "clusters/homelab/infrastructure/observability/helm-chart-kube-prometheus-stack/values.yaml")
 
@@ -73,6 +77,7 @@ class Svc:
     extras: List[Callable] = field(default_factory=list)
     description: str = ""
     quiet: bool = False         # logs very rarely: Logs panel looks back 400d (archive streams)
+    traces: Optional[str] = None  # service.name of its spans when it isn't the workload name (see trace_service)
 
 
 def pod_re(s: Svc) -> str:
@@ -92,6 +97,39 @@ def loki_sel(s: Svc) -> str:
 
 def kpod(s: Svc) -> str:
     return f'namespace="{s.ns}", pod=~"{pod_re(s)}"'
+
+
+# Who sends traces (service.name = workload name unless Svc.traces says otherwise):
+# our own services (OpenTelemetry SDKs) ...
+SDK_TRACED = {
+    ("stocks", n) for n in ("api", "console", "audit-consumer", "decision", "ingestion", "llm-gateway",
+                            "orchestrator", "paper-filler", "training")
+} | {("polymarket-bot", "bot"), ("homelab-agent", "homelab-agent"),
+     ("argocd", "argocd-server"), ("argocd", "argocd-repo-server")}
+# ... and every Deployment in the namespaces Beyla instruments
+# (helm-chart-beyla/values.yaml discovery.instrument).
+BEYLA_NAMESPACES = {"mediacenter", "homeassistant", "anki", "authelia"}
+NOT_TRACED = {("homeassistant", "matter-server")}  # websocket only, nothing Beyla traces
+
+
+def trace_service(s: Svc) -> Optional[str]:
+    """service.name of the workload's spans, None if it sends none."""
+    if s.traces:
+        return s.traces
+    if (s.ns, s.name) in NOT_TRACED:
+        return None
+    if (s.ns, s.name) in SDK_TRACED or (s.ns in BEYLA_NAMESPACES and s.kind == "deployment"):
+        return {"bot": "polymarket-bot"}.get(s.name, s.name)
+    return None
+
+
+def span_sel(s: Svc, extra: str = "") -> str:
+    sel = f'service="{trace_service(s)}", k8s_namespace_name="{s.ns}"'
+    return sel + (", " + extra if extra else "")
+
+
+# spans that are the service doing work: requests it serves, messages it handles, jobs it runs
+WORK_KINDS = 'span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER"'
 
 
 # ----------------------------------------------------------------------------
@@ -213,6 +251,16 @@ class Board:
         }
         if time_from:
             p["timeFrom"] = time_from
+        return self._add(p, w, h)
+
+    def traces_table(self, title, traceql, w=24, h=8, desc="", limit=20):
+        p = {
+            "type": "table", "title": title, "description": desc, "datasource": TEMPO,
+            "targets": [{"datasource": TEMPO, "refId": "A", "queryType": "traceql", "query": traceql,
+                         "limit": limit, "tableType": "traces"}],
+            "fieldConfig": {"defaults": {}, "overrides": []},
+            "options": {"showHeader": True, "cellHeight": "sm"},
+        }
         return self._add(p, w, h)
 
     def text(self, title, content, w=24, h=3):
@@ -407,6 +455,10 @@ def standard(s: Svc) -> Board:
         b.ts("External probe duration", [(f'max(probe_duration_seconds{{probe="external", target_namespace="{s.ns}", target_service="{s.probe}"}})', "probe")], unit="s")
         b.ts("External probe success", [(f'min(probe_success{{probe="external", target_namespace="{s.ns}", target_service="{s.probe}"}})', "up")], min0=True)
 
+    # ---- traces -----------------------------------------------------------
+    if trace_service(s):
+        traces_row(b, s)
+
     # ---- service specific -------------------------------------------------
     if s.extras:
         b.row("Service metrics")
@@ -435,6 +487,66 @@ def standard(s: Svc) -> Board:
     b.logs("Logs", f'{sel} | detected_level=~"$level" |~ "(?i)$search"', h=16, time_from="400d" if s.quiet else "30d",
            desc=("this service logs very rarely: looking back 400d (history is archived for that long). " if s.quiet else "") + "newest first. Filter with the level/search variables; expand a line for all parsed fields")
     return b
+
+
+def traces_row(b: Board, s: Svc):
+    sp = span_sel(s)
+    work = span_sel(s, WORK_KINDS)
+    out = span_sel(s, 'span_kind=~"SPAN_KIND_CLIENT|SPAN_KIND_PRODUCER"')
+    b.row("Traces (Tempo)")
+    b.ts("Work / s by operation", [
+        (f'topk(10, sum by (span_name) (rate(traces_spanmetrics_calls_total{{{work}}}[$__rate_interval])))', "{{span_name}}"),
+    ], unit="ops", w=8, stack=True,
+        desc="requests served and messages handled per second, from the service's spans (top 10 operations)")
+    b.ts("Errors (share of requests / messages)", [
+        (f'(sum(rate(traces_spanmetrics_calls_total{{{work}, status_code="STATUS_CODE_ERROR"}}[$__rate_interval])) or vector(0)) / sum(rate(traces_spanmetrics_calls_total{{{work}}}[$__rate_interval]))', "error share"),
+    ], unit="percentunit", w=8, desc="server/consumer spans with error status (HTTP 5xx, failed handler) over all of them")
+    b.ts("Latency (requests / messages)", [
+        (f'histogram_quantile(0.5, sum by (le) (rate(traces_spanmetrics_latency_bucket{{{work}}}[$__rate_interval])))', "p50"),
+        (f'histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{{{work}}}[$__rate_interval])))', "p95"),
+        (f'histogram_quantile(0.99, sum by (le) (rate(traces_spanmetrics_latency_bucket{{{work}}}[$__rate_interval])))', "p99"),
+    ], unit="s", w=8)
+    internal = span_sel(s, 'span_kind="SPAN_KIND_INTERNAL"')
+    b.ts("Internal operations / s (jobs, loops, tool calls)", [
+        (f'topk(10, sum by (span_name) (rate(traces_spanmetrics_calls_total{{{internal}}}[$__rate_interval])))', "{{span_name}}"),
+        (f'sum(rate(traces_spanmetrics_calls_total{{{internal}, status_code="STATUS_CODE_ERROR"}}[$__rate_interval])) or vector(0)', "failed (all)"),
+    ], unit="ops", w=12,
+        desc="spans the service creates around its own work: scheduler jobs and polling loops, agent turns and tool calls, framework internals")
+    b.table("Slowest operations (p95, last 1h)", [
+        (f'topk(15, histogram_quantile(0.95, sum by (le, span_kind, span_name) (rate(traces_spanmetrics_latency_bucket{{{sp}, span_kind!="SPAN_KIND_CLIENT"}}[1h]))) > 0)', ""),
+    ], w=12, desc="server, consumer and internal spans (background jobs: agent turns, scans, ...)",
+        transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "p95 (s)"}}}])
+    b.ts("Calls out / s by target (client spans)", [
+        (f'topk(10, sum by (span_name) (rate(traces_spanmetrics_calls_total{{{out}}}[$__rate_interval])))', "{{span_name}}"),
+    ], unit="ops", w=12, stack=True,
+        desc="what the service calls while working: databases, other services, external APIs, published messages")
+    name = trace_service(s)
+    b.traces_table("Recent traces with errors",
+                   f'{{resource.service.name="{name}" && resource.k8s.namespace.name="{s.ns}" && status=error}}',
+                   w=12, desc="click a trace ID to open it; spans link to their log lines")
+    b.traces_table("Slowest recent traces",
+                   f'{{resource.service.name="{name}" && resource.k8s.namespace.name="{s.ns}" && trace:duration > 1s}}',
+                   w=12, desc="traces this service is part of that took more than 1s in total (requests, messages, background jobs)")
+
+
+def tracing_panels(b: Board, s: Svc):
+    """Trace pipeline (Beyla dashboard): who sends spans and whether they arrive."""
+    b.ts("Spans / s by service (span metrics)", [
+        ('topk(15, sum by (k8s_namespace_name, service) (rate(traces_spanmetrics_calls_total[$__rate_interval])))', "{{k8s_namespace_name}}/{{service}}"),
+    ], unit="ops", w=12, stack=True)
+    b.ts("Alloy OTLP spans in / refused", [
+        ('sum(rate(otelcol_receiver_accepted_spans_total[$__rate_interval]))', "accepted"),
+        ('sum(rate(otelcol_receiver_refused_spans_total[$__rate_interval])) or vector(0)', "refused"),
+        ('sum(rate(otelcol_receiver_failed_spans_total[$__rate_interval])) or vector(0)', "failed"),
+    ], unit="ops", w=12)
+    b.ts("Spans exported to Tempo / failed", [
+        ('sum(rate(otelcol_exporter_sent_spans_total[$__rate_interval]))', "sent"),
+        ('sum(rate(otelcol_exporter_send_failed_spans_total[$__rate_interval])) or vector(0)', "failed"),
+    ], unit="ops", w=12)
+    b.ts("Tempo: spans received / discarded", [
+        ('sum(rate(tempo_distributor_spans_received_total[$__rate_interval]))', "received"),
+        ('sum by (reason) (rate(tempo_discarded_spans_total[$__rate_interval])) or vector(0)', "discarded {{reason}}"),
+    ], unit="ops", w=12, desc="discarded = rate limited, trace too large, ... (reason)")
 
 
 def limit_overrides():
@@ -635,6 +747,8 @@ def observability_panels(b: Board, s: Svc):
     b.ts("Prometheus active series", [('sum(prometheus_tsdb_head_series)', "series")])
     b.ts("Scrape targets down", [('count by (job) (up == 0) or vector(0)', "{{job}}")], bars=True)
     b.ts("Tempo spans received / s", [('sum(rate(tempo_distributor_spans_received_total[$__rate_interval])) or vector(0)', "spans/s")])
+    b.ts("Tempo spans discarded / s", [('sum by (reason) (rate(tempo_discarded_spans_total[$__rate_interval])) or vector(0)', "{{reason}}")],
+         desc="the trace pipeline in detail: Beyla dashboard")
 
 
 def node_panels(b: Board, s: Svc):
@@ -720,7 +834,7 @@ CATALOG: List[Svc] = [
     S("nfs-provisioner", "samba-server-omen-worker1", "Samba server (omen-worker1)", folder="Infrastructure", quiet=True),
     S("external-dns", "external-dns", "external-dns", folder="Infrastructure"),
     S("ingress-nginx", "infrastructure-ingress-nginx-controller", "Ingress NGINX", access_logs=True, probe="kubernetes-api-proxy", folder="Infrastructure",
-      extras=[ingress_global], description="All HTTP traffic into the cluster. Per-service views live in each service dashboard."),
+      extras=[ingress_global], traces="ingress-nginx", description="All HTTP traffic into the cluster. Per-service views live in each service dashboard."),
     S("local-path-storage", "local-path-provisioner", "local-path provisioner", folder="Infrastructure", quiet=True),
     S("metallb-system", "infrastructure-metallb-controller", "MetalLB controller", folder="Infrastructure", extras=[metallb_panels]),
     S("metallb-system", "infrastructure-metallb-speaker", "MetalLB speaker", kind="daemonset", folder="Infrastructure"),
@@ -731,7 +845,7 @@ CATALOG: List[Svc] = [
     S("default", "op-connect", "1Password Connect", folder="Infrastructure"),
 
     S("argocd", "argocd-server", "Argo CD server", ingress=["argocd-server-ingress"], probe="argocd-server", folder="Argo CD", extras=[argocd_panels]),
-    S("argocd", "argocd-application-controller", "Argo CD application controller", kind="statefulset", folder="Argo CD"),
+    S("argocd", "argocd-application-controller", "Argo CD application controller", kind="statefulset", folder="Argo CD", traces="argocd-controller"),
     S("argocd", "argocd-repo-server", "Argo CD repo server", folder="Argo CD"),
     S("argocd", "argocd-applicationset-controller", "Argo CD applicationset controller", folder="Argo CD"),
     S("argocd", "argocd-notifications-controller", "Argo CD notifications controller", folder="Argo CD"),
@@ -745,12 +859,14 @@ CATALOG: List[Svc] = [
     S("kube-system", "kube-proxy", "kube-proxy", kind="daemonset", folder="Kubernetes"),
     S("kube-system", "kube-flannel", "Flannel (CNI)", kind="daemonset", folder="Kubernetes"),
 
-    S("observability", "kps-grafana", "Grafana", ingress=["kps-grafana"], probe="grafana", folder="Observability"),
+    S("observability", "kps-grafana", "Grafana", ingress=["kps-grafana"], probe="grafana", folder="Observability", traces="grafana"),
     S("observability", "prometheus-kps", "Prometheus", kind="statefulset", folder="Observability", extras=[observability_panels]),
     S("observability", "loki", "Loki", kind="statefulset", folder="Observability"),
     S("observability", "tempo", "Tempo", kind="statefulset", folder="Observability"),
     S("observability", "alloy", "Alloy (node collector)", kind="daemonset", folder="Observability"),
     S("observability", "alloy-events", "Alloy (k8s events)", folder="Observability"),
+    S("observability", "beyla", "Beyla (eBPF traces) + trace pipeline", kind="daemonset", folder="Observability", extras=[tracing_panels],
+      description="eBPF auto-instrumentation for third-party apps (helm-chart-beyla), and the whole trace pipeline: senders -> Alloy -> Tempo"),
     S("observability", "alertmanager-kps", "Alertmanager", kind="statefulset", folder="Observability"),
     S("observability", "kps-kube-state-metrics", "kube-state-metrics", folder="Observability"),
     S("observability", "kps-prometheus-node-exporter", "node-exporter", kind="daemonset", folder="Observability", extras=[node_panels]),
