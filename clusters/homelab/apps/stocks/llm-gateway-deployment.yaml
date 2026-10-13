@@ -27,6 +27,11 @@ spec:
             - containerPort: 8082
               name: http
           env:
+            # traces -> Alloy (OTLP) -> Tempo
+            - name: OTEL_SERVICE_NAME
+              value: llm-gateway
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://alloy.observability.svc:4318
             - name: LLM_CONFIG_PATH
               value: /config/llm_config.yaml
             - name: OPENAI_API_KEY

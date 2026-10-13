@@ -30,6 +30,11 @@ spec:
             - containerPort: 8081
               name: http
           env:
+            # traces -> Alloy (OTLP) -> Tempo
+            - name: OTEL_SERVICE_NAME
+              value: ingestion
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://alloy.observability.svc:4318
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

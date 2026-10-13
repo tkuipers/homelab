@@ -30,6 +30,11 @@ spec:
             - containerPort: 3000
               name: http
           env:
+            # traces -> Alloy (OTLP) -> Tempo
+            - name: OTEL_SERVICE_NAME
+              value: console
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://alloy.observability.svc:4318
             - name: NATS_URL
               value: nats://nats:4222
             - name: ENVIRONMENT
