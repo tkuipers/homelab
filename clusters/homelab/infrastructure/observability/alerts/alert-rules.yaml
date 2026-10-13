@@ -603,7 +603,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: min by (target_namespace, target_service, instance) (probe_success{probe="internal"})
+            expr: min by (target_namespace, target_service, instance) (probe_success{probe="internal"}) unless on (target_namespace, target_service) label_replace(label_replace(min by (namespace, pod) (time() - kube_pod_created) < 480, "target_namespace", "$$1", "namespace", "(.*)"), "target_service", "$$1", "pod", "(.+?)(?:(?:-[a-z0-9]{8,10})?-[a-z0-9]{5}|-[0-9]+)")
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -642,7 +642,7 @@ data:
           service: '{{ $$labels.target_service }}'
         annotations:
           summary: '{{ $labels.target_namespace }}/{{ $labels.target_service }} does not answer its health check'
-          description: 'In-cluster probe of the app itself ({{ $labels.instance }}) via its Service. Open the service dashboard: Kubernetes events, restarts and logs. No data = the blackbox exporter (observability/blackbox) is down.'
+          description: 'In-cluster probe of the app itself ({{ $labels.instance }}) via its Service. Open the service dashboard: Kubernetes events, restarts and logs. No data = the blackbox exporter (observability/blackbox) is down. Not raised while the service''s pod is under 8 minutes old (a deploy pulling its image).'
           dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.target_namespace }}
         isPaused: false
       - uid: hl-public-url-down

@@ -102,6 +102,16 @@ def deploy_down(uid, title, ns, deploy):
 
 POD_TO_SERVICE = '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $labels.pod }}'
 
+# (target_namespace, target_service) of every pod created in the last 8 minutes,
+# the service derived from the pod name like POD_TO_SERVICE. A Recreate deploy
+# (NATS consumers, single-writer apps) leaves its service without a pod while
+# the new image is pulled - 3-4 min for the stocks images - which is not an
+# outage. A pod that stays unready past 8 min, or crash loops (same pod), alerts.
+# "$$1": Grafana env-interpolates the query model of provisioned rules too.
+RECENT_POD = ('label_replace(label_replace(min by (namespace, pod) (time() - kube_pod_created) < 480, '
+              '"target_namespace", "$$1", "namespace", "(.*)"), '
+              '"target_service", "$$1", "pod", "(.+?)(?:(?:-[a-z0-9]{8,10})?-[a-z0-9]{5}|-[0-9]+)")')
+
 SERVICE_MONITORS = [
     deploy_down("dd-homepage-pod-health", "Homepage pod health", "homepage", "homepage"),
     rule("dd-homepage-http-errors", "Homepage HTTP 5xx rate",
@@ -141,10 +151,10 @@ SERVICE_MONITORS = [
 
 HOMELAB = [
     rule("hl-health-check-failing", "Service health check failing",
-         'min by (target_namespace, target_service, instance) (probe_success{probe="internal"})', "lt", 1, for_="3m", severity="critical",
+         'min by (target_namespace, target_service, instance) (probe_success{probe="internal"}) unless on (target_namespace, target_service) ' + RECENT_POD, "lt", 1, for_="3m", severity="critical",
          ns="target_namespace", svc="target_service", no_data="Alerting",
          summary="{{ $labels.target_namespace }}/{{ $labels.target_service }} does not answer its health check",
-         description="In-cluster probe of the app itself ({{ $labels.instance }}) via its Service. Open the service dashboard: Kubernetes events, restarts and logs. No data = the blackbox exporter (observability/blackbox) is down."),
+         description="In-cluster probe of the app itself ({{ $labels.instance }}) via its Service. Open the service dashboard: Kubernetes events, restarts and logs. No data = the blackbox exporter (observability/blackbox) is down. Not raised while the service's pod is under 8 minutes old (a deploy pulling its image)."),
     rule("hl-public-url-down", "Public URL unreachable",
          'min by (target_namespace, target_service, instance) (probe_success{probe="external"})', "lt", 1, for_="5m", severity="critical",
          ns="target_namespace", svc="target_service", no_data="Alerting",
