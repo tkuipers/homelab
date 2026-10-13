@@ -150,6 +150,11 @@ spec:
           env:
             - name: PUBLIC_URL
               value: https://agent.tkuipers.ca
+            # traces -> Alloy (OTLP) -> Tempo; the agent's commands don't inherit these
+            - name: OTEL_SERVICE_NAME
+              value: homelab-agent
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://alloy.observability.svc:4318
             # tool-use turns per session before it stops with max_turns_reached (default 200;
             # 10000 is the highest the app accepts, so effectively no limit; the daily budget still applies)
             - name: AGENT_MAX_TURNS
