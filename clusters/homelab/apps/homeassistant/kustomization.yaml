@@ -26,6 +26,7 @@ configMapGenerator:
       - managed/packages/outdoor_lighting.yaml
       - managed/packages/good_night.yaml
       - managed/packages/heating.yaml
+      - managed/packages/prometheus.yaml
   - name: homeassistant-dashboards
     files:
       - managed/dashboards/home.yaml

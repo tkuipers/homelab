@@ -1,0 +1,18 @@
+# Prometheus metrics at /api/prometheus (entity states: temperatures,
+# thermostat setpoints, power, battery levels, ...). Auth stays on: Prometheus
+# scrapes with the reconciler's long-lived token (ServiceMonitor in
+# infrastructure/observability/monitors/servicemonitors.yaml), and the public
+# ingress answers 401 without one.
+prometheus:
+  namespace: hass
+  requires_auth: true
+  filter:
+    # no numeric state, only noise
+    exclude_domains:
+      - automation
+      - script
+      - scene
+      - button
+      - event
+      - update
+      - persistent_notification
