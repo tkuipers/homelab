@@ -5,6 +5,9 @@ metadata:
   namespace: mediacenter
 spec:
   replicas: 1
+  # one writer of the hostPath config/queue: never two pods at once
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: transmission
