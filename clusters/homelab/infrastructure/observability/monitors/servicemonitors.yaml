@@ -195,3 +195,26 @@ spec:
   podMetricsEndpoints:
     - port: metrics
       interval: 30s
+---
+# Home Assistant entity states (managed/packages/prometheus.yaml); bearer token
+# from the hass-prometheus ExternalSecret (secrets/external-secrets.yaml)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: homeassistant
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [homeassistant]
+  selector:
+    matchLabels:
+      app: homeassistant
+  endpoints:
+    - port: http
+      path: /api/prometheus
+      interval: 60s
+      authorization:
+        type: Bearer
+        credentials:
+          name: hass-prometheus
+          key: token
