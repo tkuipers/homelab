@@ -678,6 +678,25 @@ def external_dns_panels(b: Board, s: Svc):
     b.ts("Endpoints", [('sum(external_dns_source_endpoints_total)', "wanted (source)"), ('sum(external_dns_registry_endpoints_total)', "in Route 53")], w=12)
 
 
+def homeassistant_panels(b: Board, s: Svc):
+    """HA's prometheus integration (managed/packages/prometheus.yaml), entity states."""
+    b.stat("Entities unavailable", 'count(hass_entity_available == 0) or vector(0)',
+           desc="entities HA marks unavailable. ~90 are always unavailable (Dreame options the vacuum lacks, iPhone sensors, ...); a jump means an integration or device went down")
+    b.stat("Batteries below 20%", 'count(hass_sensor_battery_percent < 20) or vector(0)', thresholds=RED_IF_ABOVE_0)
+    b.stat("Thermostat: actual", 'max(hass_climate_current_temperature_celsius)', unit="celsius", decimals=1)
+    b.stat("Thermostat: target", 'max(hass_climate_target_temperature_celsius)', unit="celsius", decimals=1,
+           desc="the setpoint HA sees; if the thermostat itself shows another one, see the Daikin note (hspActive vs hspHome)")
+    b.ts("Thermostat", [('max by (friendly_name) (hass_climate_current_temperature_celsius)', "{{friendly_name}} actual"),
+                        ('max by (friendly_name) (hass_climate_target_temperature_celsius)', "{{friendly_name}} target")], unit="celsius", w=12)
+    b.ts("Temperatures", [('max by (friendly_name) (hass_sensor_temperature_celsius)', "{{friendly_name}}")], unit="celsius", w=12)
+    b.ts("Humidity", [('max by (friendly_name) (hass_sensor_humidity_percent)', "{{friendly_name}}")], unit="percent", w=8)
+    b.ts("Power", [('max by (friendly_name) (hass_sensor_power_w)', "{{friendly_name}}")], unit="watt", w=8)
+    b.table("Lowest batteries", [('bottomk(10, max by (friendly_name) (hass_sensor_battery_percent))', "")], w=8,
+            transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "%"}}}])
+    b.table("Unavailable entities", [('max by (entity, friendly_name, domain) (hass_entity_available == 0)', "")], w=24,
+            transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True, "Value": True}}}])
+
+
 def adguard_panels(b: Board, s: Svc):
     b.ts("Probes: LAN DNS (10.0.0.71:53) and web UI", [('min by (instance) (probe_success{probe="internal", target_namespace="adguard-home"})', "{{instance}}")],
          desc="1 = up, 0 = down. dns_a = resolves github.com through the LoadBalancer IP the LAN uses; 0 = LAN DNS is broken")
@@ -863,7 +882,8 @@ def S(*a, **k):
 CATALOG: List[Svc] = [
     # --- apps ----------------------------------------------------------------
     S("anki", "anki", "Anki sync server", ingress=["anki"], probe="anki", folder="Apps"),
-    S("homeassistant", "homeassistant", "Home Assistant", ingress=["homeassistant"], probe="homeassistant", folder="Home Assistant"),
+    S("homeassistant", "homeassistant", "Home Assistant", ingress=["homeassistant"], probe="homeassistant", folder="Home Assistant",
+      extras=[homeassistant_panels]),
     S("homeassistant", "hamh", "Home Assistant Matter Hub (hamh)", ingress=["hamh"], probe="hamh", folder="Home Assistant"),
     S("homeassistant", "matter-server", "Matter server", folder="Home Assistant"),
     S("homelab-agent", "homelab-agent", "Homelab agent", ingress=["homelab-agent"], probe="homelab-agent", folder="Apps",
