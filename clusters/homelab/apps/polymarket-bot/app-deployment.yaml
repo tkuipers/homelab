@@ -40,6 +40,11 @@ spec:
             - secretRef:
                 name: polymarket-secret
           env:
+            # traces -> Alloy (OTLP) -> Tempo
+            - name: OTEL_SERVICE_NAME
+              value: polymarket-bot
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://alloy.observability.svc:4318
             - name: BOT_DB
               value: /app/data/bot.db   # unused when DATABASE_URL is set, but kept for sanity
             - name: BOT_CONFIG          # shadows the in-image /app/config.yaml
