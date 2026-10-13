@@ -514,6 +514,14 @@ prometheus-blackbox-exporter:
           method: POST
           follow_redirects: false
           valid_status_codes: [400]
+      http_twilio_hook:     # Twilio webhook: an unsigned POST is refused (403) by the app itself
+        prober: http
+        timeout: 10s
+        http:
+          preferred_ip_protocol: ip4
+          method: POST
+          follow_redirects: false
+          valid_status_codes: [403]
       http_faro:            # Faro receiver: /collect only takes POST, so a GET answers 405
         prober: http
         timeout: 10s
@@ -552,6 +560,15 @@ prometheus-blackbox-exporter:
         probe: external
         target_namespace: adguard-home
         target_service: adguard-home
+    # Twilio's fallback when the agent is down: the relay must answer it
+    - name: agent-sms-fallback
+      url: https://agent.tkuipers.ca/hooks/sms-fallback
+
+      module: http_twilio_hook
+      additionalMetricsRelabels:
+        probe: external
+        target_namespace: homelab-agent
+        target_service: homelab-agent-relay
     - name: agent-tkuipers-ca
       url: https://agent.tkuipers.ca/
 
