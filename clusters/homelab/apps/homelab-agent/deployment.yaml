@@ -150,6 +150,10 @@ spec:
           env:
             - name: PUBLIC_URL
               value: https://agent.tkuipers.ca
+            # tool-use turns per session before it stops with max_turns_reached (default 200;
+            # 10000 is the highest the app accepts, so effectively no limit; the daily budget still applies)
+            - name: AGENT_MAX_TURNS
+              value: "10000"
             - name: AUTHELIA_VERIFY_URL
               value: http://authelia.authelia.svc.cluster.local/api/authz/auth-request
             - name: GRAFANA_URL
