@@ -60,3 +60,25 @@ in the agent (Settings > MCP servers), where Tyler chooses per persona whether i
 - Same gate as Gmail: listens on 127.0.0.1, the `gate` sidecar requires the token (secret
   `arr-mcp-gate`, generated here, pushed to 1Password "Arr MCP Gate", read by the agent). No ingress.
 - The agent registers it as the system server `arr` (`ARR_MCP_URL`) for Ops and the Assistant.
+
+## whatsapp-mcp (Tyler's WhatsApp)
+
+- [lharries/whatsapp-mcp](https://github.com/lharries/whatsapp-mcp) at a pinned commit plus our patches
+  (`homelab-agent/images/whatsapp-mcp`, built and pinned by its CI): current whatsmeow, the bridge's send
+  API on 127.0.0.1 only, no message text / contacts / numbers in the logs, only media downloaded from a
+  chat may be sent (never the store's databases), and a status server on :8081 (pairing QR page, metrics).
+- Two containers from one image share the `whatsapp-store` PVC (local-path: the pod stays on its first
+  node): the `bridge` is a linked device of Tyler's account (session keys in `whatsapp.db`, every message in
+  `messages.db`); the `mcp` server reads `messages.db` read-only and sends through the bridge.
+- Its own namespace `mcp-whatsapp` (privileged) for the firewall init container: only the bridge's user
+  gets out, to 80/443 on the internet, never to private ranges or our public IP. The MCP server and the
+  gate can't reach anything.
+- Same gate as Gmail: the gate sidecar (port 8090; the bridge has 8080) requires the token (secret
+  `whatsapp-mcp-gate`, generated here, pushed to 1Password "WhatsApp MCP Gate", read by the agent).
+- Pairing: https://whatsapp-mcp.tkuipers.ca/qr (only that path, behind Authelia) shows the current code;
+  scan it in WhatsApp > Settings > Linked devices > Link a device. The bridge restarts into pairing when
+  it's logged out (device removed on the phone, or the phone offline ~14 days); "WhatsApp bridge not
+  linked" alerts after an hour.
+- The agent attaches it to the Assistant as the system server `whatsapp` (`WHATSAPP_MCP_URL`). Sending
+  (`send_message`, `send_file`, `send_audio_message`) waits for Tyler's approval by default.
+- Dashboard: *WhatsApp MCP server* (Apps folder): linked / connected, messages stored, sends.

@@ -1,0 +1,333 @@
+# WhatsApp for the homelab agent: lharries/whatsapp-mcp (image built from
+# homelab-agent/images/whatsapp-mcp: upstream at a pinned commit plus our patches). Two
+# containers from one image share the store volume:
+#
+# - bridge: a linked device of Tyler's WhatsApp account (whatsmeow). Keeps the session keys
+#   (whatsapp.db) and every message (messages.db) on the PVC, sends through its REST API on
+#   127.0.0.1:8080, and serves :8081 (status Service port): /qr, the pairing QR code page (the
+#   only path the ingress exposes, behind Authelia), /metrics and /healthz.
+# - mcp: the Python MCP server (Streamable HTTP on 127.0.0.1:8000). Reads messages.db (mounted
+#   read-only) and asks the bridge to send; its send tools wait for Tyler's approval in the agent.
+#
+# Network: the firewall init container lets only the bridge's user (1001) out, to the internet
+# on 80/443 (WhatsApp's servers), never to private, link-local or CGNAT ranges or our own public
+# IP (agent.tkuipers.ca, resolved at start). The MCP server and the gate have no way out at all.
+# NET_ADMIN for the firewall is why this has its own privileged namespace; the long-running
+# containers drop every capability and run as non-root.
+#
+# Like the other MCP servers it has no auth of its own: the gate sidecar (the agent image,
+# MODE=mcpgate) requires the shared bearer token, generated here, pushed to 1Password
+# ("WhatsApp MCP Gate") and read back by the agent with its MCP secrets.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-whatsapp
+  labels:
+    # the firewall init container needs NET_ADMIN
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ghcr-credentials
+  namespace: mcp-whatsapp
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: onepassword-store
+    kind: ClusterSecretStore
+  target:
+    name: ghcr-secret
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: |
+          {
+            "auths": {
+              "ghcr.io": {
+                "username": "{{ .username }}",
+                "password": "{{ .token }}",
+                "auth": "{{ printf "%s:%s" .username .token | b64enc }}"
+              }
+            }
+          }
+  data:
+    - secretKey: username
+      remoteRef: {key: "GitHub Container Registry", property: username, conversionStrategy: Default, decodingStrategy: None, metadataPolicy: None}
+    - secretKey: token
+      remoteRef: {key: "GitHub Container Registry", property: token, conversionStrategy: Default, decodingStrategy: None, metadataPolicy: None}
+---
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: whatsapp-mcp-gate
+  namespace: mcp-whatsapp
+spec:
+  length: 48
+  digits: 8
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: whatsapp-mcp-gate
+  namespace: mcp-whatsapp
+spec:
+  refreshInterval: "0"  # generated once
+  target:
+    name: whatsapp-mcp-gate
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      data:
+        whatsapp-mcp-authorization: "Bearer {{ .password }}"
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: whatsapp-mcp-gate
+---
+# the agent (homelab-agent namespace) reads it from 1Password with its other MCP secrets
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: whatsapp-mcp-gate
+  namespace: mcp-whatsapp
+spec:
+  # short: the generated token can be rewritten right after creation, and the agent must get the final value
+  refreshInterval: 10m
+  deletionPolicy: None
+  updatePolicy: Replace
+  secretStoreRefs:
+    - kind: ClusterSecretStore
+      name: onepassword-store
+  selector:
+    secret:
+      name: whatsapp-mcp-gate
+  data:
+    - conversionStrategy: None
+      match:
+        secretKey: whatsapp-mcp-authorization
+        remoteRef:
+          remoteKey: WhatsApp MCP Gate
+          property: whatsapp-mcp-authorization
+---
+# session keys and messages (local-path, so the pod stays on the node that first ran it)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: whatsapp-store
+  namespace: mcp-whatsapp
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whatsapp-mcp
+  namespace: mcp-whatsapp
+  labels:
+    app: whatsapp-mcp
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # one linked device, one writer on the store
+  selector:
+    matchLabels:
+      app: whatsapp-mcp
+  template:
+    metadata:
+      labels:
+        app: whatsapp-mcp
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-secret
+      securityContext:
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Pod firewall (flannel can't enforce NetworkPolicies): only the bridge's user (1001)
+        # leaves the pod, on 80/443 to the internet but never to private ranges or our public IP.
+        # Replies to the gate's and Prometheus' connections are ESTABLISHED.
+        - name: firewall
+          image: ghcr.io/tkuipers/homelab-agent
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+              add: [NET_ADMIN, NET_RAW]
+          env:
+            - name: PUBLIC_NAME
+              value: agent.tkuipers.ca  # resolves to our public IP (dynamic DNS)
+          command:
+            - sh
+            - -ec
+            - |
+              public4=$( (getent ahostsv4 "$PUBLIC_NAME" | awk '{print $1}'; curl -4fsS -m 10 https://checkip.amazonaws.com || true) | sort -u)
+              public6=$(getent ahostsv6 "$PUBLIC_NAME" | awk '$1 !~ /^::ffff:/ {print $1}' | sort -u)
+              [ -n "$public4" ] || { echo "can't find our public IP; refusing to start without blocking it"; exit 1; }
+              iptables -A OUTPUT -o lo -j ACCEPT
+              iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+              for ns in $(awk '/^nameserver/ {print $2}' /etc/resolv.conf); do
+                iptables -A OUTPUT -m owner --uid-owner 1001 -d "$ns" -p udp --dport 53 -j ACCEPT
+                iptables -A OUTPUT -m owner --uid-owner 1001 -d "$ns" -p tcp --dport 53 -j ACCEPT
+              done
+              for net in 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4 $public4; do
+                iptables -A OUTPUT -d "$net" -j REJECT
+              done
+              iptables -A OUTPUT -m owner --uid-owner 1001 -p tcp -m multiport --dports 80,443 -j ACCEPT
+              iptables -A OUTPUT -j REJECT
+              ip6tables -A OUTPUT -o lo -j ACCEPT
+              ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+              for net in ::/128 ::ffff:0:0/96 64:ff9b::/96 fc00::/7 fe80::/10 ff00::/8 $public6; do
+                ip6tables -A OUTPUT -d "$net" -j REJECT
+              done
+              ip6tables -A OUTPUT -m owner --uid-owner 1001 -p tcp -m multiport --dports 80,443 -j ACCEPT
+              ip6tables -A OUTPUT -j REJECT
+              iptables -S OUTPUT
+              ip6tables -S OUTPUT
+      containers:
+        - name: bridge
+          image: ghcr.io/tkuipers/whatsapp-mcp
+          command: ["/app/whatsapp-bridge/whatsapp-bridge"]
+          workingDir: /app/whatsapp-bridge  # the store is ./store
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: status
+              containerPort: 8081
+          livenessProbe:
+            httpGet: {path: /healthz, port: status}
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: {path: /healthz, port: status}
+          volumeMounts:
+            - name: store
+              mountPath: /app/whatsapp-bridge/store
+            - name: bridge-tmp
+              mountPath: /tmp
+          resources:
+            requests: {cpu: 10m, memory: 64Mi}
+            limits: {memory: 512Mi}
+        - name: mcp
+          image: ghcr.io/tkuipers/whatsapp-mcp
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: store
+              mountPath: /app/whatsapp-bridge/store
+              readOnly: true
+            - name: mcp-tmp
+              mountPath: /tmp
+          resources:
+            requests: {cpu: 5m, memory: 64Mi}
+            limits: {memory: 256Mi}
+        - name: gate
+          image: ghcr.io/tkuipers/homelab-agent
+          securityContext:
+            runAsUser: 1002
+            runAsGroup: 1002
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: MODE
+              value: mcpgate
+            - name: GATE_PORT
+              value: "8090"  # the bridge's API has 127.0.0.1:8080
+            - name: GATE_UPSTREAM_PORT
+              value: "8000"
+            - name: GATE_OPEN_PATHS
+              value: ""  # every request needs the token
+            - name: GATE_AUTHORIZATION
+              valueFrom: {secretKeyRef: {name: whatsapp-mcp-gate, key: whatsapp-mcp-authorization}}
+          ports:
+            - name: http
+              containerPort: 8090
+          readinessProbe:
+            httpGet: {path: /gate/healthz, port: http}
+          resources:
+            requests: {cpu: 5m, memory: 48Mi}
+            limits: {memory: 128Mi}
+      volumes:
+        - name: store
+          persistentVolumeClaim:
+            claimName: whatsapp-store
+        - name: bridge-tmp
+          emptyDir: {sizeLimit: 256Mi}
+        - name: mcp-tmp
+          emptyDir: {sizeLimit: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whatsapp-mcp
+  namespace: mcp-whatsapp
+  labels:
+    app: whatsapp-mcp
+spec:
+  selector:
+    app: whatsapp-mcp
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: status
+      port: 8081
+      targetPort: status
+---
+# Only the pairing QR code page, and only for Tyler's browser (Authelia)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: whatsapp-mcp
+  namespace: mcp-whatsapp
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/auth-url: http://authelia.authelia.svc.cluster.local/api/authz/auth-request
+    nginx.ingress.kubernetes.io/auth-signin: https://auth.tkuipers.ca/?rd=https://$host$escaped_request_uri
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts: [whatsapp-mcp.tkuipers.ca]
+    secretName: whatsapp-mcp-tkuipers-ca-tls
+  rules:
+  - host: whatsapp-mcp.tkuipers.ca
+    http:
+      paths:
+      - path: /qr
+        pathType: Exact
+        backend:
+          service:
+            name: whatsapp-mcp
+            port:
+              name: status
