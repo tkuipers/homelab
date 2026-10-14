@@ -2693,6 +2693,162 @@ data:
           description: 'About 90 entities are unavailable all the time (Dreame options the vacuum lacks, iPhone sensors, backup sensors before a backup), so this compares with the day''s median (startup dips don''t count): a jump means an integration or hub went down (Matter server, a cloud integration, Wi-Fi). Home Assistant dashboard > Unavailable entities.'
           dashboard: https://logs.tkuipers.ca/d/svc-homeassistant-homeassistant
         isPaused: false
+      - uid: hl-adguard-protection-off
+        title: AdGuard filtering turned off
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max(adguard_protection_enabled)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 2h
+        labels:
+          severity: warning
+          namespace: adguard-home
+        annotations:
+          summary: AdGuard Home protection has been off for 2h
+          description: Someone paused filtering in the AdGuard UI (it can be paused for a while on purpose); ads/trackers resolve again until it's back on.
+          dashboard: https://logs.tkuipers.ca/d/svc-adguard-home-adguard-home
+        isPaused: false
+      - uid: hl-adguard-slow
+        title: LAN DNS slow
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max(adguard_avg_processing_time_seconds)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0.5
+        noDataState: OK
+        execErrState: Error
+        for: 30m
+        labels:
+          severity: warning
+          namespace: adguard-home
+        annotations:
+          summary: AdGuard takes {{ $values.B }}s per query on average
+          description: Upstreams slow or failing (AdGuard dashboard > Upstream response time, 'exchange failed' in its logs). Every device on the LAN feels this.
+          dashboard: https://logs.tkuipers.ca/d/svc-adguard-home-adguard-home
+        isPaused: false
+      - uid: hl-adguard-exporter-failing
+        title: AdGuard stats not collected
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum(increase(adguard_scrape_errors_total[30m]))
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 30m
+        labels:
+          severity: warning
+          namespace: observability
+        annotations:
+          summary: adguard-exporter cannot read AdGuard's API
+          description: Usually the credentials (1Password 'Observability Credentials' adguard-username/-password) were changed in AdGuard. adguard-exporter logs.
+          dashboard: https://logs.tkuipers.ca/d/svc-adguard-home-adguard-home
+        isPaused: false
       - uid: hl-logs-dropped
         title: Logs are being dropped
         condition: C

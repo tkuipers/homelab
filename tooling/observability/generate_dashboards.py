@@ -698,6 +698,24 @@ def homeassistant_panels(b: Board, s: Svc):
 
 
 def adguard_panels(b: Board, s: Svc):
+    # query stats from adguard-exporter (observability/exporters/adguard-exporter.yaml); AdGuard
+    # reports them over its statistics window (24h), so these are gauges, not counters
+    b.stat("Protection", 'max(adguard_protection_enabled)',
+           mappings=[{"type": "value", "options": {"0": {"text": "OFF", "color": "red"}, "1": {"text": "on", "color": "green"}}}],
+           desc="filtering on/off (the AdGuard UI toggle)")
+    b.stat("Queries (24h)", 'max(adguard_queries)')
+    b.stat("Blocked (24h)", 'max(adguard_queries_blocked) / max(adguard_queries)', unit="percentunit", decimals=1)
+    b.stat("Avg processing time", 'max(adguard_avg_processing_time_seconds)', unit="s",
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.1}, {"color": "red", "value": 0.5}])
+    b.ts("Upstream response time", [('max by (upstream) (adguard_top_upstreams_avg_response_time_seconds)', "{{upstream}}")], unit="s", w=12)
+    b.ts("Queries / blocked (24h window)", [('max(adguard_queries)', "queries"), ('max(adguard_queries_blocked)', "blocked")], w=12)
+    b.table("Top clients (24h)", [('topk(10, max by (name) (adguard_top_clients))', "")], w=8,
+            transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "queries"}}}],
+            desc="10.244.0.1 / 10.244.1.1 = pods in the cluster (node gateway)")
+    b.table("Top blocked domains (24h)", [('topk(10, max by (domain) (adguard_top_blocked_domains))', "")], w=8,
+            transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "queries"}}}])
+    b.table("Top queried domains (24h)", [('topk(10, max by (domain) (adguard_top_queried_domains))', "")], w=8,
+            transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "queries"}}}])
     b.ts("Probes: LAN DNS (10.0.0.71:53) and web UI", [('min by (instance) (probe_success{probe="internal", target_namespace="adguard-home"})', "{{instance}}")],
          desc="1 = up, 0 = down. dns_a = resolves github.com through the LoadBalancer IP the LAN uses; 0 = LAN DNS is broken")
     b.ts("Upstream failures by upstream", [(f'sum by (upstream) (count_over_time({loki_sel(s)} |= "exchange failed" | regexp "upstream=(?P<upstream>[^ ]+)" [$__auto])) or vector(0)', "{{upstream}}")],
