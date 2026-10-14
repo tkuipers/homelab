@@ -1,0 +1,94 @@
+# AdGuard Home query stats (queries, blocked share, upstream latency, top
+# clients/domains) via its API. Credentials: 1Password "Observability
+# Credentials" adguard-username / adguard-password.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: adguard-exporter
+  namespace: observability
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: onepassword-store
+    kind: ClusterSecretStore
+  target:
+    name: adguard-exporter
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    - secretKey: username
+      remoteRef:
+        key: "Observability Credentials"
+        property: adguard-username
+        conversionStrategy: Default
+        decodingStrategy: None
+        metadataPolicy: None
+    - secretKey: password
+      remoteRef:
+        key: "Observability Credentials"
+        property: adguard-password
+        conversionStrategy: Default
+        decodingStrategy: None
+        metadataPolicy: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adguard-exporter
+  namespace: observability
+  labels:
+    app: adguard-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adguard-exporter
+  template:
+    metadata:
+      labels:
+        app: adguard-exporter
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: adguard-exporter
+          image: ghcr.io/henrywhitaker3/adguard-exporter:v1.2.1
+          env:
+            - name: ADGUARD_SERVERS
+              value: http://adguard-home-web.adguard-home.svc
+            - name: ADGUARD_USERNAMES
+              valueFrom: {secretKeyRef: {name: adguard-exporter, key: username}}
+            - name: ADGUARD_PASSWORDS
+              valueFrom: {secretKeyRef: {name: adguard-exporter, key: password}}
+            - name: INTERVAL
+              value: 30s
+          ports:
+            - name: metrics
+              containerPort: 9618
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: adguard
+  namespace: observability
+spec:
+  selector:
+    matchLabels:
+      app: adguard-exporter
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
