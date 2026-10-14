@@ -2849,6 +2849,110 @@ data:
           description: Usually the credentials (1Password 'Observability Credentials' adguard-username/-password) were changed in AdGuard. adguard-exporter logs.
           dashboard: https://logs.tkuipers.ca/d/svc-adguard-home-adguard-home
         isPaused: false
+      - uid: hl-whatsapp-not-linked
+        title: WhatsApp bridge not linked
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max(whatsapp_bridge_linked)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 1h
+        labels:
+          severity: warning
+          namespace: mcp-whatsapp
+        annotations:
+          summary: The agent's WhatsApp bridge isn't linked to Tyler's account
+          description: Tyler has to scan the code at https://whatsapp-mcp.tkuipers.ca/qr (WhatsApp > Settings > Linked devices > Link a device). It unlinks when the device is removed on the phone, or after the phone has been offline for about 14 days.
+          dashboard: https://logs.tkuipers.ca/d/svc-mcp-whatsapp-whatsapp-mcp
+        isPaused: false
+      - uid: hl-whatsapp-disconnected
+        title: WhatsApp bridge disconnected
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max(whatsapp_bridge_linked) * (1 - max(whatsapp_bridge_connected))
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+          namespace: mcp-whatsapp
+        annotations:
+          summary: The WhatsApp bridge is linked but hasn't been connected for 15m
+          description: whatsmeow reconnects by itself; if it doesn't, the bridge's logs say why (WhatsApp rejecting an outdated client version -> bump whatsmeow in homelab-agent/images/whatsapp-mcp/patches; network -> the pod firewall).
+          dashboard: https://logs.tkuipers.ca/d/svc-mcp-whatsapp-whatsapp-mcp
+        isPaused: false
       - uid: hl-logs-dropped
         title: Logs are being dropped
         condition: C

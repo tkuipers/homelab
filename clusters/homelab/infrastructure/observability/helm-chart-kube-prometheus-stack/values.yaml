@@ -777,6 +777,13 @@ prometheus-blackbox-exporter:
         probe: internal
         target_namespace: homelab-agent
         target_service: homelab-agent
+    - name: int-mcp-whatsapp-whatsapp-mcp
+      url: http://whatsapp-mcp.mcp-whatsapp.svc:8081/healthz
+      module: http_2xx
+      additionalMetricsRelabels:
+        probe: internal
+        target_namespace: mcp-whatsapp
+        target_service: whatsapp-mcp
     - name: int-homelab-agent-homelab-agent-relay
       url: http://homelab-agent-relay.homelab-agent.svc/healthz
       module: http_2xx

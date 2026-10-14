@@ -111,6 +111,12 @@ configMapGenerator:
     options:
       annotations:
         grafana_folder: "Apps"
+  - name: dash-apps-svc-mcp-whatsapp-whatsapp-mcp
+    files:
+      - apps--svc-mcp-whatsapp-whatsapp-mcp.json
+    options:
+      annotations:
+        grafana_folder: "Apps"
   - name: dash-apps-svc-homepage-homepage
     files:
       - apps--svc-homepage-homepage.json

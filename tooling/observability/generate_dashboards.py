@@ -108,7 +108,7 @@ SDK_TRACED = {
      ("argocd", "argocd-server"), ("argocd", "argocd-repo-server")}
 # ... and every Deployment in the namespaces Beyla instruments
 # (helm-chart-beyla/values.yaml discovery.instrument).
-BEYLA_NAMESPACES = {"mediacenter", "homeassistant", "anki", "authelia"}
+BEYLA_NAMESPACES = {"mediacenter", "homeassistant", "anki", "authelia", "mcp-whatsapp"}
 NOT_TRACED = {("homeassistant", "matter-server")}  # websocket only, nothing Beyla traces
 
 
@@ -722,6 +722,25 @@ def adguard_panels(b: Board, s: Svc):
          ds=LOKI, bars=True, desc="queries AdGuard could not forward; with parallel upstreams a single failing upstream is harmless, all failing = DNS outage")
 
 
+def whatsapp_panels(b: Board, s: Svc):
+    # the bridge's own /metrics (status port 8081; homelab-agent/images/whatsapp-mcp patches)
+    yes_no = [{"type": "value", "options": {"0": {"text": "NO", "color": "red"}, "1": {"text": "YES", "color": "green"}}}]
+    green_if_1 = [{"color": "red", "value": None}, {"color": "green", "value": 1}]
+    b.row("WhatsApp")
+    b.stat("Linked", "max(whatsapp_bridge_linked)", mappings=yes_no, thresholds=green_if_1,
+           desc="A linked device of Tyler's WhatsApp account. If NO: scan the code at https://whatsapp-mcp.tkuipers.ca/qr")
+    b.stat("Connected", "max(whatsapp_bridge_connected)", mappings=yes_no, thresholds=green_if_1)
+    b.stat("QR code waiting", "max(whatsapp_bridge_pairing)", mappings=yes_no, thresholds=RED_IF_ABOVE_0,
+           desc="Pairing: https://whatsapp-mcp.tkuipers.ca/qr (WhatsApp > Settings > Linked devices > Link a device)")
+    b.stat("Messages stored (24h)", "sum(increase(whatsapp_bridge_messages_stored_total[24h]))", decimals=0,
+           desc="Live messages, sent or received, written to the store (history sync not counted)")
+    b.stat("Sends (24h)", 'sum(increase(whatsapp_bridge_sends_total{result="ok"}[24h]))', decimals=0)
+    b.stat("Failed sends (24h)", 'sum(increase(whatsapp_bridge_sends_total{result="error"}[24h]))', decimals=0, thresholds=RED_IF_ABOVE_0)
+    b.timeline("Linked / connected", [("max(whatsapp_bridge_linked)", "linked"), ("max(whatsapp_bridge_connected)", "connected")], h=5)
+    b.ts("Messages stored", [("sum(increase(whatsapp_bridge_messages_stored_total[$__rate_interval]))", "messages")], w=12, bars=True)
+    b.ts("Sends by result", [("sum by (result) (increase(whatsapp_bridge_sends_total[$__rate_interval]))", "{{result}}")], w=12, bars=True)
+
+
 def agent_panels(b: Board, s: Svc):
     yes_no = [{"type": "value", "options": {"0": {"text": "NO", "color": "red"}, "1": {"text": "YES", "color": "green"}}}]
     b.row("Agent health")
@@ -909,6 +928,8 @@ CATALOG: List[Svc] = [
     S("homelab-agent", "homelab-agent-relay", "Homelab agent SMS relay", probe="homelab-agent-relay", folder="Apps", quiet=True),
     S("homelab-agent", "homelab-agent-postgres", "Homelab agent Postgres", folder="Apps", extras=[postgres_panels]),
     S("homelab-agent", "homelab-agent-postgres-backup", "Homelab agent Postgres backup (CronJob)", kind="cronjob", folder="Apps"),
+    S("mcp-whatsapp", "whatsapp-mcp", "WhatsApp MCP server", ingress=["whatsapp-mcp"], probe="whatsapp-mcp", folder="Apps", extras=[whatsapp_panels],
+      description="The agent's WhatsApp tools: a linked device of Tyler's account (bridge) + the MCP server. Pairing: https://whatsapp-mcp.tkuipers.ca/qr"),
     S("homepage", "homepage", "Homepage (tkuipers.ca)", ingress=["homepage", "resume-proxy"], probe="homepage", access_logs=True, folder="Apps",
       extras=[browser_panels]),
 

@@ -218,3 +218,19 @@ spec:
         credentials:
           name: hass-prometheus
           key: token
+---
+# the agent's WhatsApp bridge: linked / connected, messages stored, sends
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: whatsapp-mcp
+  namespace: observability
+spec:
+  namespaceSelector:
+    matchNames: [mcp-whatsapp]
+  selector:
+    matchLabels:
+      app: whatsapp-mcp
+  endpoints:
+    - port: status
+      interval: 60s

@@ -51,6 +51,7 @@ beyla:
           - k8s_namespace: mcp
           - k8s_namespace: mcp-arr
           - k8s_namespace: mcp-browser
+          - k8s_namespace: mcp-whatsapp
       # Group unknown URL paths (/api/v3/series/123 -> /api/v3/series/*) so
       # span names stay low-cardinality for span metrics.
       routes:
