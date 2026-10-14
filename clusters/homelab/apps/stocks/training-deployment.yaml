@@ -55,6 +55,12 @@ spec:
                   key: minio-root-password
             - name: MINIO_MODELS_BUCKET
               value: models
+            # Records labeled per nightly run (app default 1000). ~280 decisions
+            # arrive per day but labeling runs on weekdays only, leaving a backlog
+            # of ~8.9k unlabeled records (2026-10-14). Same 2s yfinance spacing,
+            # so this only lengthens the labeler (~30 min per 1000).
+            - name: LABEL_BATCH_LIMIT
+              value: "3000"
           readinessProbe:
             httpGet:
               path: /healthz
