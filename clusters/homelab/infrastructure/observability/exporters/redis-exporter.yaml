@@ -27,6 +27,13 @@ spec:
       containers:
         - name: redis-exporter
           image: oliver006/redis_exporter:v1.93.0
+          env:
+            # no default target: /metrics only serves the exporter's own
+            # metrics, Redis instances are scraped via /scrape?target=
+            # (otherwise it tries redis://localhost:6379 and logs an error
+            # every scrape)
+            - name: REDIS_ADDR
+              value: ""
           ports:
             - name: metrics
               containerPort: 9121
