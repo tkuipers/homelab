@@ -8,6 +8,10 @@ loki:
 
   loki:
     auth_enabled: false
+    # no usage reports to stats.grafana.org (AdGuard blocks it; the retries were
+    # its top blocked domain, ~7k lookups a day)
+    analytics:
+      reporting_enabled: false
     # hostPath volumes are root owned; fsGroup does not apply to hostPath.
     podSecurityContext:
       runAsUser: 0
