@@ -40,7 +40,9 @@ tempo:
         cpu: 100m
         memory: 256Mi
       limits:
-        memory: 2Gi
+        # hourly peaks are 1.5-1.85Gi (metrics-generator local-blocks + flushes);
+        # 2Gi left too little room and it was OOM-killed on 2026-10-16
+        memory: 4Gi
 
   # hostPath volume is root owned; fsGroup does not apply to hostPath.
   securityContext:
