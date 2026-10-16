@@ -35,6 +35,10 @@ tempo:
             endpoint: "0.0.0.0:4317"
           http:
             endpoint: "0.0.0.0:4318"
+    # Soft limit (~85% of the 4Gi limit): the Go GC works harder before the cgroup OOM.
+    extraEnv:
+      - name: GOMEMLIMIT
+        value: 3400MiB
     resources:
       requests:
         cpu: 100m
