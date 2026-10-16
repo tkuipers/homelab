@@ -2078,7 +2078,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: sum by (stream_name, consumer_name) (increase(jetstream_consumer_num_redelivered[30m]))
+            expr: max by (stream_name, consumer_name) (jetstream_consumer_num_redelivered)
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -2107,16 +2107,16 @@ data:
             - evaluator:
                 type: gt
                 params:
-                - 20
+                - 0
         noDataState: OK
         execErrState: Error
-        for: 0s
+        for: 15m
         labels:
           severity: warning
           namespace: stocks
         annotations:
-          summary: '{{ $labels.consumer_name }} keeps failing to ack messages on {{ $labels.stream_name }}'
-          description: ''
+          summary: '{{ $labels.consumer_name }} keeps failing to ack messages on {{ $labels.stream_name }} ({{ $values.B }} redelivered, unacked)'
+          description: 'Redelivered messages have stayed unacked for 15m: a message the consumer keeps failing on, or a consumer too slow for ack_wait (30s). Check the owning service''s logs.'
           dashboard: https://logs.tkuipers.ca/dashboards?tag=stocks
         isPaused: false
       - uid: hl-node-disk

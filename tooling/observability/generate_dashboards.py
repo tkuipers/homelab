@@ -1168,15 +1168,15 @@ def stocks_pipeline(b: Board):
            desc="'decision.predicted' events from the decision service")
     b.stat("Consumer backlog (max)", 'max(jetstream_consumer_num_pending)', thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 50}, {"color": "red", "value": 500}],
            desc="largest number of messages waiting for a JetStream consumer")
-    b.stat("Redeliveries (1h)", 'sum(increase(jetstream_consumer_num_redelivered[1h]))', thresholds=ORANGE_RED, decimals=0,
-           desc="messages delivered more than once - consumers failing to ack")
+    b.stat("Redelivered, unacked (max 1h)", 'max_over_time(sum(jetstream_consumer_num_redelivered)[1h:])', thresholds=ORANGE_RED, decimals=0,
+           desc="peak number of messages redelivered and not yet acked - consumers failing to ack or slower than ack_wait")
     b.stat("ERROR events (1h)", 'sum(count_over_time({k8s_namespace_name="stocks"} | detected_level=~"error|fatal|critical" [1h])) or (sum(count_over_time({k8s_namespace_name="stocks"} [1h])) * 0)',
            ds=LOKI, thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 1}, {"color": "red", "value": 20}])
     b.stat("Postgres up", 'max(pg_up{namespace="stocks"})', mappings=UPDOWN, thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}])
     b.ts("JetStream consumer backlog", [('max by (stream_name, consumer_name) (jetstream_consumer_num_pending)', "{{stream_name}} -> {{consumer_name}}")], w=12)
     b.ts("Messages published per stream", [('sum by (stream_name) (increase(jetstream_stream_last_seq[$__rate_interval]))', "{{stream_name}}")], bars=True, stack=True, w=12)
     b.ts("Ack pending / redelivered", [('sum by (consumer_name) (jetstream_consumer_num_ack_pending)', "ack pending {{consumer_name}}"),
-                                        ('sum by (consumer_name) (increase(jetstream_consumer_num_redelivered[$__rate_interval]))', "redelivered {{consumer_name}}")], w=12)
+                                        ('sum by (consumer_name) (jetstream_consumer_num_redelivered)', "redelivered {{consumer_name}}")], w=12)
     b.ts("Business events", [('sum by (service_name) (count_over_time({k8s_namespace_name="stocks", service_name=~"ingestion|decision|orchestrator|paper-filler|audit-consumer|training"} | log_format="json" [$__auto]))', "{{service_name}}")],
          ds=LOKI, bars=True, stack=True, w=12, desc="structured (JSON) events per service = real work, not health checks")
 

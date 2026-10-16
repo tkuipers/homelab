@@ -264,7 +264,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "messages delivered more than once - consumers failing to ack",
+   "description": "peak number of messages redelivered and not yet acked - consumers failing to ack or slower than ack_wait",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -319,14 +319,14 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum(increase(jetstream_consumer_num_redelivered[1h]))",
+     "expr": "max_over_time(sum(jetstream_consumer_num_redelivered)[1h:])",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
      "refId": "A"
     }
    ],
-   "title": "Redeliveries (1h)",
+   "title": "Redelivered, unacked (max 1h)",
    "type": "stat"
   },
   {
@@ -651,7 +651,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum by (consumer_name) (increase(jetstream_consumer_num_redelivered[$__rate_interval]))",
+     "expr": "sum by (consumer_name) (jetstream_consumer_num_redelivered)",
      "instant": false,
      "legendFormat": "redelivered {{consumer_name}}",
      "range": true,

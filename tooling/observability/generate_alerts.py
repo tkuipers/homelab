@@ -277,9 +277,13 @@ HOMELAB = [
          'max by (stream_name, consumer_name) (jetstream_consumer_num_pending)', "gt", 500, for_="30m", static_ns="stocks",
          summary="{{ $labels.consumer_name }} on stream {{ $labels.stream_name }} has {{ $values.B }} unprocessed messages",
          description="The consumer is down or stuck - check the service that owns it (stocks overview > Pipeline activity)."),
+    # num_redelivered is a gauge (messages redelivered and not yet acked), not a
+    # counter: increase() over it overcounts a backlog that drains and misses a
+    # poison message stuck at 1. Alert when redelivered messages linger instead.
     rule("hl-jetstream-redeliveries", "NATS JetStream redeliveries",
-         'sum by (stream_name, consumer_name) (increase(jetstream_consumer_num_redelivered[30m]))', "gt", 20, for_="0s", static_ns="stocks",
-         summary="{{ $labels.consumer_name }} keeps failing to ack messages on {{ $labels.stream_name }}"),
+         'max by (stream_name, consumer_name) (jetstream_consumer_num_redelivered)', "gt", 0, for_="15m", static_ns="stocks",
+         summary="{{ $labels.consumer_name }} keeps failing to ack messages on {{ $labels.stream_name }} ({{ $values.B }} redelivered, unacked)",
+         description="Redelivered messages have stayed unacked for 15m: a message the consumer keeps failing on, or a consumer too slow for ack_wait (30s). Check the owning service's logs."),
     rule("hl-node-disk", "Node filesystem almost full",
          'max by (instance, mountpoint) (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"})',
          "gt", 0.85, for_="15m", severity="critical", dashboard=svc_uid("observability", "kps-prometheus-node-exporter"), static_ns="kube-system",
