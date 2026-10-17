@@ -100,7 +100,8 @@ folder from annotation `grafana_folder`). Hand edits in the UI are not saved.
   `namespace` + `service` labels and a `dashboard` annotation (the service
   dashboard, or the namespace's dashboards). Besides "is it up" (probes,
   replicas, crash loops) there are "is it failing" rules: *Error log spike*
-  (sudden change vs yesterday) and *Errors logged steadily* (>20 errors/h for
+  (sudden change vs yesterday; ingress access-log 5xx lines are left out, the
+  *Ingress 5xx ratio* rule covers those per ingress) and *Errors logged steadily* (>20 errors/h for
   2h - catches things that are broken all the time), plus functional ones
   (stocks pipeline, JetStream, VPN tunnel, *arr health, backups via CronJob
   rules). Probe rules alert on *no data* too (blackbox exporter gone).

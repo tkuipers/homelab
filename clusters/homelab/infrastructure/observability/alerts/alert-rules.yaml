@@ -920,7 +920,7 @@ data:
           datasourceUid: loki
           model:
             refId: A
-            expr: (sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [10m])) > 50) unless on (k8s_namespace_name, service_name) (3 * sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [10m] offset 1d)) >= sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" [10m])))
+            expr: (sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!="access_nginx" [10m])) > 50) unless on (k8s_namespace_name, service_name) (3 * sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!="access_nginx" [10m] offset 1d)) >= sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!="access_nginx" [10m])))
             queryType: instant
             intervalMs: 60000
             maxDataPoints: 43200
@@ -959,7 +959,7 @@ data:
           service: '{{ $$labels.service_name }}'
         annotations:
           summary: '{{ $labels.k8s_namespace_name }}/{{ $labels.service_name }} logged {{ $values.B }} errors in 10m (>3x the same time yesterday)'
-          description: A sudden change. Steady failures are caught by 'Errors logged steadily'. Open the service dashboard > Logs and filter level=error.
+          description: A sudden change. Steady failures are caught by 'Errors logged steadily'. Ingress access-log 5xx lines are left out (one line per failed request, so a 1-minute backend restart behind a polling UI is hundreds of lines; 'Ingress 5xx ratio high' covers them per ingress). Open the service dashboard > Logs and filter level=error.
           dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.k8s_namespace_name }}
         isPaused: false
       - uid: hl-error-log-sustained
