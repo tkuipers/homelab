@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: research
+  namespace: stocks-research
+  labels:
+    app: stocks-research
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: stocks-research
+  template:
+    metadata:
+      labels:
+        app: stocks-research
+    spec:
+      # same node as the training service; it works only inside its window,
+      # when the nightly bake-off and the GPU training are done
+      nodeSelector:
+        kubernetes.io/hostname: omen-worker1
+      imagePullSecrets:
+        - name: ghcr-secret
+      # no Kubernetes API access and no production credentials of any kind
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: research
+          # renovate: datasource=docker
+          image: ghcr.io/tkuipers/stock-guesser-training:latest
+          imagePullPolicy: Always
+          command:
+            - uvicorn
+            - stock_guesser_training.research.app:app
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8090"
+          ports:
+            - containerPort: 8090
+              name: http
+          env:
+            # read-only production inputs: GET /v1/xsec/universe and /v1/xsec/champion
+            - name: TRAINING_URL
+              value: http://training.stocks.svc:8085
+            - name: RESEARCH_DATA_DIR
+              value: /data
+            # after the nightly bake-off (22:00 UTC, ~5h) and before the
+            # 09:35-ET xsec run (13:35 UTC in summer, 14:35 in winter)
+            - name: RESEARCH_WINDOW_UTC
+              value: "07:00-13:00"
+            - name: PROMOTION_WINDOW_UTC
+              value: "07:00-12:00"
+            - name: OMP_NUM_THREADS
+              value: "4"
+            - name: HOME
+              value: /tmp
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8090
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            # model fits keep the CPU busy; only a server stuck for 5 min is dead
+            timeoutSeconds: 10
+            failureThreshold: 10
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: 500m
+            limits:
+              memory: 8Gi
+              cpu: "4"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: research-data
+        - name: tmp
+          emptyDir: {}

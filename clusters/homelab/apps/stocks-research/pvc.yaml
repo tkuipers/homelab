@@ -1,0 +1,14 @@
+# Price-history snapshots (last 3) and the experiment ledger (SQLite). Losing it
+# loses the research history (and resets the trial count the gate uses), not
+# anything production needs.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: research-data
+  namespace: stocks-research
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
