@@ -12,6 +12,8 @@ metadata:
     # live transcripts are server-sent events
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    # image uploads (the agent takes up to 10 MB; nginx's default is 1 MB)
+    nginx.ingress.kubernetes.io/proxy-body-size: "12m"
 spec:
   ingressClassName: nginx
   tls:
