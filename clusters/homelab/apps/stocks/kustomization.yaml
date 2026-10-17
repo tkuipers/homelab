@@ -39,3 +39,13 @@ resources:
   - paper-filler-service.yaml
   - training-deployment.yaml
   - training-service.yaml
+# Feature 19/20: the cross-sectional model's config and trading policy (the
+# "champion"). Training fits with it, decision trades with it; the overnight
+# research service (apps/stocks-research) proposes changes, and only a
+# candidate its promotion gate approves is written here. The name gets a
+# content hash, so a change rolls both deployments.
+configMapGenerator:
+  - name: xsec-champion
+    namespace: stocks
+    envs:
+      - xsec-champion.env

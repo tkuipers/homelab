@@ -61,6 +61,10 @@ spec:
             # so this only lengthens the labeler (~30 min per 1000).
             - name: LABEL_BATCH_LIMIT
               value: "3000"
+          # XSEC_MODEL_CONFIG / XSEC_HALF_LIFE / XSEC_ENTER / XSEC_EXIT
+          envFrom:
+            - configMapRef:
+                name: xsec-champion
           readinessProbe:
             httpGet:
               path: /healthz

@@ -63,6 +63,10 @@ spec:
             # "legacy" puts the old engine back in charge (xsec then shadows).
             - name: ORDER_SOURCE
               value: xsec
+          # XSEC_MODEL_CONFIG / XSEC_HALF_LIFE / XSEC_ENTER / XSEC_EXIT
+          envFrom:
+            - configMapRef:
+                name: xsec-champion
           readinessProbe:
             httpGet:
               path: /healthz
