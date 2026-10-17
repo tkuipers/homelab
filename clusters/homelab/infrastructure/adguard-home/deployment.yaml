@@ -21,7 +21,7 @@ spec:
           # upstream DNS (10.0.0.71), so a forced re-pull after an outage
           # deadlocks — no DNS means no image pull means no DNS.
           # A cached image lets AdGuard restart with no network dependency.
-          image: adguard/adguardhome:v0.107.78
+          image: adguard/adguardhome:v0.107.79
           imagePullPolicy: IfNotPresent
           ports:
             - name: dns-tcp
