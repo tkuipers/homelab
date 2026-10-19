@@ -225,6 +225,9 @@ spec:
               valueFrom: {secretKeyRef: {name: homelab-agent, key: sms-allowed-numbers, optional: true}}
             - name: TYPESAFE_API_KEY
               valueFrom: {secretKeyRef: {name: homelab-agent, key: typesafe-api-key, optional: true}}
+            # image generation (fal.ai) for the study companion
+            - name: FAL_KEY
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: fal-key, optional: true}}
           volumeMounts:
             - name: data
               mountPath: /data
