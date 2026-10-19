@@ -228,6 +228,8 @@ spec:
             # image generation (fal.ai) for the study companion
             - name: FAL_KEY
               valueFrom: {secretKeyRef: {name: homelab-agent, key: fal-key, optional: true}}
+            - name: RUNPOD_KEY
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: runpod-key, optional: true}}
           volumeMounts:
             - name: data
               mountPath: /data
