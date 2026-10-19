@@ -230,6 +230,9 @@ spec:
               valueFrom: {secretKeyRef: {name: homelab-agent, key: fal-key, optional: true}}
             - name: RUNPOD_KEY
               valueFrom: {secretKeyRef: {name: homelab-agent, key: runpod-key, optional: true}}
+            # personas on open models (Hugging Face Inference Providers / Inference Endpoints)
+            - name: HF_TOKEN
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: huggingface-token, optional: true}}
           volumeMounts:
             - name: data
               mountPath: /data
