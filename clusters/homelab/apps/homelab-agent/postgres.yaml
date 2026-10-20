@@ -1,6 +1,43 @@
 # The agent's database: conversations, transcripts, personas, notes, settings.
 # The password is generated once by External Secrets (nobody needs to know it)
 # and kept as long as the Secret exists; backups in postgres-backup-cronjob.yaml.
+#
+# Two roles: "agent" (owner, used for migrations/writes) and "agent_reader"
+# (read-only, used for reads and queries). The reader can SELECT on all tables
+# in the public schema but cannot INSERT, UPDATE, DELETE or DDL.
+# A NetworkPolicy restricts Postgres access to the agent pod only.
+
+# Reader password (same pattern: generated once, never rotated)
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: homelab-agent-postgres-reader
+  namespace: homelab-agent
+spec:
+  length: 32
+  digits: 6
+  symbols: 0
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: homelab-agent-postgres-reader
+  namespace: homelab-agent
+spec:
+  refreshInterval: "0"
+  target:
+    name: homelab-agent-postgres-reader
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: homelab-agent-postgres-reader
+---
 apiVersion: generators.external-secrets.io/v1alpha1
 kind: Password
 metadata:
@@ -52,6 +89,49 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
+      # Postgres runs as non-root; the entrypoint handles UID remapping
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Create the read-only role after Postgres is ready
+        - name: create-reader
+          image: postgres:16
+          command:
+            - sh
+            - -ec
+            - |
+              until pg_isready -h localhost -U agent -d agent; do sleep 1; done
+              psql -v ON_ERROR_STOP=1 -U agent -d agent <<'SQL'
+              DO $$
+              BEGIN
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'agent_reader') THEN
+                  CREATE ROLE agent_reader LOGIN PASSWORD :'READER_PASS';
+                END IF;
+              END
+              $$;
+              GRANT USAGE ON SCHEMA public TO agent_reader;
+              GRANT SELECT ON ALL TABLES IN SCHEMA public TO agent_reader;
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO agent_reader;
+              SQL
+          env:
+            - name: PGHOST
+              value: localhost
+            - name: PGUSER
+              value: agent
+            - name: PGDATABASE
+              value: agent
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: homelab-agent-postgres
+                  key: password
+            - name: READER_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: homelab-agent-postgres-reader
+                  key: password
       containers:
         - name: postgres
           image: postgres:16
@@ -131,6 +211,31 @@ spec:
     - name: postgres
       port: 5432
       targetPort: postgres
+---
+# NetworkPolicy: only the agent pod and the backup job may reach Postgres
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: homelab-agent-postgres
+  namespace: homelab-agent
+spec:
+  podSelector:
+    matchLabels:
+      app: homelab-agent-postgres
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: homelab-agent
+      ports:
+        - port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              app: homelab-agent-postgres-backup
+      ports:
+        - port: 5432
 ---
 apiVersion: batch/v1
 kind: CronJob

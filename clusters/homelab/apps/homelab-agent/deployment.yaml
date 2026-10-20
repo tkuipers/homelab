@@ -179,6 +179,11 @@ spec:
               value: agent
             - name: PGPASSWORD
               valueFrom: {secretKeyRef: {name: homelab-agent-postgres, key: password}}
+            # read-only connection for queries (the agent process uses the writer for writes)
+            - name: PGREADER_USER
+              value: agent_reader
+            - name: PGREADER_PASSWORD
+              valueFrom: {secretKeyRef: {name: homelab-agent-postgres-reader, key: password}}
             # everything leaves through the egress sidecar; in-cluster traffic goes direct
             - name: HTTPS_PROXY
               value: http://127.0.0.1:3128
