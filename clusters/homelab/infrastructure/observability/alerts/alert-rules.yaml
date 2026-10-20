@@ -3587,6 +3587,112 @@ data:
           description: 'All slots busy: see https://agent.tkuipers.ca (Working now).'
           dashboard: https://logs.tkuipers.ca/dashboards?tag=homelab-agent
         isPaused: false
+      - uid: agent-professor-grading-failing
+        title: Study grading checks failing
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 1800
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum(increase(homelab_agent_professor_claude_total{purpose=~"accuracy|typed",ok="false"}[30m])) or vector(0)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+          namespace: homelab-agent
+          notify: agent-self
+        annotations:
+          summary: Claude's accuracy check or typed-answer matching on the Study page failed
+          description: 'Grading accuracy is a hard rule for the Professor: his writing went to her marked "Not checked" (or a typed answer could not be matched). See the homelab-agent logs for "professor accuracy check failed" / "typed answer match failed".'
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=homelab-agent
+        isPaused: false
+      - uid: agent-professor-fillers-failing
+        title: Professor filler batches failing
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 3600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum(increase(homelab_agent_professor_filler_batches_total{ok="false"}[1h])) or vector(0)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 2
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+          namespace: homelab-agent
+          notify: agent-self
+        annotations:
+          summary: The Professor's filler line batches keep failing
+          description: More than 2 filler batches failed in the last hour (her model returned no lines). See "professor filler batch failed" in the homelab-agent logs.
+          dashboard: https://logs.tkuipers.ca/dashboards?tag=homelab-agent
+        isPaused: false
       - uid: agent-scan-overdue
         title: Homelab agent daily scan overdue
         condition: C
