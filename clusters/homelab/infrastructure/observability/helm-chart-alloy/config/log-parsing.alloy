@@ -188,6 +188,13 @@ otelcol.processor.transform "logs" {
 			`set(severity_text, "warn") where resource.attributes["k8s.container.name"] == "argocd-repo-server" and IsMatch(body, "You may need to run .helm dependency build.")`,
 			// nginx logs every 404 for a missing file (scanners: wp-login.php ...) at error
 			`set(severity_text, "warn") where attributes["log.format"] == "nginx_error" and IsMatch(body, "^open\\(\\) .* failed \\(2: No such file or directory\\)")`,
+			// ... and for a missing directory index the same way (scanners: /wp/?rest_route= ...)
+			`set(severity_text, "warn") where attributes["log.format"] == "nginx_error" and IsMatch(body, "^\".*/index\\.html\" is not found \\(2: No such file or directory\\)")`,
+			// blackbox-exporter logs every failed probe at error (the lines carry the probe
+			// module). The probe alerts (Public URL unreachable, Service health check failing)
+			// are the signal, with for: durations; as errors these lines made every
+			// homelab-agent deploy (~1 min of 503s) count toward "Errors logged steadily"
+			`set(severity_text, "warn") where resource.attributes["k8s.container.name"] == "blackbox-exporter" and attributes["module"] != nil and severity_text == "error"`,
 			// polymarket-bot's Postgres driver appends "RETURNING id" to every INSERT and
 			// re-runs it without on failure (polymarket_bot/db_drivers.py), so inserts into
 			// bot_state / bankroll_snapshots (no id column) log this ~20x/h; the write succeeds
