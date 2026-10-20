@@ -23,3 +23,11 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  # homelab-agent may scale this to 0 for a while (at most 24h) and scales
+  # it back itself, so selfHeal must not undo it. Git stays the truth.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

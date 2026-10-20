@@ -27,4 +27,11 @@ spec:
       - ServerSideApply=true
       - PruneLast=true  # If prune ever enabled, do it last
       - RespectIgnoreDifferences=true
+  # homelab-agent may scale these to 0 for a while (at most 24h) and scales
+  # them back itself, so selfHeal must not undo it. Git stays the truth.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
 
