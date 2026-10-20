@@ -89,32 +89,30 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
-      # Postgres runs as non-root; the entrypoint handles UID remapping
+      # no runAsNonRoot: the postgres image's entrypoint starts as root and drops to the postgres user itself
       securityContext:
-        runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-        # Create the read-only role after Postgres is ready
+        # Create the read-only role after Postgres is ready. A native sidecar (restartPolicy: Always) so it
+        # runs alongside Postgres: a plain init container would wait for a server that can't start until it exits.
         - name: create-reader
           image: postgres:16
+          restartPolicy: Always
           command:
             - sh
             - -ec
             - |
               until pg_isready -h localhost -U agent -d agent; do sleep 1; done
-              psql -v ON_ERROR_STOP=1 -U agent -d agent <<'SQL'
-              DO $$
-              BEGIN
-                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'agent_reader') THEN
-                  CREATE ROLE agent_reader LOGIN PASSWORD :'READER_PASS';
-                END IF;
-              END
-              $$;
+              # psql variables aren't substituted inside $$ bodies, hence \gexec
+              psql -v ON_ERROR_STOP=1 -v READER_PASS="$READER_PASS" -U agent -d agent <<'SQL'
+              SELECT format('CREATE ROLE agent_reader LOGIN PASSWORD %L', :'READER_PASS')
+              WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'agent_reader') \gexec
               GRANT USAGE ON SCHEMA public TO agent_reader;
               GRANT SELECT ON ALL TABLES IN SCHEMA public TO agent_reader;
               ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO agent_reader;
               SQL
+              exec sleep infinity
           env:
             - name: PGHOST
               value: localhost
