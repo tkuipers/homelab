@@ -1,8 +1,9 @@
 # What the agent may do with kubectl. Real changes go through git (Argo CD);
 # this allows looking at everything except Secrets, restarts, and minor live
 # edits/test patches that the agent must commit before it finishes.
-# pods/exec removed: exec into pods accesses mounted secrets and other pods'
-# environments; the agent can restart, patch and read logs instead.
+# Note: patching workloads or exec'ing into pods can reach whatever those pods
+# can (including mounted secrets): Tyler accepts that for a single-owner homelab
+# (2026-10-20: the agent's flexibility matters more than locking exec away).
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -54,6 +55,9 @@ rules:
   - apiGroups: [""]
     resources: [pods]
     verbs: [delete]
+  - apiGroups: [""]
+    resources: [pods/exec]
+    verbs: [create]
   - apiGroups: [""]
     resources: [configmaps, services]
     verbs: [patch, update]
