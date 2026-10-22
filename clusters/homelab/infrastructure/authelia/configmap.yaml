@@ -156,6 +156,12 @@ data:
             - introspection
             - userinfo
           allowed_origins_from_client_redirect_uris: true
+        lifespans:
+          custom:
+            # Claude Code keeps its MCP sign-in (renewed with the refresh token) instead of the 90m default
+            claude_code:
+              access_token: '1h'
+              refresh_token: '30d'
         clients:
           - client_id: 'argocd'
             client_name: 'Argo CD'
@@ -320,3 +326,32 @@ data:
             access_token_signed_response_alg: 'none'
             userinfo_signed_response_alg: 'none'
             token_endpoint_auth_method: 'client_secret_basic'
+          # Claude Code's sign-in to the agent's read-only conversations MCP server
+          # (`claude mcp add ... --client-id claude-code --callback-port 47913`). Access tokens
+          # are JWTs (RS256) for that server alone, which checks them against our jwks.
+          - client_id: 'claude-code'
+            client_name: 'Claude Code (homelab agent conversations)'
+            public: true
+            authorization_policy: 'one_factor'
+            consent_mode: 'pre-configured'
+            pre_configured_consent_duration: '30d'
+            require_pkce: true
+            pkce_challenge_method: 'S256'
+            redirect_uris:
+              - 'http://localhost:47913/callback'
+              - 'http://127.0.0.1:47913/callback'
+            audience:
+              - 'https://agent.tkuipers.ca/mcp/conversations'
+            requested_audience_mode: 'implicit'
+            scopes:
+              - 'openid'
+              - 'offline_access'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+              - 'refresh_token'
+            lifespan: 'claude_code'
+            access_token_signed_response_alg: 'RS256'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'none'

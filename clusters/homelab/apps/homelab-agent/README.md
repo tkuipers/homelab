@@ -14,6 +14,11 @@ with `kubectl -n homelab-agent rollout restart deploy/homelab-agent`).
 - **SMS** (Twilio, one number): `https://agent.tkuipers.ca/hooks/sms` is public
   (separate Ingress without Authelia) and checked against Twilio's signature;
   only `sms-allowed-numbers` may talk to it. Text `/help` for the commands.
+- **Conversations MCP server**: `https://agent.tkuipers.ca/mcp/conversations` is
+  public too and read-only; Claude Code signs in with Authelia (OIDC client
+  `claude-code`, JWT access tokens the service checks against Authelia's keys):
+  `claude mcp add --transport http --client-id claude-code --callback-port 47913
+  conversations https://agent.tkuipers.ca/mcp/conversations`, then `/mcp` to sign in.
 - **Changes** go to `main` through a write deploy key; commits carry an
   `Agent-Run:` trailer. kubectl (ServiceAccount `homelab-agent`, `rbac.yaml`):
   read everything but Secrets, restarts and minor live edits that the agent

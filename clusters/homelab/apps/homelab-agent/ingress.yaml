@@ -34,7 +34,7 @@ spec:
 ---
 # Public paths: Twilio's incoming-SMS webhooks (public, authenticated by Twilio's request
 # signature (checked by the service), not by Authelia. The fallback goes to the
-# relay, which stores texts while the agent is down), and the /legal pages.
+# relay, which stores texts while the agent is down), the conversations MCP server, and the /legal pages.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -62,6 +62,22 @@ spec:
         backend:
           service:
             name: homelab-agent-relay
+            port:
+              number: 80
+      # read-only conversations MCP server for Claude Code: it signs in with Authelia (OAuth client
+      # claude-code) and the service checks the access token; the metadata says where to sign in
+      - path: /mcp/conversations
+        pathType: Exact
+        backend:
+          service:
+            name: homelab-agent
+            port:
+              number: 80
+      - path: /.well-known/oauth-protected-resource
+        pathType: Prefix
+        backend:
+          service:
+            name: homelab-agent
             port:
               number: 80
       # app home, privacy policy and terms (linked from Google's OAuth consent screen)
