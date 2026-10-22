@@ -11,8 +11,11 @@ automation:
   # thermostat is off, kick on the heat at 20°C between midnight and 7am.
   # Triggers on the start of the window or on either temp crossing below 5°C
   # mid-window; the condition block makes sure all four facts hold before we
-  # touch the thermostat. Claims ownership BEFORE changing state so the
-  # release automation can see we're the source of the resulting state change.
+  # touch the thermostat. The Daikin integration ignores hvac_mode on
+  # set_temperature and rejects a setpoint while the thermostat is off, so the
+  # mode goes first. Ownership is claimed only once heat + 20°C has landed:
+  # the in-between "heat at the old setpoint" state would otherwise trip the
+  # release automation.
   - id: heating_overnight_freeze_guard_on
     alias: "Heating: Overnight freeze guard (on)"
     trigger:
@@ -38,15 +41,26 @@ automation:
         entity_id: sensor.outdoor_temperature
         below: 5
     action:
-      - service: input_boolean.turn_on
-        target:
-          entity_id: input_boolean.heating_freeze_guard_active
-      - service: climate.set_temperature
+      - service: climate.set_hvac_mode
         target:
           entity_id: climate.main_floor_thermostat
         data:
           hvac_mode: heat
+      - wait_template: "{{ is_state('climate.main_floor_thermostat', 'heat') }}"
+        timeout: "00:02:00"
+        continue_on_timeout: false
+      - service: climate.set_temperature
+        target:
+          entity_id: climate.main_floor_thermostat
+        data:
           temperature: 20.0
+      - wait_template: >
+          {%- set t = state_attr('climate.main_floor_thermostat', 'temperature') -%}
+          {{ t is not none and (t | float - 20.0) | abs <= 0.1 }}
+        timeout: "00:02:00"
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.heating_freeze_guard_active
 
   # Cut the heat back to off at 7am — but only if our claim is still active.
   # If someone manually changed mode or setpoint overnight (e.g. flipped to
