@@ -839,12 +839,14 @@ def arc_panels(b: Board, s: Svc):
     b.stat("Jobs waiting for a runner", "clamp_min(sum(gha_assigned_jobs) - sum(gha_running_jobs), 0)",
            thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 1}], no_value="no listener",
            desc="Assigned to a scale set but not running yet: pods starting, or maxRunners reached")
-    b.stat("Idle runners", "sum(gha_idle_runners)", no_value="no listener", desc="Warm runners (minRunners) waiting for a job")
-    b.stat("Failed runner pods", "sum(gha_controller_failed_ephemeral_runners)", thresholds=RED_IF_ABOVE_0, no_value="no scale sets",
+    b.stat("Idle runners", "sum(gha_controller_pending_ephemeral_runners)", no_value="no scale sets",
+           desc="Runner pods up and waiting for a job (minRunners keeps one warm). From the controller: the listener's "
+                "gha_idle_runners / gha_registered_runners only update when GitHub sends it a message")
+    # these series only exist once there has been a failure / a job: absent = 0
+    b.stat("Failed runner pods", "sum(gha_controller_failed_ephemeral_runners) or vector(0)", thresholds=RED_IF_ABOVE_0,
            desc="Ephemeral runners the controller marked failed (pod could not start or run). kubectl -n arc-runners get ephemeralrunners")
-    b.stat("Jobs started (24h)", "sum(increase(gha_started_jobs_total[24h]))", decimals=0, no_value="no listener")
-    b.ts("Runners by scale set", [("sum by (name) (gha_registered_runners)", "{{name}} registered"),
-                                  ("sum by (name) (gha_busy_runners)", "{{name}} busy"),
+    b.stat("Jobs started (24h)", "sum(increase(gha_started_jobs_total[24h])) or vector(0)", decimals=0)
+    b.ts("Runners by scale set", [("sum by (name) (gha_busy_runners)", "{{name}} busy"),
                                   ("sum by (name) (gha_desired_runners)", "{{name}} desired"),
                                   ("sum by (name) (gha_max_runners)", "{{name}} max")])
     b.ts("Jobs: assigned vs running", [("sum by (name) (gha_assigned_jobs)", "{{name}} assigned"),

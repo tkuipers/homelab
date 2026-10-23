@@ -3016,7 +3016,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: sum by (name) (gha_controller_running_listeners)
+            expr: sum(gha_controller_running_listeners) or vector(0)
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -3053,7 +3053,7 @@ data:
           severity: warning
           namespace: arc-systems
         annotations:
-          summary: 'Scale set {{ $labels.name }} has no listener: its repo''s jobs (runs-on: homelab) are not picked up'
+          summary: 'No GitHub Actions listener is running: jobs for runs-on: homelab are not picked up'
           description: The listener authenticates as the GitHub App. Usually the App credentials (1Password 'GitHub Actions Runner App'; tooling/scripts/setup-credentials/setup-github-runner-credentials.sh --check) or the App lost access to the repo. Listener logs on the GitHub Actions runners dashboard; kubectl -n arc-systems get autoscalinglisteners.
           dashboard: https://logs.tkuipers.ca/d/svc-arc-systems-arc-controller
         isPaused: false

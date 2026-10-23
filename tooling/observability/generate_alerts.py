@@ -355,9 +355,10 @@ HOMELAB = [
     # --- GitHub Actions runners (ARC, clusters/homelab/infrastructure/github-runners) ---
     deploy_down("hl-arc-controller-down", "GitHub runner controller down", "arc-systems", "arc-controller"),
     rule("hl-arc-listener-down", "GitHub runner listener not running",
-         'sum by (name) (gha_controller_running_listeners)', "lt", 1, for_="15m", static_ns="arc-systems",
+         # name is the listener's; "or vector(0)": a deleted listener drops its series instead of reporting 0
+         'sum(gha_controller_running_listeners) or vector(0)', "lt", 1, for_="15m", static_ns="arc-systems",
          dashboard=svc_uid("arc-systems", "arc-controller"),
-         summary="Scale set {{ $labels.name }} has no listener: its repo's jobs (runs-on: homelab) are not picked up",
+         summary="No GitHub Actions listener is running: jobs for runs-on: homelab are not picked up",
          description="The listener authenticates as the GitHub App. Usually the App credentials (1Password 'GitHub Actions Runner App'; "
                      "tooling/scripts/setup-credentials/setup-github-runner-credentials.sh --check) or the App lost access to the repo. "
                      "Listener logs on the GitHub Actions runners dashboard; kubectl -n arc-systems get autoscalinglisteners."),

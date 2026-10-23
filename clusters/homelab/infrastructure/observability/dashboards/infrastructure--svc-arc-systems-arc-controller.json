@@ -912,7 +912,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "Warm runners (minRunners) waiting for a job",
+   "description": "Runner pods up and waiting for a job (minRunners keeps one warm). From the controller: the listener's gha_idle_runners / gha_registered_runners only update when GitHub sends it a message",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -923,7 +923,7 @@
        "options": {
         "-1": {
          "color": "text",
-         "text": "no listener"
+         "text": "no scale sets"
         }
        },
        "type": "value"
@@ -968,7 +968,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "(sum(gha_idle_runners)) or vector(-1)",
+     "expr": "(sum(gha_controller_pending_ephemeral_runners)) or vector(-1)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -989,17 +989,7 @@
      "color": {
       "mode": "thresholds"
      },
-     "mappings": [
-      {
-       "options": {
-        "-1": {
-         "color": "text",
-         "text": "no scale sets"
-        }
-       },
-       "type": "value"
-      }
-     ],
+     "mappings": [],
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -1043,7 +1033,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "(sum(gha_controller_failed_ephemeral_runners)) or vector(-1)",
+     "expr": "sum(gha_controller_failed_ephemeral_runners) or vector(0)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -1065,17 +1055,7 @@
       "mode": "thresholds"
      },
      "decimals": 0,
-     "mappings": [
-      {
-       "options": {
-        "-1": {
-         "color": "text",
-         "text": "no listener"
-        }
-       },
-       "type": "value"
-      }
-     ],
+     "mappings": [],
      "thresholds": {
       "mode": "absolute",
       "steps": [
@@ -1115,7 +1095,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "(sum(increase(gha_started_jobs_total[24h]))) or vector(-1)",
+     "expr": "sum(increase(gha_started_jobs_total[24h])) or vector(0)",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -1173,22 +1153,11 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum by (name) (gha_registered_runners)",
-     "instant": false,
-     "legendFormat": "{{name}} registered",
-     "range": true,
-     "refId": "A"
-    },
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "prometheus"
-     },
      "expr": "sum by (name) (gha_busy_runners)",
      "instant": false,
      "legendFormat": "{{name}} busy",
      "range": true,
-     "refId": "B"
+     "refId": "A"
     },
     {
      "datasource": {
@@ -1199,7 +1168,7 @@
      "instant": false,
      "legendFormat": "{{name}} desired",
      "range": true,
-     "refId": "C"
+     "refId": "B"
     },
     {
      "datasource": {
@@ -1210,7 +1179,7 @@
      "instant": false,
      "legendFormat": "{{name}} max",
      "range": true,
-     "refId": "D"
+     "refId": "C"
     }
    ],
    "title": "Runners by scale set",
