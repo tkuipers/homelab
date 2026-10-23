@@ -1,0 +1,131 @@
+# Self-hosted GitHub Actions runners. Workflows use them with `runs-on: homelab`.
+# Each job gets a fresh pod (ephemeral runner) with its own Docker daemon (dind),
+# so `services:`, `docker build` and buildx work as on GitHub's ubuntu-latest.
+#
+# Docker-in-Docker needs privileged pods: a job is effectively root on dell-r620.
+# Only attach repositories whose workflows you trust (private repos; GitHub advises
+# against self-hosted runners on public repos because fork PRs can run code on them).
+
+gha-runner-scale-set-controller:
+  fullnameOverride: arc-controller
+  serviceAccount:
+    create: true
+    name: arc-controller
+  flags:
+    # chart default is debug (a line per reconcile)
+    logLevel: info
+    logFormat: json
+  # Controller metrics (gha_controller_*) on the controller pod, and the listener metrics
+  # (gha_*: assigned/running jobs, job durations) on each scale set's listener pod.
+  # Scraped by the PodMonitors in templates/podmonitors.yaml.
+  metrics:
+    controllerManagerAddr: ":8080"
+    listenerAddr: ":8080"
+    listenerEndpoint: "/metrics"
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# Shared by every scale set below (YAML anchor): the pod each job runs in.
+# Written out instead of `containerMode: dind` because that mode hardcodes an unpinned
+# docker:dind with no /var/lib/docker volume (overlay-on-overlay -> slow vfs driver)
+# and no resources. Same shape as the chart's dind expansion otherwise.
+runnerTemplate: &runner-template
+  spec:
+    # omen-worker1 is the small GPU node (training jobs); keep builds off it
+    nodeSelector:
+      kubernetes.io/hostname: dell-r620
+    initContainers:
+      - name: init-dind-externals
+        image: ghcr.io/actions/actions-runner:2.338.1
+        command: ["cp", "-r", "/home/runner/externals/.", "/home/runner/tmpDir/"]
+        volumeMounts:
+          - name: dind-externals
+            mountPath: /home/runner/tmpDir
+      # native sidecar: starts before the runner, stops after it
+      - name: dind
+        image: docker:29.9.2-dind
+        restartPolicy: Always
+        args:
+          - dockerd
+          - --host=unix:///var/run/docker.sock
+          - --group=$(DOCKER_GROUP_GID)
+        env:
+          # the runner image's docker group
+          - name: DOCKER_GROUP_GID
+            value: "123"
+        securityContext:
+          privileged: true
+        startupProbe:
+          exec:
+            command: ["docker", "info"]
+          initialDelaySeconds: 0
+          failureThreshold: 24
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: "4"
+            memory: 8Gi
+        volumeMounts:
+          - name: work
+            mountPath: /home/runner/_work
+          - name: dind-sock
+            mountPath: /var/run
+          - name: dind-externals
+            mountPath: /home/runner/externals
+          - name: dind-storage
+            mountPath: /var/lib/docker
+    containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:2.338.1
+        command: ["/home/runner/run.sh"]
+        env:
+          - name: DOCKER_HOST
+            value: unix:///var/run/docker.sock
+          - name: RUNNER_WAIT_FOR_DOCKER_IN_SECONDS
+            value: "120"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: "4"
+            memory: 8Gi
+        volumeMounts:
+          - name: work
+            mountPath: /home/runner/_work
+          - name: dind-sock
+            mountPath: /var/run
+    volumes:
+      - name: work
+        emptyDir: {}
+      - name: dind-sock
+        emptyDir: {}
+      - name: dind-externals
+        emptyDir: {}
+      - name: dind-storage
+        emptyDir: {}
+
+homelab-agent:
+  githubConfigUrl: https://github.com/tkuipers/homelab-agent
+  # GitHub App credentials (templates/external-secret.yaml)
+  githubConfigSecret: github-app
+  # Kubernetes name of the scale set (unique per namespace); also a runs-on label
+  runnerScaleSetName: homelab-agent
+  # the label every repo's workflows use, whichever scale set serves them
+  scaleSetLabels: [homelab]
+  # one warm runner: jobs start without waiting for a pod (homelab-agent deploys often)
+  minRunners: 1
+  maxRunners: 6
+  namespaceOverride: arc-runners
+  # Argo CD renders without cluster access, so the chart's controller lookup can't run
+  controllerServiceAccount:
+    namespace: arc-systems
+    name: arc-controller
+  template: *runner-template

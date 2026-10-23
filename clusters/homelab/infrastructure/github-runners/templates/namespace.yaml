@@ -1,0 +1,9 @@
+# Runner pods live here. Their dind sidecar is privileged, which the cluster's
+# default Pod Security level (baseline) rejects. The controller and the listeners
+# stay in arc-systems (the Application's namespace) at the default level.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: arc-runners
+  labels:
+    pod-security.kubernetes.io/enforce: privileged

@@ -19,6 +19,7 @@ resources:
   - argocd-application-authelia.yaml
   - argocd-application-nvidia-device-plugin.yaml
   - argocd-application-adguard-home.yaml
+  - argocd-application-github-runners.yaml
   # Apps
   - argocd-application-homepage.yaml
   - argocd-application-mediacenter.yaml

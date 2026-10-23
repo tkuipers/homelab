@@ -829,6 +829,45 @@ def metallb_panels(b: Board, s: Svc):
     b.ts("Config stale / k8s update errors", [("max(metallb_k8s_client_config_stale_bool)", "config stale"), ("sum(increase(metallb_k8s_client_update_errors_total[1h])) or vector(0)", "update errors")])
 
 
+def arc_panels(b: Board, s: Svc):
+    # Metric names from ARC 0.15.0: gha_controller_* (controller, metrics/metrics.go) and gha_*
+    # (one listener per scale set, listenerMetrics in the gha-runner-scale-set chart). `name` = scale set.
+    b.row("Runner scale sets")
+    b.stat("Listeners running", "sum(gha_controller_running_listeners)", thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}],
+           desc="One listener per scale set holds the long poll to GitHub; without it no job is picked up", no_value="no scale sets")
+    b.stat("Jobs running", "sum(gha_running_jobs)", no_value="no listener")
+    b.stat("Jobs waiting for a runner", "clamp_min(sum(gha_assigned_jobs) - sum(gha_running_jobs), 0)",
+           thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 1}], no_value="no listener",
+           desc="Assigned to a scale set but not running yet: pods starting, or maxRunners reached")
+    b.stat("Idle runners", "sum(gha_idle_runners)", no_value="no listener", desc="Warm runners (minRunners) waiting for a job")
+    b.stat("Failed runner pods", "sum(gha_controller_failed_ephemeral_runners)", thresholds=RED_IF_ABOVE_0, no_value="no scale sets",
+           desc="Ephemeral runners the controller marked failed (pod could not start or run). kubectl -n arc-runners get ephemeralrunners")
+    b.stat("Jobs started (24h)", "sum(increase(gha_started_jobs_total[24h]))", decimals=0, no_value="no listener")
+    b.ts("Runners by scale set", [("sum by (name) (gha_registered_runners)", "{{name}} registered"),
+                                  ("sum by (name) (gha_busy_runners)", "{{name}} busy"),
+                                  ("sum by (name) (gha_desired_runners)", "{{name}} desired"),
+                                  ("sum by (name) (gha_max_runners)", "{{name}} max")])
+    b.ts("Jobs: assigned vs running", [("sum by (name) (gha_assigned_jobs)", "{{name}} assigned"),
+                                       ("sum by (name) (gha_running_jobs)", "{{name}} running")])
+    b.ts("Jobs completed", [("sum by (repository, job_result) (increase(gha_completed_jobs_total[$__rate_interval]))", "{{repository}} {{job_result}}")], bars=True)
+    b.ts("Ephemeral runner pods (controller)", [("sum by (name) (gha_controller_pending_ephemeral_runners)", "{{name}} pending"),
+                                                ("sum by (name) (gha_controller_running_ephemeral_runners)", "{{name}} running"),
+                                                ("sum by (name) (gha_controller_failed_ephemeral_runners)", "{{name}} failed")])
+    b.ts("Time to start (p50 / p95)", [("histogram_quantile(0.5, sum by (le) (rate(gha_job_startup_duration_seconds_bucket[$__rate_interval])))", "p50"),
+                                       ("histogram_quantile(0.95, sum by (le) (rate(gha_job_startup_duration_seconds_bucket[$__rate_interval])))", "p95")], unit="s",
+         desc="From the job being assigned to the scale set until it starts on a runner")
+    b.ts("Job duration p95 by job", [("histogram_quantile(0.95, sum by (le, job_name) (rate(gha_job_execution_duration_seconds_bucket[$__rate_interval])))", "{{job_name}}")], unit="s")
+    b.row("Runner pods (arc-runners)")
+    b.ts("CPU by container", [('sum by (container) (rate(container_cpu_usage_seconds_total{namespace="arc-runners", container!=""}[$__rate_interval]))', "{{container}}")],
+         desc="runner = the job's steps; dind = Docker (builds, service containers). Limit 4 cores each per pod")
+    b.ts("Memory by container", [('sum by (container) (container_memory_working_set_bytes{namespace="arc-runners", container!=""})', "{{container}}")], unit="bytes",
+         desc="Limit 8Gi each per pod")
+    b.logs("Listener logs", '{k8s_namespace_name="arc-systems", service_name="listener"}', h=8,
+           desc="Pods owned by ARC resources take their container name as service_name")
+    b.logs("Runner pod logs (runner + dind)", '{k8s_namespace_name="arc-runners"}', h=10,
+           desc="The runner's own log (job assigned/finished) and dockerd. Step output is in the GitHub Actions UI")
+
+
 def jellyfin_panels(b: Board, s: Svc):
     b.logs("Playback activity", f'{loki_sel(s)} |~ "(?i)(playback|transcod|stream)"', h=8, time_from="7d", max_lines=200)
     b.ts("Ingress bandwidth out", [('sum(rate(nginx_ingress_controller_response_size_sum{exported_namespace="mediacenter", ingress="jellyfin"}[$__rate_interval])) or vector(0)', "bytes/s")], unit="Bps")
@@ -975,6 +1014,8 @@ CATALOG: List[Svc] = [
     S("authelia", "authelia", "Authelia (SSO)", ingress=["authelia"], probe="authelia", folder="Infrastructure", extras=[authelia_panels]),
     S("authelia", "authelia-redis", "Authelia Redis", folder="Infrastructure", extras=[redis_panels]),
     S("aws-ip-updater", "aws-ip-updater", "AWS dynamic DNS updater (CronJob)", kind="cronjob", folder="Infrastructure"),
+    S("arc-systems", "arc-controller", "GitHub Actions runners (ARC)", folder="Infrastructure", extras=[arc_panels],
+      description="Self-hosted runners (runs-on: homelab): controller + one listener per scale set in arc-systems, a pod per job in arc-runners. clusters/homelab/infrastructure/github-runners"),
     S("cert-manager", "infrastructure-cert-manager", "cert-manager", folder="Infrastructure", extras=[cert_manager_panels]),
     S("cert-manager", "infrastructure-cert-manager-cainjector", "cert-manager cainjector", folder="Infrastructure"),
     S("cert-manager", "infrastructure-cert-manager-webhook", "cert-manager webhook", folder="Infrastructure"),

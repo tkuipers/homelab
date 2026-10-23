@@ -1,0 +1,31 @@
+# The ARC charts ship no monitors. Port and label names from ARC 0.15.0
+# (controllers/actions.github.com/resourcebuilder.go, constants.go).
+# Controller: gha_controller_* (runners pending/running/failed per scale set, listeners running)
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: arc-controller
+  namespace: arc-systems
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: gha-rs-controller
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+---
+# Listeners (one per scale set, created by the controller in arc-systems):
+# gha_assigned_jobs, gha_running_jobs, gha_*_runners, gha_started/completed_jobs_total,
+# gha_job_startup/execution_duration_seconds
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: arc-listeners
+  namespace: arc-systems
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: runner-scale-set-listener
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s

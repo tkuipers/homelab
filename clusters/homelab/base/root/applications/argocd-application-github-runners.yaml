@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infrastructure-github-runners
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    # after kube-prometheus-stack (PodMonitor CRD)
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: infrastructure
+  source:
+    repoURL: ssh://git@github.com/tkuipers/homelab.git
+    targetRevision: main
+    path: clusters/homelab/infrastructure/github-runners
+    helm:
+      releaseName: github-runners
+      valueFiles:
+        - values.yaml
+  # controller + listeners here; runner pods in arc-runners (namespaceOverride)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-systems
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # the ARC CRDs are too large for client-side apply's last-applied annotation
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m

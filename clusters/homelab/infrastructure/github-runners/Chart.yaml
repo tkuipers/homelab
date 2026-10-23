@@ -1,0 +1,18 @@
+apiVersion: v2
+name: github-runners
+description: Umbrella chart for self-hosted GitHub Actions runners (Actions Runner Controller, runner scale sets)
+type: application
+version: 1.0.0
+
+dependencies:
+  # One controller for every scale set (arc-systems); it also runs each scale set's listener pod
+  - name: gha-runner-scale-set-controller
+    version: "0.15.0"
+    repository: "oci://ghcr.io/actions/actions-runner-controller-charts"
+  # One scale set per repository: tkuipers is a user account, and GitHub only registers
+  # self-hosted runners per repository, organization or enterprise. Add a repo = another
+  # alias here + a block in values.yaml (see README.md).
+  - name: gha-runner-scale-set
+    alias: homelab-agent
+    version: "0.15.0"
+    repository: "oci://ghcr.io/actions/actions-runner-controller-charts"

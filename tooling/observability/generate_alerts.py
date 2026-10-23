@@ -352,6 +352,26 @@ HOMELAB = [
          'max(whatsapp_bridge_linked) * (1 - max(whatsapp_bridge_connected))', "gt", 0, for_="15m", static_ns="mcp-whatsapp", dashboard=svc_uid("mcp-whatsapp", "whatsapp-mcp"),
          summary="The WhatsApp bridge is linked but hasn't been connected for 15m",
          description="whatsmeow reconnects by itself; if it doesn't, the bridge's logs say why (WhatsApp rejecting an outdated client version -> bump whatsmeow in homelab-agent/images/whatsapp-mcp/patches; network -> the pod firewall)."),
+    # --- GitHub Actions runners (ARC, clusters/homelab/infrastructure/github-runners) ---
+    deploy_down("hl-arc-controller-down", "GitHub runner controller down", "arc-systems", "arc-controller"),
+    rule("hl-arc-listener-down", "GitHub runner listener not running",
+         'sum by (name) (gha_controller_running_listeners)', "lt", 1, for_="15m", static_ns="arc-systems",
+         dashboard=svc_uid("arc-systems", "arc-controller"),
+         summary="Scale set {{ $labels.name }} has no listener: its repo's jobs (runs-on: homelab) are not picked up",
+         description="The listener authenticates as the GitHub App. Usually the App credentials (1Password 'GitHub Actions Runner App'; "
+                     "tooling/scripts/setup-credentials/setup-github-runner-credentials.sh --check) or the App lost access to the repo. "
+                     "Listener logs on the GitHub Actions runners dashboard; kubectl -n arc-systems get autoscalinglisteners."),
+    rule("hl-arc-jobs-stuck", "GitHub Actions jobs not starting",
+         'max by (name) (gha_assigned_jobs - gha_running_jobs)', "gt", 0, for_="20m", static_ns="arc-systems",
+         dashboard=svc_uid("arc-systems", "arc-controller"),
+         summary="{{ $values.B }} job(s) assigned to {{ $labels.name }} have waited 20m for a runner",
+         description="Runner pods not starting (kubectl -n arc-runners get pods,ephemeralrunners; image pull, Pod Security, no room on dell-r620) "
+                     "or maxRunners (6) reached by long jobs."),
+    rule("hl-arc-runners-failing", "GitHub runner pods failing",
+         'sum by (name) (gha_controller_failed_ephemeral_runners)', "gt", 0, for_="15m", static_ns="arc-systems",
+         dashboard=svc_uid("arc-systems", "arc-controller"),
+         summary="{{ $values.B }} runner(s) of {{ $labels.name }} failed",
+         description="kubectl -n arc-runners get ephemeralrunners -o wide shows why (image pull, Pod Security, dind not starting)."),
     # --- the observability pipeline itself -------------------------------
     rule("hl-logs-dropped", "Logs are being dropped",
          'sum(rate(otelcol_exporter_send_failed_log_records_total[10m])) or vector(0)', "gt", 1, for_="10m", severity="critical", static_ns="observability", dashboard=svc_uid("observability", "alloy"),

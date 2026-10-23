@@ -345,6 +345,12 @@ configMapGenerator:
     options:
       annotations:
         grafana_folder: "Infrastructure"
+  - name: dash-infrastructure-svc-arc-systems-arc-controller
+    files:
+      - infrastructure--svc-arc-systems-arc-controller.json
+    options:
+      annotations:
+        grafana_folder: "Infrastructure"
   - name: dash-infrastructure-svc-cert-manager-infrastructure-71e44504
     files:
       - infrastructure--svc-cert-manager-infrastructure-71e44504.json

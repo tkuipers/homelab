@@ -2953,6 +2953,214 @@ data:
           description: whatsmeow reconnects by itself; if it doesn't, the bridge's logs say why (WhatsApp rejecting an outdated client version -> bump whatsmeow in homelab-agent/images/whatsapp-mcp/patches; network -> the pod firewall).
           dashboard: https://logs.tkuipers.ca/d/svc-mcp-whatsapp-whatsapp-mcp
         isPaused: false
+      - uid: hl-arc-controller-down
+        title: GitHub runner controller down
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum(kube_deployment_status_replicas_available{namespace="arc-systems", deployment="arc-controller"})
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+          namespace: arc-systems
+        annotations:
+          summary: arc-systems/arc-controller has no available replicas
+          description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
+          dashboard: https://logs.tkuipers.ca/d/svc-arc-systems-arc-controller
+        isPaused: false
+      - uid: hl-arc-listener-down
+        title: GitHub runner listener not running
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum by (name) (gha_controller_running_listeners)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+          namespace: arc-systems
+        annotations:
+          summary: 'Scale set {{ $labels.name }} has no listener: its repo''s jobs (runs-on: homelab) are not picked up'
+          description: The listener authenticates as the GitHub App. Usually the App credentials (1Password 'GitHub Actions Runner App'; tooling/scripts/setup-credentials/setup-github-runner-credentials.sh --check) or the App lost access to the repo. Listener logs on the GitHub Actions runners dashboard; kubectl -n arc-systems get autoscalinglisteners.
+          dashboard: https://logs.tkuipers.ca/d/svc-arc-systems-arc-controller
+        isPaused: false
+      - uid: hl-arc-jobs-stuck
+        title: GitHub Actions jobs not starting
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max by (name) (gha_assigned_jobs - gha_running_jobs)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 20m
+        labels:
+          severity: warning
+          namespace: arc-systems
+        annotations:
+          summary: '{{ $values.B }} job(s) assigned to {{ $labels.name }} have waited 20m for a runner'
+          description: Runner pods not starting (kubectl -n arc-runners get pods,ephemeralrunners; image pull, Pod Security, no room on dell-r620) or maxRunners (6) reached by long jobs.
+          dashboard: https://logs.tkuipers.ca/d/svc-arc-systems-arc-controller
+        isPaused: false
+      - uid: hl-arc-runners-failing
+        title: GitHub runner pods failing
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: sum by (name) (gha_controller_failed_ephemeral_runners)
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: gt
+                params:
+                - 0
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+          namespace: arc-systems
+        annotations:
+          summary: '{{ $values.B }} runner(s) of {{ $labels.name }} failed'
+          description: kubectl -n arc-runners get ephemeralrunners -o wide shows why (image pull, Pod Security, dind not starting).
+          dashboard: https://logs.tkuipers.ca/d/svc-arc-systems-arc-controller
+        isPaused: false
       - uid: hl-logs-dropped
         title: Logs are being dropped
         condition: C
