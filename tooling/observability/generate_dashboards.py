@@ -861,9 +861,9 @@ def arc_panels(b: Board, s: Svc):
     b.ts("Job duration p95 by job", [("histogram_quantile(0.95, sum by (le, job_name) (rate(gha_job_execution_duration_seconds_bucket[$__rate_interval])))", "{{job_name}}")], unit="s")
     b.row("Runner pods (arc-runners)")
     b.ts("CPU by container", [('sum by (container) (rate(container_cpu_usage_seconds_total{namespace="arc-runners", container!=""}[$__rate_interval]))', "{{container}}")],
-         desc="runner = the job's steps; dind = Docker (builds, service containers). Limit 4 cores each per pod")
+         desc="runner = the job's steps; dind = Docker (builds, service containers). Limits per pod: runner 6 cores, dind 8")
     b.ts("Memory by container", [('sum by (container) (container_memory_working_set_bytes{namespace="arc-runners", container!=""})', "{{container}}")], unit="bytes",
-         desc="Limit 8Gi each per pod")
+         desc="Limits per pod: 12Gi each (runner's includes its 2Gi /dev/shm)")
     b.logs("Listener logs", '{k8s_namespace_name="arc-systems", service_name="listener"}', h=8,
            desc="Pods owned by ARC resources take their container name as service_name")
     b.logs("Runner pod logs (runner + dind)", '{k8s_namespace_name="arc-runners"}', h=10,

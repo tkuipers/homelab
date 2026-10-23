@@ -1537,7 +1537,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "runner = the job's steps; dind = Docker (builds, service containers). Limit 4 cores each per pod",
+   "description": "runner = the job's steps; dind = Docker (builds, service containers). Limits per pod: runner 6 cores, dind 8",
    "fieldConfig": {
     "defaults": {
      "custom": {
@@ -1595,7 +1595,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "Limit 8Gi each per pod",
+   "description": "Limits per pod: 12Gi each (runner's includes its 2Gi /dev/shm)",
    "fieldConfig": {
     "defaults": {
      "custom": {

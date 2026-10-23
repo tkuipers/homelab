@@ -12,8 +12,8 @@ jobs:
   **listener** pod (also in `arc-systems`) that long-polls GitHub for jobs.
 - **Runners** (`arc-runners`): one fresh pod per job (ephemeral), deleted afterwards. Image
   `ghcr.io/actions/actions-runner` (Ubuntu 24.04) with a Docker-in-Docker sidecar, so `services:`,
-  `docker build` and `docker/build-push-action` work. 4 CPU / 8Gi for the job and the same for Docker,
-  on dell-r620 only.
+  `docker build` and `docker/build-push-action` work. Per job: 6 CPU / 12Gi for the steps, 8 CPU / 12Gi
+  for Docker, 2Gi /dev/shm (Chromium), 10Gi workspace + 30Gi Docker storage; on dell-r620 only.
 - **Auth**: GitHub App `tkuipers-homelab-runners` (Administration: write, Metadata: read), from the
   1Password item "GitHub Actions Runner App" via `templates/external-secret.yaml`. Create or rotate it with
   `tooling/scripts/setup-credentials/setup-github-runner-credentials.sh`.
@@ -53,6 +53,14 @@ needs in the job: `sudo apt-get install -y <pkg>`, a setup action (`actions/setu
 ```yaml
       - run: sudo curl -fsSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq
 ```
+
+## CPU count inside a job
+
+`nproc` and Node's `os.cpus()` report the node's 48 cores, not the pod's limit, so anything that sizes
+itself from the core count oversubscribes the pod. Set the parallelism explicitly in CI:
+
+- Playwright (default: 50% of `os.cpus()` = 24 workers): `workers: process.env.CI ? 4 : undefined`
+- anything using `make -j$(nproc)` or similar: a fixed number such as `-j6`
 
 ## Troubleshooting
 

@@ -65,13 +65,15 @@ runnerTemplate: &runner-template
           initialDelaySeconds: 0
           failureThreshold: 24
           periodSeconds: 5
+        # builds (BuildKit runs in here). Requests are what the scheduler reserves; dell-r620
+        # has ~46 idle cores and ~165Gi free, so the limits are generous
         resources:
           requests:
-            cpu: 250m
-            memory: 512Mi
+            cpu: "1"
+            memory: 2Gi
           limits:
-            cpu: "4"
-            memory: 8Gi
+            cpu: "8"
+            memory: 12Gi
         volumeMounts:
           - name: work
             mountPath: /home/runner/_work
@@ -90,27 +92,41 @@ runnerTemplate: &runner-template
             value: unix:///var/run/docker.sock
           - name: RUNNER_WAIT_FOR_DOCKER_IN_SECONDS
             value: "120"
+        # the job's own steps: tests, browsers (Playwright), npm
         resources:
           requests:
-            cpu: 250m
-            memory: 512Mi
+            cpu: "1"
+            memory: 2Gi
           limits:
-            cpu: "4"
-            memory: 8Gi
+            cpu: "6"
+            memory: 12Gi
         volumeMounts:
           - name: work
             mountPath: /home/runner/_work
           - name: dind-sock
             mountPath: /var/run
+          - name: dshm
+            mountPath: /dev/shm
+    # Disk comes from dell-r620's /var (79% used, hl-node-disk alerts at 85%). Exceeding a
+    # sizeLimit evicts only that job's pod; 6 runners x 40Gi stays clear of the node's eviction threshold.
     volumes:
       - name: work
-        emptyDir: {}
+        emptyDir:
+          sizeLimit: 10Gi
       - name: dind-sock
         emptyDir: {}
       - name: dind-externals
         emptyDir: {}
+      # Docker images, layers and BuildKit cache of this job (gone with the pod)
       - name: dind-storage
-        emptyDir: {}
+        emptyDir:
+          sizeLimit: 30Gi
+      # Chromium needs more than the container default of 64M (Playwright recommends --ipc=host in Docker);
+      # memory-backed, counts toward the runner container's memory limit
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 2Gi
 
 homelab-agent:
   githubConfigUrl: https://github.com/tkuipers/homelab-agent
