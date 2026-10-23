@@ -13,4 +13,4 @@ resources:
   - ingress.yaml
 images:
   - name: ghcr.io/tkuipers/homelab-agent
-    digest: sha256:157624ab7cc87a922cd7ea5ecdb1b1e43b6ffd3e04331d4dc956a12fa1e3f104
+    digest: sha256:7d0d5884a69859239fe4f6fae286e8702e60ad5d5880dab4b54215618c8b57d1
