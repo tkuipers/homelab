@@ -22,10 +22,12 @@ data:
         base_url: "https://api.anthropic.com/v1"
         api_key: "${ANTHROPIC_API_KEY:-}"
 
+    # Anthropic tasks stay on claude-haiku-4-5: the gateway always sends
+    # temperature, which the 5.x models reject.
     tasks:
       filing_extraction:
         provider: anthropic_compat
-        model: "${FILING_EXTRACTION_MODEL:-claude-haiku-5-5}"
+        model: "${FILING_EXTRACTION_MODEL:-claude-haiku-4-5}"
         temperature: 0.0
         max_tokens: 256
         system_prompt: |
@@ -69,7 +71,7 @@ data:
 
       insider_context:
         provider: anthropic_compat
-        model: "${INSIDER_CONTEXT_MODEL:-claude-haiku-5-5}"
+        model: "${INSIDER_CONTEXT_MODEL:-claude-haiku-4-5}"
         temperature: 0.0
         max_tokens: 512
         system_prompt: |
