@@ -246,6 +246,10 @@ spec:
             - name: mcp-secrets
               mountPath: /secrets/mcp
               readOnly: true
+            # the Professor's ledger signing key (created by hand; until it exists her ledger is unsigned)
+            - name: ledger-key
+              mountPath: /secrets/ledger-key
+              readOnly: true
           resources:
             requests:
               cpu: 200m
@@ -275,6 +279,11 @@ spec:
         - name: mcp-secrets
           secret:
             secretName: homelab-agent-mcp
+            optional: true
+            defaultMode: 0440
+        - name: ledger-key
+          secret:
+            secretName: professor-ledger-key
             optional: true
             defaultMode: 0440
         - name: ssh
