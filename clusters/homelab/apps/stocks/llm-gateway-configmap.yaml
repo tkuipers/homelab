@@ -25,7 +25,7 @@ data:
     tasks:
       filing_extraction:
         provider: anthropic_compat
-        model: "${FILING_EXTRACTION_MODEL:-claude-3-5-haiku-latest}"
+        model: "${FILING_EXTRACTION_MODEL:-claude-haiku-5-5}"
         temperature: 0.0
         max_tokens: 256
         system_prompt: |
@@ -69,7 +69,7 @@ data:
 
       insider_context:
         provider: anthropic_compat
-        model: "${INSIDER_CONTEXT_MODEL:-claude-3-5-haiku-latest}"
+        model: "${INSIDER_CONTEXT_MODEL:-claude-haiku-5-5}"
         temperature: 0.0
         max_tokens: 512
         system_prompt: |
