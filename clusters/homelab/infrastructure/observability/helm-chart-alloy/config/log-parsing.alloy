@@ -204,6 +204,13 @@ otelcol.processor.transform "logs" {
 			// line per stack frame (66 lines per job). BrokerServer requests are retried with
 			// backoff; a broker the runners cannot reach shows as hl-arc-jobs-stuck
 			`set(severity_text, "warn") where resource.attributes["k8s.namespace.name"] == "arc-runners" and resource.attributes["k8s.container.name"] == "runner" and IsMatch(body, "^\\[RUNNER [^\\]]+ ERR +BrokerServer\\]")`,
+			// ... and at job start the worker probes the broker WebSocket: it logs the 101
+			// upgrade as "ping.sock failed. HTTP Status: SwitchingProtocols" and the probe's
+			// close as a WebSocketException trace (RunLongPollWebSocketProbeAsync), every job
+			`set(severity_text, "warn") where resource.attributes["k8s.namespace.name"] == "arc-runners" and resource.attributes["k8s.container.name"] == "runner" and IsMatch(body, "^\\[WORKER [^\\]]+ ERR +(BrokerServer\\]|GitHubActionsService\\] GET request to wss://[^ ]+/_ws/ping\\.sock failed)")`,
+			// runner exceptions (renewjob, results upload, ... all retried) log every stack frame
+			// as its own ERR line; keep the exception lines at error and count the frames as warn
+			`set(severity_text, "warn") where resource.attributes["k8s.namespace.name"] == "arc-runners" and resource.attributes["k8s.container.name"] == "runner" and IsMatch(body, "^\\[(RUNNER|WORKER) [^\\]]+ ERR +[A-Za-z]+\\] +(at |--- End of |#####|Object name: )")`,
 			// TEMPORARY (remove after 2026-12-10, when 60d retention has aged them out):
 			// stale index refs left by the 2026-10-11 migration delete request make
 			// queries touching 2026-10-11 <06:04Z log "failed to load chunk ... no such
