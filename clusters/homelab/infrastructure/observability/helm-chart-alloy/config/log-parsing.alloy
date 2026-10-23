@@ -199,6 +199,11 @@ otelcol.processor.transform "logs" {
 			// re-runs it without on failure (polymarket_bot/db_drivers.py), so inserts into
 			// bot_state / bankroll_snapshots (no id column) log this ~20x/h; the write succeeds
 			`set(severity_text, "warn") where resource.attributes["k8s.namespace.name"] == "polymarket-bot" and attributes["log.format"] == "postgres" and IsMatch(body, "^column \"id\" does not exist at character [0-9]+")`,
+			// GitHub Actions runners are one-time use: when the job ends the runner cancels its
+			// broker long-poll (GetRunnerMessage) and logs the TaskCanceledException at ERR, one
+			// line per stack frame (66 lines per job). BrokerServer requests are retried with
+			// backoff; a broker the runners cannot reach shows as hl-arc-jobs-stuck
+			`set(severity_text, "warn") where resource.attributes["k8s.namespace.name"] == "arc-runners" and resource.attributes["k8s.container.name"] == "runner" and IsMatch(body, "^\\[RUNNER [^\\]]+ ERR +BrokerServer\\]")`,
 			// TEMPORARY (remove after 2026-12-10, when 60d retention has aged them out):
 			// stale index refs left by the 2026-10-11 migration delete request make
 			// queries touching 2026-10-11 <06:04Z log "failed to load chunk ... no such
