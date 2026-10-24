@@ -12,8 +12,9 @@ jobs:
   **listener** pod (also in `arc-systems`) that long-polls GitHub for jobs.
 - **Runners** (`arc-runners`): one fresh pod per job (ephemeral), deleted afterwards. Image
   `ghcr.io/actions/actions-runner` (Ubuntu 24.04) with a Docker-in-Docker sidecar, so `services:`,
-  `docker build` and `docker/build-push-action` work. Per job: 6 CPU / 12Gi for the steps, 8 CPU / 12Gi
-  for Docker, 2Gi /dev/shm (Chromium), 10Gi workspace + 30Gi Docker storage; on dell-r620 only.
+  `docker build` and `docker/build-push-action` work. Per job: 6 CPU / 12Gi for the steps, 8 CPU / 36Gi
+  for Docker, 2Gi /dev/shm (Chromium), 10Gi workspace on disk + 30Gi Docker storage in RAM (tmpfs, part
+  of Docker's 36Gi; on disk it stalled etcd, which shares dell-r620's spinning RAID); on dell-r620 only.
 - **Auth**: GitHub App `tkuipers-homelab-runners` (Administration: write, Metadata: read), from the
   1Password item "GitHub Actions Runner App" via `templates/external-secret.yaml`. Create or rotate it with
   `tooling/scripts/setup-credentials/setup-github-runner-credentials.sh`.
@@ -33,7 +34,7 @@ controller, the App and the pod template, and all carry the `homelab` label.
 
 | Repo | Scale set | Warm runners | Max |
 |------|-----------|--------------|-----|
-| tkuipers/homelab-agent | homelab-agent | 1 | 6 |
+| tkuipers/homelab-agent | homelab-agent | 1 | 4 |
 
 ### Add a repo
 

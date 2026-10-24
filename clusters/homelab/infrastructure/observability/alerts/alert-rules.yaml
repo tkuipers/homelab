@@ -3106,7 +3106,7 @@ data:
           namespace: arc-systems
         annotations:
           summary: '{{ $values.B }} job(s) assigned to {{ $labels.name }} have waited 20m for a runner'
-          description: Runner pods not starting (kubectl -n arc-runners get pods,ephemeralrunners; image pull, Pod Security, no room on dell-r620) or maxRunners (6) reached by long jobs.
+          description: Runner pods not starting (kubectl -n arc-runners get pods,ephemeralrunners; image pull, Pod Security, no room on dell-r620) or maxRunners (4) reached by long jobs.
           dashboard: https://logs.tkuipers.ca/d/svc-arc-systems-arc-controller
         isPaused: false
       - uid: hl-arc-runners-failing

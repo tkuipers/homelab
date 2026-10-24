@@ -66,14 +66,15 @@ runnerTemplate: &runner-template
           failureThreshold: 24
           periodSeconds: 5
         # builds (BuildKit runs in here). Requests are what the scheduler reserves; dell-r620
-        # has ~46 idle cores and ~165Gi free, so the limits are generous
+        # has ~46 idle cores and ~165Gi free, so the limits are generous. The memory limit
+        # covers the RAM-backed dind-storage (30Gi) plus ~6Gi for dockerd and builds.
         resources:
           requests:
             cpu: "1"
             memory: 2Gi
           limits:
             cpu: "8"
-            memory: 12Gi
+            memory: 36Gi
         volumeMounts:
           - name: work
             mountPath: /home/runner/_work
@@ -107,8 +108,7 @@ runnerTemplate: &runner-template
             mountPath: /var/run
           - name: dshm
             mountPath: /dev/shm
-    # Disk comes from dell-r620's /var (79% used, hl-node-disk alerts at 85%). Exceeding a
-    # sizeLimit evicts only that job's pod; 6 runners x 40Gi stays clear of the node's eviction threshold.
+    # The workspace is on dell-r620's /var; exceeding its sizeLimit evicts only that job's pod.
     volumes:
       - name: work
         emptyDir:
@@ -117,9 +117,13 @@ runnerTemplate: &runner-template
         emptyDir: {}
       - name: dind-externals
         emptyDir: {}
-      # Docker images, layers and BuildKit cache of this job (gone with the pod)
+      # Docker images, layers and BuildKit cache of this job (gone with the pod). In RAM:
+      # dell-r620's only disk is one spinning RAID volume shared with etcd, and ~6GB of layer
+      # writes per job stalled etcd and the apiserver for seconds at a time. tmpfs, so a job
+      # that fills it gets ENOSPC; counts toward the dind container's memory limit.
       - name: dind-storage
         emptyDir:
+          medium: Memory
           sizeLimit: 30Gi
       # Chromium needs more than the container default of 64M (Playwright recommends --ipc=host in Docker);
       # memory-backed, counts toward the runner container's memory limit
@@ -138,7 +142,8 @@ homelab-agent:
   scaleSetLabels: [homelab]
   # one warm runner: jobs start without waiting for a pod (homelab-agent deploys often)
   minRunners: 1
-  maxRunners: 6
+  # 4 x (36Gi dind + 12Gi runner) at the limits still fits dell-r620's 202GB
+  maxRunners: 4
   namespaceOverride: arc-runners
   # Argo CD renders without cluster access, so the chart's controller lookup can't run
   controllerServiceAccount:

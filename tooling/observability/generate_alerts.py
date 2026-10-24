@@ -367,7 +367,7 @@ HOMELAB = [
          dashboard=svc_uid("arc-systems", "arc-controller"),
          summary="{{ $values.B }} job(s) assigned to {{ $labels.name }} have waited 20m for a runner",
          description="Runner pods not starting (kubectl -n arc-runners get pods,ephemeralrunners; image pull, Pod Security, no room on dell-r620) "
-                     "or maxRunners (6) reached by long jobs."),
+                     "or maxRunners (4) reached by long jobs."),
     rule("hl-arc-runners-failing", "GitHub runner pods failing",
          'sum by (name) (gha_controller_failed_ephemeral_runners)', "gt", 0, for_="15m", static_ns="arc-systems",
          dashboard=svc_uid("arc-systems", "arc-controller"),
