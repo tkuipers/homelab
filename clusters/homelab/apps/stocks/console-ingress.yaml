@@ -27,3 +27,38 @@ spec:
                 name: console
                 port:
                   number: 3000
+---
+# The ticker pages (/stocks/<ticker>) are rendered on the server, ~5 api calls each.
+# Crawlers that fetched all of them in parallel (2026-10-17, 2026-10-24; up to ~300/min)
+# made the api miss its probes. People and search bots stay under ~11/min, so these
+# pages get a per-IP limit; everything else on the host is unlimited (rule above).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: console-ticker-pages
+  namespace: stocks
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rpm: "30"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+    nginx.ingress.kubernetes.io/limit-connections: "5"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx
+  # certificate is issued through the console Ingress above
+  tls:
+    - hosts:
+        - stocks.tkuipers.ca
+      secretName: stocks-console-tls
+  rules:
+    - host: stocks.tkuipers.ca
+      http:
+        paths:
+          - path: /stocks
+            pathType: Prefix
+            backend:
+              service:
+                name: console
+                port:
+                  number: 3000
