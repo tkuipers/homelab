@@ -104,15 +104,26 @@ runnerTemplate: &runner-template
         volumeMounts:
           - name: work
             mountPath: /home/runner/_work
+          - name: npm-cache
+            mountPath: /home/runner/.npm
           - name: dind-sock
             mountPath: /var/run
           - name: dshm
             mountPath: /dev/shm
-    # The workspace is on dell-r620's /var; exceeding its sizeLimit evicts only that job's pod.
     volumes:
+      # The workspace (checkout, node_modules, builds, tool cache) and the npm cache that
+      # setup-node restores: ~1.5GB of small-file writes per job, which still stalled etcd on
+      # dell-r620's spinning RAID after Docker's storage moved to RAM. tmpfs, counted toward the
+      # runner container's memory limit (its peak was ~4.4Gi of 12Gi with these on disk); a job that
+      # fills them gets ENOSPC, or OOM if its own processes also need most of the 12Gi.
       - name: work
         emptyDir:
-          sizeLimit: 10Gi
+          medium: Memory
+          sizeLimit: 6Gi
+      - name: npm-cache
+        emptyDir:
+          medium: Memory
+          sizeLimit: 2Gi
       - name: dind-sock
         emptyDir: {}
       - name: dind-externals
