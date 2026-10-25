@@ -1,0 +1,13 @@
+# Zones beyond Home. Both of Tyler's offices are "Work", so a phone in either reads as at work
+# (the Professor reads device_tracker.iphone: home, Work, or not_home).
+zone:
+  - name: Work
+    latitude: 53.5616058
+    longitude: -113.5091605
+    radius: 150
+    icon: mdi:briefcase
+  - name: Work
+    latitude: 53.4764833
+    longitude: -113.4932118
+    radius: 150
+    icon: mdi:briefcase
