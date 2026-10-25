@@ -14,7 +14,8 @@ jobs:
   `ghcr.io/actions/actions-runner` (Ubuntu 24.04) with a Docker-in-Docker sidecar, so `services:`,
   `docker build` and `docker/build-push-action` work. Per job: 6 CPU / 12Gi for the steps, 8 CPU / 36Gi
   for Docker, 2Gi /dev/shm (Chromium). A job's bulk writes stay off disk: the 6Gi workspace and 2Gi npm
-  cache (part of the steps' 12Gi) and the 30Gi Docker storage (part of Docker's 36Gi) are tmpfs, because
+  cache (part of the steps' 12Gi), the 30Gi Docker storage (part of Docker's 36Gi) and the ~600MB copy
+  of the runner's node runtimes made at pod start are tmpfs, because
   on disk they stalled etcd, which shares dell-r620's spinning RAID. On dell-r620 only.
 - **Auth**: GitHub App `tkuipers-homelab-runners` (Administration: write, Metadata: read), from the
   1Password item "GitHub Actions Runner App" via `templates/external-secret.yaml`. Create or rotate it with

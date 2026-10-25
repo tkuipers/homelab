@@ -126,8 +126,12 @@ runnerTemplate: &runner-template
           sizeLimit: 2Gi
       - name: dind-sock
         emptyDir: {}
+      # The runner's node runtimes (~600MB) that init-dind-externals copies for job containers:
+      # on disk, every new runner pod (often several per CI run) wrote a ~40MB/s burst that stalled etcd.
       - name: dind-externals
-        emptyDir: {}
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
       # Docker images, layers and BuildKit cache of this job (gone with the pod). In RAM:
       # dell-r620's only disk is one spinning RAID volume shared with etcd, and ~6GB of layer
       # writes per job stalled etcd and the apiserver for seconds at a time. tmpfs, so a job
