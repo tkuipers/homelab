@@ -67,7 +67,7 @@ spec:
         - name: config
           mountPath: /config
       - name: export-api-key
-        image: busybox:1.36
+        image: busybox:1.38
         command:
         - sh
         - -c
