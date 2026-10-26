@@ -61,7 +61,7 @@ spec:
       # Exportarr sidecar for Prometheus metrics (API key copied from the app's config by
       # the export-api-key init container; exportarr only parses *arr config.xml itself)
       - name: exportarr
-        image: ghcr.io/onedr0p/exportarr:v2.0
+        image: ghcr.io/onedr0p/exportarr:v2.3
         args:
           - bazarr
         env:
