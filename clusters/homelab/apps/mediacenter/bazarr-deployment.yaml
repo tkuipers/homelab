@@ -19,7 +19,7 @@ spec:
         kubernetes.io/hostname: dell-r620
       initContainers:
       - name: export-api-key
-        image: busybox:1.36
+        image: busybox:1.38
         command:
         - sh
         - -c
