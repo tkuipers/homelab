@@ -53,6 +53,12 @@ runnerTemplate: &runner-template
           - dockerd
           - --host=unix:///var/run/docker.sock
           - --group=$(DOCKER_GROUP_GID)
+          # The pod network is flannel VXLAN (MTU 1450) and dockerd's bridges default to 1500, so
+          # full-size packets from a job's containers are dropped and some TLS hosts hang mid
+          # handshake (get.helm.sh, behind Azure Front Door). The default bridge and every network
+          # a job creates (buildx's BuildKit container included) use the pod's MTU.
+          - --mtu=1450
+          - --default-network-opt=bridge=com.docker.network.driver.mtu=1450
         env:
           # the runner image's docker group
           - name: DOCKER_GROUP_GID
