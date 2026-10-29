@@ -218,6 +218,10 @@ spec:
               value: "3"
             - name: GRAFANA_SERVICE_ACCOUNT_TOKEN
               valueFrom: {secretKeyRef: {name: homelab-agent, key: grafana-token}}
+            - name: ADGUARD_USERNAME
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: adguard-username, optional: true}}
+            - name: ADGUARD_PASSWORD
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: adguard-password, optional: true}}
             - name: WEBHOOK_TOKEN
               valueFrom: {secretKeyRef: {name: homelab-agent, key: webhook-token}}
             - name: TWILIO_ACCOUNT_SID
