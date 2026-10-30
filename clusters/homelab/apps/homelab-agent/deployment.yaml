@@ -242,6 +242,12 @@ spec:
             # personas that run on OpenRouter models instead of Claude
             - name: OPENROUTER_API_KEY
               valueFrom: {secretKeyRef: {name: homelab-agent, key: openrouter-key, optional: true}}
+            - name: APNS_KEY
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: apns-key, optional: true}}
+            - name: APNS_KEY_ID
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: apns-key-id, optional: true}}
+            - name: APNS_TEAM_ID
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: apns-team-id, optional: true}}
           volumeMounts:
             - name: data
               mountPath: /data
