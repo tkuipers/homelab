@@ -11,8 +11,8 @@ resources:
 # pinned by homelab-agent's CI (deploy job)
 images:
   - name: ghcr.io/tkuipers/homelab-agent
-    digest: sha256:39cf87ba331b71248d664a7c37e8253be3717692f8032b827cab6f66164ec9da
+    digest: sha256:07c75d0b163728f57bfdd713caf7f64921c86e8794bc6fc2c00acba3a60e1c0d
   - name: ghcr.io/tkuipers/workspace-mcp
-    digest: sha256:82b71912d6aac91f3e9dccf4469ca551f3a6c5ce27fb21ebd99197e1b80686f0
+    digest: sha256:e0c056e84b3bef9f3efa4f96ad0ebd52a0689de039149b252099b2169c5709ca
   - name: ghcr.io/tkuipers/whatsapp-mcp
-    digest: sha256:0ab29984b410fa732b86739999d8d2c2ef7530f555d29b865b93f7b3448a6aff
+    digest: sha256:e928698dae7b4f248f02a2647eb3e0d9882a41a0a178e206c4266434d7959c62
