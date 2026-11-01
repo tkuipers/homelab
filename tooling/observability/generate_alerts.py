@@ -112,13 +112,17 @@ def deploy_down(uid, title, ns, deploy):
 
 POD_TO_SERVICE = '{{ reReplaceAll "(-[a-z0-9]{8,10})?-[a-z0-9]{5}$|-[0-9]+$" "" $labels.pod }}'
 
-# (target_namespace, target_service) of every pod created in the last 8 minutes,
-# the service derived from the pod name like POD_TO_SERVICE. A Recreate deploy
-# (NATS consumers, single-writer apps) leaves its service without a pod while
-# the new image is pulled - 3-4 min for the stocks images - which is not an
-# outage. A pod that stays unready past 8 min, or crash loops (same pod), alerts.
+# (target_namespace, target_service) of every pod that started on its node in
+# the last 8 minutes, the service derived from the pod name like POD_TO_SERVICE.
+# A Recreate deploy (NATS consumers, single-writer apps) leaves its service
+# without a pod while the new image is pulled - 3-4 min for the stocks images -
+# which is not an outage. Counted from the pod's start (kubelet accepted it), not
+# its creation: pods pinned to a rebooting node are created at the drain and sit
+# Pending until the node is back, which used up the whole window on 11-01.
+# A pod that stays unready past 8 min, or crash loops (same pod), alerts; one
+# still Pending falls back to its creation time.
 # Plain "$1": Grafana env-interpolates rule labels, not the query model.
-RECENT_POD = ('label_replace(label_replace(min by (namespace, pod) (time() - kube_pod_created) < 480, '
+RECENT_POD = ('label_replace(label_replace(min by (namespace, pod) (time() - (kube_pod_start_time or kube_pod_created)) < 480, '
               '"target_namespace", "$1", "namespace", "(.*)"), '
               '"target_service", "$1", "pod", "(.+?)(?:(?:-[a-z0-9]{8,10})?-[a-z0-9]{5}|-[0-9]+)")')
 
