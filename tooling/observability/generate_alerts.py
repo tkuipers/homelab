@@ -257,7 +257,13 @@ HOMELAB = [
          'max by (namespace, statefulset) (kube_statefulset_replicas - kube_statefulset_status_replicas_ready)', "gt", 0, for_="15m", severity="critical", ns="namespace", svc="statefulset",
          summary="{{ $labels.namespace }}/{{ $labels.statefulset }} has replicas not ready (Loki/Prometheus/Tempo/Alertmanager/Argo CD controller)"),
     rule("hl-node-disk-forecast", "Node filesystem will fill within 24h",
-         'min by (instance, mountpoint) (predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"}[6h], 86400))', "lt", 0, for_="30m", severity="critical", dashboard=svc_uid("observability", "kps-prometheus-node-exporter"), static_ns="kube-system",
+         # Only forecast series that are still scraped and have >=2h of samples (30s scrape): a node-exporter
+         # pod that died with a reboot keeps its last 6h in the range, and a few minutes of image pulls
+         # extrapolated over a day look like a fill.
+         'min by (instance, mountpoint) ('
+         'predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"}[6h], 86400)'
+         ' and on (instance, mountpoint, pod) node_filesystem_avail_bytes'
+         ' and on (instance, mountpoint, pod) count_over_time(node_filesystem_avail_bytes[6h]) >= 240)', "lt", 0, for_="30m", severity="critical", dashboard=svc_uid("observability", "kps-prometheus-node-exporter"), static_ns="kube-system",
          summary="{{ $labels.instance }} {{ $labels.mountpoint }} will be full within a day at the current rate",
          description="dell-r620 /var holds media, Loki, Prometheus and containerd; kubelet starts evicting at ~90%."),
     rule("hl-kernel-oom", "Kernel OOM kill on node",

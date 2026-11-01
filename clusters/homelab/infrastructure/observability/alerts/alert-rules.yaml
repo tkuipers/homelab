@@ -1659,7 +1659,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: min by (instance, mountpoint) (predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"}[6h], 86400))
+            expr: min by (instance, mountpoint) (predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs"}[6h], 86400) and on (instance, mountpoint, pod) node_filesystem_avail_bytes and on (instance, mountpoint, pod) count_over_time(node_filesystem_avail_bytes[6h]) >= 240)
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
