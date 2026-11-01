@@ -442,7 +442,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: sum(increase(prober_probe_total{namespace="stock-guesser", pod=~"stock-guesser-app-.*", result!="successful"}[5m])) or vector(0)
+            expr: sum(increase(prober_probe_total{namespace="stock-guesser", pod=~"stock-guesser-app-.*", probe_type!="Startup", result!="successful"}[5m])) or vector(0)
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -480,7 +480,7 @@ data:
           namespace: stock-guesser
         annotations:
           summary: Stock Guesser app is failing its probes
-          description: Ported from the APM latency monitor (avg request duration > 10s). There is no APM anymore; probe failures/timeouts are the replacement signal.
+          description: Ported from the APM latency monitor (avg request duration > 10s). There is no APM anymore; liveness/readiness probe failures/timeouts are the replacement signal. Startup probe failures (cold start after a reboot) don't count.
           dashboard: https://logs.tkuipers.ca/d/svc-stock-guesser-stock-guesser-app
         isPaused: false
       - uid: dd-stock-guesser-errors

@@ -141,12 +141,14 @@ SERVICE_MONITORS = [
     deploy_down("dd-stock-guesser-mysql-health", "Stock Guesser MySQL health", "stock-guesser", "mysql"),
     # The old monitor used APM (request duration > 10s). There is no tracing
     # in the app anymore; the closest signal is the readiness probe (it times
-    # out when the app is slow/hung).
+    # out when the app is slow/hung). Startup probe failures are left out: a
+    # cold TensorFlow import after a node reboot fails it for up to 5 min by
+    # design; a start that never succeeds is a crash loop / pod-health alert.
     rule("dd-stock-guesser-latency", "Stock Guesser app slow / probes failing",
-         'sum(increase(prober_probe_total{namespace="stock-guesser", pod=~"stock-guesser-app-.*", result!="successful"}[5m])) or vector(0)',
+         'sum(increase(prober_probe_total{namespace="stock-guesser", pod=~"stock-guesser-app-.*", probe_type!="Startup", result!="successful"}[5m])) or vector(0)',
          "gt", 3, dashboard=svc_uid("stock-guesser", "stock-guesser-app"), static_ns="stock-guesser",
          summary="Stock Guesser app is failing its probes",
-         description="Ported from the APM latency monitor (avg request duration > 10s). There is no APM anymore; probe failures/timeouts are the replacement signal."),
+         description="Ported from the APM latency monitor (avg request duration > 10s). There is no APM anymore; liveness/readiness probe failures/timeouts are the replacement signal. Startup probe failures (cold start after a reboot) don't count."),
     rule("dd-stock-guesser-errors", "Stock Guesser app error rate",
          '100 * (sum(count_over_time({k8s_namespace_name="stock-guesser", service_name="stock-guesser-app"} | status >= 500 | path !~ "/(readyz|healthz|livez|health)/?" [5m])) or vector(0)) / sum(count_over_time({k8s_namespace_name="stock-guesser", service_name="stock-guesser-app"} | status != "" | path !~ "/(readyz|healthz|livez|health)/?" [5m]))',
          "gt", 20, ds="loki", dashboard=svc_uid("stock-guesser", "stock-guesser-app"), static_ns="stock-guesser",
