@@ -90,6 +90,9 @@ Prometheus did this (operator default subPath `prometheus-db`) from 10-11 until
 2026-11-01, when the reboots lost all its history; `disableMountSubPath` fixes it.
 Check: Prometheus logs `filesystem information fs_type=XFS_SUPER_MAGIC` at start
 (`OVERLAYFS_SUPER_MAGIC` = not persisted).
+`tooling/patches/kubelet-var-persist.yaml` adds `/var/persist` to kubelet's
+extraMounts (applied by hand with `talosctl patch mc`, not by Argo). Keep
+avoiding subPath anyway: a node rebuilt without that patch has the trap again.
 
 ### Dashboards and alerts are generated
 ```

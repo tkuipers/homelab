@@ -1,0 +1,16 @@
+# Let kubelet see host /var/persist, where the hostPath PVs live (both nodes).
+# Without it kubelet resolves subPath and DirectoryOrCreate inside its own
+# container rootfs, which every reboot wipes: Prometheus lost all its history
+# this way on 2026-11-01. Also in sidero/serverclass-*.yaml.
+#   talosctl -n 10.0.0.50 patch mc --patch @tooling/patches/kubelet-var-persist.yaml
+#   talosctl -n 10.0.0.51 patch mc --patch @tooling/patches/kubelet-var-persist.yaml
+machine:
+  kubelet:
+    extraMounts:
+      - destination: /var/persist
+        type: bind
+        source: /var/persist
+        options:
+          - rbind
+          - rshared
+          - rw

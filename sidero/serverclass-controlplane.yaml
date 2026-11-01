@@ -85,6 +85,14 @@ spec:
             - rbind
             - rshared
             - rw
+        # hostPath PVs; see tooling/patches/kubelet-var-persist.yaml
+        - destination: /var/persist
+          type: bind
+          source: /var/persist
+          options:
+            - rbind
+            - rshared
+            - rw
     - op: add
       path: /cluster/apiServer/admissionControl/-
       value:
