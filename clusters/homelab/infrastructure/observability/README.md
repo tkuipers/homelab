@@ -83,6 +83,13 @@ in static PVs (`storage-pvs.yaml`, class `observability-hostpath`).
 Loki 100 Gi (60d retention; ~0.2-1 GB/day observed, budget alert), Prometheus 40 Gi
 (`retentionSize: 36GB`, 90d), Tempo 8 Gi (5d), Grafana 2 Gi.
 Pods writing to hostPath run as root (hostPath ignores fsGroup).
+Never mount these PVs with a `subPath`: Talos' kubelet does not see host
+`/var/persist` (only `/var/local` is in its extraMounts), so kubelet resolves the
+subPath inside its own container rootfs, which is wiped on every node reboot.
+Prometheus did this (operator default subPath `prometheus-db`) from 10-11 until
+2026-11-01, when the reboots lost all its history; `disableMountSubPath` fixes it.
+Check: Prometheus logs `filesystem information fs_type=XFS_SUPER_MAGIC` at start
+(`OVERLAYFS_SUPER_MAGIC` = not persisted).
 
 ### Dashboards and alerts are generated
 ```

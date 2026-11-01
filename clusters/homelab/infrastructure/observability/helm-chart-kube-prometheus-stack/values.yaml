@@ -131,6 +131,9 @@ kube-prometheus-stack:
         limits:
           memory: 8Gi
       storageSpec:
+        # No subPath: kubelet would resolve it inside its own container rootfs
+        # (Talos), which a reboot wipes. See README "Storage / retention".
+        disableMountSubPath: true
         volumeClaimTemplate:
           spec:
             storageClassName: observability-hostpath
