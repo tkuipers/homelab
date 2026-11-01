@@ -43,6 +43,13 @@ GRAFANA = "https://logs.tkuipers.ca"
 # Root spans of loops that run every few minutes (polymarket-bot, stocks decision).
 LOOP_SPANS = "scanner.scan|monitor.check_positions|reconciler.reconcile|bankroll.snapshot|decision.loss_monitor"
 
+# Start time of every Job owned by a CronJob, labelled with its CronJob as owner_name.
+CRONJOB_RUN_START = ('(max by (namespace, job_name) (kube_job_status_start_time) * on (namespace, job_name) group_left (owner_name) '
+                     'max by (namespace, job_name, owner_name) (kube_job_owner{owner_kind="CronJob"}))')
+# Failed CronJob runs that a later run of the same CronJob (scheduled or manual) completed after.
+SUPERSEDED_CRONJOB_RUNS = (f'({CRONJOB_RUN_START} < on (namespace, owner_name) group_left '
+                           f'max by (namespace, owner_name) ({CRONJOB_RUN_START} and on (namespace, job_name) (kube_job_status_succeeded > 0)))')
+
 
 def rule(uid, title, expr, op, threshold, for_="5m", ds="prometheus", severity="warning",
          summary="", description="", dashboard=None, window=600, no_data="OK", ns=None, svc=None,
@@ -235,7 +242,8 @@ HOMELAB = [
          "gt", 0, for_="1h", ns="namespace", svc="cronjob",
          summary="{{ $labels.namespace }}/{{ $labels.cronjob }} exists for >2 days and never completed successfully"),
     rule("hl-job-failed", "Job failed",
-         'max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)',
+         'max by (namespace, job_name) (kube_job_failed{condition="true"} > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)'
+         f' unless on (namespace, job_name) {SUPERSEDED_CRONJOB_RUNS}',
          "gt", 0, for_="0s", ns="namespace", svc='{{ reReplaceAll "-[0-9]+$" "" $labels.job_name }}',
          summary="Job {{ $labels.namespace }}/{{ $labels.job_name }} failed (started in the last 24h)",
          description="Logs of the job pod are in Loki even after the pod is gone: {k8s_namespace_name=\"{{ $labels.namespace }}\"} |= \"\" with k8s_pod_name=~\"{{ $labels.job_name }}-.*\"."),

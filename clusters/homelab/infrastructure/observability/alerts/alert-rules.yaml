@@ -1447,7 +1447,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: max by (namespace, job_name) (kube_job_status_failed > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400)
+            expr: max by (namespace, job_name) (kube_job_failed{condition="true"} > 0) and on (namespace, job_name) (time() - kube_job_status_start_time < 86400) unless on (namespace, job_name) ((max by (namespace, job_name) (kube_job_status_start_time) * on (namespace, job_name) group_left (owner_name) max by (namespace, job_name, owner_name) (kube_job_owner{owner_kind="CronJob"})) < on (namespace, owner_name) group_left max by (namespace, owner_name) ((max by (namespace, job_name) (kube_job_status_start_time) * on (namespace, job_name) group_left (owner_name) max by (namespace, job_name, owner_name) (kube_job_owner{owner_kind="CronJob"})) and on (namespace, job_name) (kube_job_status_succeeded > 0)))
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
