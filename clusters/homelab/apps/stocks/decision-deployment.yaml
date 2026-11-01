@@ -73,6 +73,12 @@ spec:
               port: 8083
             initialDelaySeconds: 30
             periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8083
+            periodSeconds: 10
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: /healthz
