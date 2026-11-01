@@ -15,6 +15,11 @@ spec:
       labels:
         app: adguard-home
     spec:
+      # The config and work dirs are hostPaths on dell-r620. Scheduled
+      # anywhere else, AdGuard starts as a fresh install (setup wizard,
+      # no DNS on :53).
+      nodeSelector:
+        kubernetes.io/hostname: dell-r620
       containers:
         - name: adguard-home
           # Pinned + IfNotPresent on purpose: the nodes use this pod as their
