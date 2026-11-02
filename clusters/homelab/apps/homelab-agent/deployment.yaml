@@ -222,6 +222,9 @@ spec:
               valueFrom: {secretKeyRef: {name: homelab-agent, key: adguard-username, optional: true}}
             - name: ADGUARD_PASSWORD
               valueFrom: {secretKeyRef: {name: homelab-agent, key: adguard-password, optional: true}}
+            # what he watches, from Jellyfin's API (the key Tyler made for the agent); without it, its logs only
+            - name: JELLYFIN_API_KEY
+              valueFrom: {secretKeyRef: {name: homelab-agent, key: jellyfin-key, optional: true}}
             - name: WEBHOOK_TOKEN
               valueFrom: {secretKeyRef: {name: homelab-agent, key: webhook-token}}
             - name: TWILIO_ACCOUNT_SID
