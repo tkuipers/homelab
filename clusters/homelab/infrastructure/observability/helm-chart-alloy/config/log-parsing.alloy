@@ -199,6 +199,11 @@ otelcol.processor.transform "logs" {
 			// re-runs it without on failure (polymarket_bot/db_drivers.py), so inserts into
 			// bot_state / bankroll_snapshots (no id column) log this ~20x/h; the write succeeds
 			`set(severity_text, "warn") where resource.attributes["k8s.namespace.name"] == "polymarket-bot" and attributes["log.format"] == "postgres" and IsMatch(body, "^column \"id\" does not exist at character [0-9]+")`,
+			// kube-apiserver logs every client that hangs up an HTTP/2 connection at error
+			// (conn.go: "Error on socket receive ... use of closed network connection",
+			// "Unable to write frame ... closed pipe"); a LAN kubectl session alone gave
+			// 38/h on 2026-11-02. Apiserver failures (handler timeouts, etcd) stay at error
+			`set(severity_text, "warn") where resource.attributes["k8s.container.name"] == "kube-apiserver" and attributes["log.format"] == "klog" and IsMatch(body, "^(Error on socket receive: .*use of closed network connection|Unable to write frame .*closed pipe)$")`,
 			// GitHub Actions runners are one-time use: when the job ends the runner cancels its
 			// broker long-poll (GetRunnerMessage) and logs the TaskCanceledException at ERR, one
 			// line per stack frame (66 lines per job). BrokerServer requests are retried with
