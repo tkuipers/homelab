@@ -190,6 +190,10 @@ otelcol.processor.transform "logs" {
 			`set(severity_text, "warn") where attributes["log.format"] == "nginx_error" and IsMatch(body, "^open\\(\\) .* failed \\(2: No such file or directory\\)")`,
 			// ... and for a missing directory index the same way (scanners: /wp/?rest_route= ...)
 			`set(severity_text, "warn") where attributes["log.format"] == "nginx_error" and IsMatch(body, "^\".*/index\\.html\" is not found \\(2: No such file or directory\\)")`,
+			// ... and every request its limit-rpm / limit-connections annotations reject (a crawler
+			// on stocks.tkuipers.ca/stocks gave 188 in one minute on 2026-11-02); the limiter
+			// working is not an error, and the 429s still show in the access log
+			`set(severity_text, "warn") where attributes["log.format"] == "nginx_error" and IsMatch(body, "^limiting (requests|connections) by zone|^limiting requests, excess: ")`,
 			// blackbox-exporter logs every failed probe at error (the lines carry the probe
 			// module). The probe alerts (Public URL unreachable, Service health check failing)
 			// are the signal, with for: durations; as errors these lines made every
