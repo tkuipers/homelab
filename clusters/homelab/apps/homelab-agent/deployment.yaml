@@ -150,6 +150,9 @@ spec:
           env:
             - name: PUBLIC_URL
               value: https://agent.tkuipers.ca
+            # his zone: her clocks skip his night (push-plan stage 5)
+            - name: TZ
+              value: America/Edmonton
             # traces -> Alloy (OTLP) -> Tempo; the agent's commands don't inherit these
             - name: OTEL_SERVICE_NAME
               value: homelab-agent
