@@ -293,10 +293,14 @@ matter_devices:
       "MatterLight-6-0": { id: light.main_bedroom }
       "MatterStartUpOnOff-6-16387": { id: select.main_bedroom_power_on_behavior, hidden: true }
       "MatterUpdate-40-9": { id: update.main_bedroom_firmware, hidden: true }
-  # H7057 [H7057]  (14 entities)
+  # H7057 [H7057]  (18 entities)
   - identifier: "matter:deviceid_DF8F5546DC2CCC5A-0000000000000004-MatterNodeDevice"
     area: "Outside"
     entities:
+      "GeneralDiagnosticsActiveHardwareFaults-51-5": { id: binary_sensor.h7057_hardware_faults, hidden: true }
+      "GeneralDiagnosticsActiveNetworkFaults-51-7": { id: binary_sensor.h7057_network_faults, hidden: true }
+      "GeneralDiagnosticsActiveRadioFaults-51-6": { id: binary_sensor.h7057_radio_faults, hidden: true }
+      "GeneralDiagnosticsBootReason-51-4": { id: sensor.h7057_boot_reason, hidden: true }
       "GeneralDiagnosticsRebootCount-51-1": { id: sensor.h7057_reboot_count, hidden: true }
       "GeneralDiagnosticsUpTime-51-2": { id: sensor.h7057_uptime, hidden: true }
       "IdentifyButton-3-1#0": { id: button.h7057_identify_0, hidden: true }
