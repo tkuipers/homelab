@@ -72,3 +72,24 @@ script:
                 - input_boolean.vacuum_pick_dining_hall
                 - input_boolean.vacuum_pick_kitchen
                 - input_boolean.vacuum_pick_living_room
+
+# The Dreame integration is cloud-only. When Dreame's cloud is down long
+# enough, its login fails and the entry stays in setup_error ("Authentication
+# Failed!") even after the cloud is back, leaving ~170 entities unavailable
+# until someone reloads it. Retry every 15 min; a reload during the outage just
+# fails again.
+automation:
+  - id: dreame_vacuum_recover_setup_error
+    alias: "Vacuum: reload Dreame after a failed login"
+    mode: single
+    trigger:
+      - trigger: time_pattern
+        minutes: "/15"
+    condition:
+      - condition: template
+        value_template: >-
+          {{ config_entry_attr(config_entry_id('vacuum.dreame_vacuum'), 'state') == 'setup_error' }}
+    action:
+      - action: homeassistant.reload_config_entry
+        data:
+          entry_id: "{{ config_entry_id('vacuum.dreame_vacuum') }}"
