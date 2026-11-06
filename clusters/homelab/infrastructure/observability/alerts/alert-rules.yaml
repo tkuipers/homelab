@@ -2652,7 +2652,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: (count(hass_entity_available{entity!~"(select|switch)[.]dreame_vacuum_.*"} == 0) or vector(0)) - quantile_over_time(0.5, count(hass_entity_available{entity!~"(select|switch)[.]dreame_vacuum_.*"} == 0)[1d:2m])
+            expr: (count(hass_entity_available{entity!~".*[.]dreame_vacuum(_.*)?"} == 0) or vector(0)) - quantile_over_time(0.5, count(hass_entity_available{entity!~".*[.]dreame_vacuum(_.*)?"} == 0)[1d:2m])
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -2690,7 +2690,59 @@ data:
           namespace: homeassistant
         annotations:
           summary: '{{ $values.B }} more Home Assistant entities unavailable than usual (median of the last day)'
-          description: 'About 45 entities are unavailable all the time (Dreame sensors the vacuum lacks, iPhone sensors, backup sensors before a backup), so this compares with the day''s median (startup dips don''t count; Dreame selects/switches are left out because the integration hides ~30 of them whenever the vacuum cleans): a jump means an integration or hub went down (Matter server, a cloud integration, Wi-Fi). Home Assistant dashboard > Unavailable entities.'
+          description: 'Some entities are unavailable all the time (iPhone sensors, backup sensors before a backup), so this compares with the day''s median (startup dips don''t count; the Dreame vacuum has its own rule): a jump means an integration or hub went down (Matter server, a cloud integration, Wi-Fi). Home Assistant dashboard > Unavailable entities.'
+          dashboard: https://logs.tkuipers.ca/d/svc-homeassistant-homeassistant
+        isPaused: false
+      - uid: hl-hass-dreame-unavailable
+        title: Dreame vacuum unreachable
+        condition: C
+        data:
+        - refId: A
+          relativeTimeRange:
+            from: 600
+            to: 0
+          datasourceUid: prometheus
+          model:
+            refId: A
+            expr: max(hass_entity_available{entity="vacuum.dreame_vacuum"})
+            instant: true
+            intervalMs: 60000
+            maxDataPoints: 43200
+        - refId: B
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: reduce
+            expression: A
+            reducer: last
+            settings:
+              mode: dropNN
+        - refId: C
+          relativeTimeRange:
+            from: 0
+            to: 0
+          datasourceUid: __expr__
+          model:
+            refId: C
+            type: threshold
+            expression: B
+            conditions:
+            - evaluator:
+                type: lt
+                params:
+                - 1
+        noDataState: OK
+        execErrState: Error
+        for: 2h
+        labels:
+          severity: warning
+          namespace: homeassistant
+        annotations:
+          summary: The Dreame vacuum has been unavailable in Home Assistant for 2h
+          description: The integration is cloud-only, and Dreame's cloud drops out for 30-90 min several times a day (device commands time out with code 80001, its MQTT refuses the login), so only a long outage alerts. If the Dreame Vacuum config entry is in setup_error, automation.vacuum_reload_dreame_after_a_failed_login should reload it within 15 min of the cloud returning. Otherwise check the vacuum's Wi-Fi and the Dreame app.
           dashboard: https://logs.tkuipers.ca/d/svc-homeassistant-homeassistant
         isPaused: false
       - uid: hl-adguard-protection-off
