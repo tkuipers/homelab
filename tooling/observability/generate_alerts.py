@@ -356,7 +356,7 @@ HOMELAB = [
          'max(hass_entity_available{entity="vacuum.dreame_vacuum"})', "lt", 1, for_="2h", static_ns="homeassistant",
          dashboard=svc_uid("homeassistant", "homeassistant"),
          summary="The Dreame vacuum has been unavailable in Home Assistant for 2h",
-         description="The integration is cloud-only, and Dreame's cloud drops out for 30-90 min several times a day (device commands time out with code 80001, its MQTT refuses the login), so only a long outage alerts. If the Dreame Vacuum config entry is in setup_error, automation.vacuum_reload_dreame_after_a_failed_login should reload it within 15 min of the cloud returning. Otherwise check the vacuum's Wi-Fi and the Dreame app."),
+         description="The integration is cloud-only, and Dreame's cloud drops out for 30-90 min several times a day (device commands time out with code 80001, its MQTT refuses the login), so only a long outage alerts. If the Dreame Vacuum config entry is in setup_error, automation.vacuum_reload_dreame_after_a_failed_login should reload it within 15 min of the cloud returning. If sensor.dreame_vacuum_status went to power_off just before (battery ~10%, often after an error like 'drop' left it off the dock), the vacuum is dead and off the LAN: someone has to put it back on its dock. Otherwise check the vacuum's Wi-Fi and the Dreame app."),
     rule("hl-adguard-protection-off", "AdGuard filtering turned off",
          'max(adguard_protection_enabled)', "lt", 1, for_="2h", static_ns="adguard-home", dashboard=svc_uid("adguard-home", "adguard-home"),
          summary="AdGuard Home protection has been off for 2h",
