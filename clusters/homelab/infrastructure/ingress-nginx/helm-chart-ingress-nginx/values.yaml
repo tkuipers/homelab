@@ -38,6 +38,10 @@ ingress-nginx:
       # not a backend failure, and stay out of the 5xx alerts
       limit-req-status-code: "429"
       limit-conn-status-code: "429"
+      # Two of the Nov 2026 "NGINX2Root" nginx CVEs need HTTP/2, and ingress-nginx is
+      # archived upstream (no patched nginx will ship). HTTP/1.1 only until the
+      # controller is replaced; no backend here needs HTTP/2 (no gRPC ingresses).
+      use-http2: "false"
 
       # JSON access logs -> Alloy turns every key into a Loki field
       # ("msg" becomes the log line). See observability/helm-chart-alloy.
