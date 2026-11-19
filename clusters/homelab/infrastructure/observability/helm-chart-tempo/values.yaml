@@ -5,8 +5,10 @@ tempo:
   fullnameOverride: tempo
 
   tempo:
-    # The single-binary chart is frozen at 1.24.4 (appVersion 2.9.0); keep the 2.9 patches.
-    tag: "2.9.5"
+    # The single-binary chart is frozen at 1.24.4 (appVersion 2.9.0) and renders a 2.x
+    # config; 2.10 is the last 2.x line. Tempo 3 (no ingesters, no local-blocks
+    # processor) needs a new deployment, not a tag bump.
+    tag: "2.10.10"
     reportingEnabled: false
     # 8Gi budget (PV), 5 days. Check tempo disk use on the Tempo dashboard.
     retention: 120h
