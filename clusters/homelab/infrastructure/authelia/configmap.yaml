@@ -14,8 +14,13 @@ data:
       asset_path: /assets
       endpoints:
         authz:
+          # homelab-agent's own session check (AUTHELIA_VERIFY_URL, sets X-Original-URL itself)
           auth-request:
             implementation: AuthRequest
+          # the ingress controller (Traefik): it always overwrites X-Forwarded-Method/
+          # Proto/Host/URI, but passes a client's X-Original-URL through untouched
+          forward-auth:
+            implementation: ForwardAuth
       headers:
         csp_template: ""
       buffers:
