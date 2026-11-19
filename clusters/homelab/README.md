@@ -45,7 +45,7 @@ clusters/homelab/
 Store secrets in 1Password Homelab vault, then create `ExternalSecret` resources:
 
 ```yaml
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: my-app-secret

@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   # Infrastructure - deployed first (sync waves control order)
   - argocd-application-argocd.yaml
+  - argocd-application-external-secrets.yaml
   - argocd-application-metallb.yaml
   - argocd-application-cert-manager.yaml
   - argocd-application-ingress-nginx.yaml

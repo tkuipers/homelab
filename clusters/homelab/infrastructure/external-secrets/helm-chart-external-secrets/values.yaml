@@ -1,0 +1,11 @@
+# External Secrets Operator. Installed by hand with Helm (0.18.1, namespace
+# default, release "external-secrets") until 2026-11-19; now synced by the
+# infrastructure-external-secrets app with the same release name and namespace, so
+# Argo CD adopted the existing objects. The 1Password Connect server it talks to
+# (op-connect, also in default) is still outside git.
+external-secrets:
+  installCRDs: true
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
