@@ -399,9 +399,9 @@ configMapGenerator:
     options:
       annotations:
         grafana_folder: "Infrastructure"
-  - name: dash-infrastructure-svc-ingress-nginx-infrastructur-15969e20
+  - name: dash-infrastructure-svc-traefik-infrastructure-traefik
     files:
-      - infrastructure--svc-ingress-nginx-infrastructur-15969e20.json
+      - infrastructure--svc-traefik-infrastructure-traefik.json
     options:
       annotations:
         grafana_folder: "Infrastructure"

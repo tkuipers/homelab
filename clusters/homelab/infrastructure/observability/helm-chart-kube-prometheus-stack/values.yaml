@@ -485,7 +485,7 @@ prometheus-blackbox-exporter:
           preferred_ip_protocol: ip4
       # --- external (public hostname) modules: each one only accepts what a
       # healthy host of that class answers, so a deleted/misrouted Ingress
-      # (ingress-nginx default backend 404) or a broken backend (502/503) fails.
+      # (the ingress's 404 for unknown hosts) or a broken backend (502/503) fails.
       http_public:          # public app: 2xx after redirects
         prober: http
         timeout: 10s
@@ -494,7 +494,7 @@ prometheus-blackbox-exporter:
           follow_redirects: true
       # behind Authelia: the redirect to the login portal, or the Professor's
       # deliberate temporal-redirect to the Study page (homelab-agent
-      # src/professor/effects/kube.ts), which nginx answers before auth.
+      # src/professor/effects/kube.ts), which the ingress answers before auth.
       http_authelia:
         prober: http
         timeout: 10s
@@ -951,13 +951,13 @@ prometheus-blackbox-exporter:
         probe: internal
         target_namespace: default
         target_service: op-connect
-    - name: int-ingress-nginx-infrastructure-ingress-nginx-controller
-      url: http://infrastructure-ingress-nginx-controller-metrics.ingress-nginx.svc:10254/healthz
+    - name: int-traefik-infrastructure-traefik
+      url: http://infrastructure-traefik-metrics.traefik.svc:9100/metrics
       module: http_2xx
       additionalMetricsRelabels:
         probe: internal
-        target_namespace: ingress-nginx
-        target_service: infrastructure-ingress-nginx-controller
+        target_namespace: traefik
+        target_service: infrastructure-traefik
     - name: int-polymarket-bot-bot
       url: http://bot.polymarket-bot.svc:8080/healthz
       module: http_2xx

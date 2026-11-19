@@ -401,7 +401,7 @@ def standard(s: Svc) -> Board:
     if s.ingress:
         ing = "|".join(s.ingress)
         b.stat("Ingress 5xx (1h)",
-               f'(sum(rate(nginx_ingress_controller_requests{{exported_namespace="{s.ns}", ingress=~"{ing}", status=~"5.."}}[1h])) or vector(0)) / (sum(rate(nginx_ingress_controller_requests{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[1h])) > 0)',
+               f'(sum(rate(traefik_router_requests_total{{exported_namespace="{s.ns}", ingress=~"{ing}", code=~"5.."}}[1h])) or vector(0)) / (sum(rate(traefik_router_requests_total{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[1h])) > 0)',
                unit="percentunit", decimals=2, no_value="no traffic",
                thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.01}, {"color": "red", "value": 0.05}],
                desc="share of requests through the ingress answered with 5xx")
@@ -426,7 +426,7 @@ def standard(s: Svc) -> Board:
     if s.ingress:
         ing = "|".join(s.ingress)
         b.ts("Ingress responses by status class",
-             [(f'sum by (status_class) (label_replace(rate(nginx_ingress_controller_requests{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval]), "status_class", "${{1}}xx", "status", "(.)..")) or vector(0)', "{{status_class}}")],
+             [(f'sum by (status_class) (label_replace(rate(traefik_router_requests_total{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval]), "status_class", "${{1}}xx", "code", "(.)..")) or vector(0)', "{{status_class}}")],
              unit="reqps", stack=True, overrides=status_overrides())
     if s.access_logs:
         b.ts("Responses by status (access logs)",
@@ -441,15 +441,15 @@ def standard(s: Svc) -> Board:
     if s.ingress:
         ing = "|".join(s.ingress)
         b.row("Traffic & latency (ingress)")
-        b.ts("Requests / s", [(f'sum by (host) (rate(nginx_ingress_controller_requests{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])) or vector(0)', "{{host}}")],
+        b.ts("Requests / s", [(f'sum by (ingress) (rate(traefik_router_requests_total{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])) or vector(0)', "{{ingress}}")],
              unit="reqps", w=8)
         b.ts("Latency (ingress -> response)", [
-            (f'histogram_quantile(0.5, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p50"),
-            (f'histogram_quantile(0.95, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p95"),
-            (f'histogram_quantile(0.99, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p99"),
+            (f'histogram_quantile(0.5, sum by (le) (rate(traefik_router_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p50"),
+            (f'histogram_quantile(0.95, sum by (le) (rate(traefik_router_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p95"),
+            (f'histogram_quantile(0.99, sum by (le) (rate(traefik_router_request_duration_seconds_bucket{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])))', "p99"),
         ] + ([(f'max(probe_duration_seconds{{probe="external", target_namespace="{s.ns}", target_service="{s.probe}"}})', "external probe (end-to-end)")] if s.probe else []),
              unit="s", w=8, desc="ingress request duration percentiles (requests stopped by Authelia have none) and the synthetic end-to-end probe")
-        b.ts("Bandwidth out", [(f'sum(rate(nginx_ingress_controller_response_size_sum{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])) or vector(0)', "bytes/s")], unit="Bps", w=8)
+        b.ts("Bandwidth out", [(f'sum(rate(traefik_router_responses_bytes_total{{exported_namespace="{s.ns}", ingress=~"{ing}"}}[$__rate_interval])) or vector(0)', "bytes/s")], unit="Bps", w=8)
     elif s.probe:
         b.row("External probe")
         b.ts("External probe duration", [(f'max(probe_duration_seconds{{probe="external", target_namespace="{s.ns}", target_service="{s.probe}"}})', "probe")], unit="s")
@@ -872,7 +872,7 @@ def arc_panels(b: Board, s: Svc):
 
 def jellyfin_panels(b: Board, s: Svc):
     b.logs("Playback activity", f'{loki_sel(s)} |~ "(?i)(playback|transcod|stream)"', h=8, time_from="7d", max_lines=200)
-    b.ts("Ingress bandwidth out", [('sum(rate(nginx_ingress_controller_response_size_sum{exported_namespace="mediacenter", ingress="jellyfin"}[$__rate_interval])) or vector(0)', "bytes/s")], unit="Bps")
+    b.ts("Ingress bandwidth out", [('sum(rate(traefik_router_responses_bytes_total{exported_namespace="mediacenter", ingress="jellyfin"}[$__rate_interval])) or vector(0)', "bytes/s")], unit="Bps")
 
 
 def postgres_panels(b: Board, s: Svc):
@@ -887,10 +887,10 @@ def postgres_panels(b: Board, s: Svc):
 
 
 def ingress_global(b: Board, s: Svc):
-    b.ts("Requests / s by ingress", [('sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests[$__rate_interval]))', "{{exported_namespace}}/{{ingress}}")], unit="reqps")
-    b.ts("5xx / s by ingress", [('sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[$__rate_interval])) or vector(0)', "{{exported_namespace}}/{{ingress}}")], unit="reqps")
-    b.ts("p95 latency by ingress", [('histogram_quantile(0.95, sum by (le, ingress) (rate(nginx_ingress_controller_request_duration_seconds_bucket[$__rate_interval])))', "{{ingress}}")], unit="s")
-    b.ts("Responses by status class", [('sum by (status_class) (label_replace(rate(nginx_ingress_controller_requests[$__rate_interval]), "status_class", "${1}xx", "status", "(.).."))', "{{status_class}}")], unit="reqps", stack=True, overrides=status_overrides())
+    b.ts("Requests / s by ingress", [('sum by (exported_namespace, ingress) (rate(traefik_router_requests_total[$__rate_interval]))', "{{exported_namespace}}/{{ingress}}")], unit="reqps")
+    b.ts("5xx / s by ingress", [('sum by (exported_namespace, ingress) (rate(traefik_router_requests_total{code=~"5.."}[$__rate_interval])) or vector(0)', "{{exported_namespace}}/{{ingress}}")], unit="reqps")
+    b.ts("p95 latency by ingress", [('histogram_quantile(0.95, sum by (le, ingress) (rate(traefik_router_request_duration_seconds_bucket[$__rate_interval])))', "{{ingress}}")], unit="s")
+    b.ts("Responses by status class", [('sum by (status_class) (label_replace(rate(traefik_router_requests_total[$__rate_interval]), "status_class", "${1}xx", "code", "(.).."))', "{{status_class}}")], unit="reqps", stack=True, overrides=status_overrides())
     sel = loki_sel(s)
     b.table("Top 5xx paths (access logs, 24h)", [(f'topk(15, sum by (host, path, status) (count_over_time({sel} | status >= 500 [24h]))) or vector(0)', "")], ds=LOKI, w=12,
             transformations=[{"id": "organize", "options": {"excludeByName": {"Time": True}, "renameByName": {"Value": "count"}}}])
@@ -1026,8 +1026,8 @@ CATALOG: List[Svc] = [
     S("nfs-provisioner", "samba-server-dell-r620", "Samba server (dell-r620)", folder="Infrastructure", quiet=True),
     S("nfs-provisioner", "samba-server-omen-worker1", "Samba server (omen-worker1)", folder="Infrastructure", quiet=True),
     S("external-dns", "external-dns", "external-dns", folder="Infrastructure", extras=[external_dns_panels]),
-    S("ingress-nginx", "infrastructure-ingress-nginx-controller", "Ingress NGINX", access_logs=True, probe="kubernetes-api-proxy", folder="Infrastructure",
-      extras=[ingress_global], traces="ingress-nginx", description="All HTTP traffic into the cluster. Per-service views live in each service dashboard."),
+    S("traefik", "infrastructure-traefik", "Traefik (ingress)", access_logs=True, folder="Infrastructure",
+      extras=[ingress_global], traces="traefik", description="All HTTP traffic into the cluster (Traefik serves the nginx-class Ingresses since 2026-11-19). Per-service views live in each service dashboard."),
     S("local-path-storage", "local-path-provisioner", "local-path provisioner", folder="Infrastructure", quiet=True),
     S("metallb-system", "infrastructure-metallb-controller", "MetalLB controller", folder="Infrastructure", extras=[metallb_panels]),
     S("metallb-system", "infrastructure-metallb-speaker", "MetalLB speaker", kind="daemonset", folder="Infrastructure"),
@@ -1113,12 +1113,12 @@ AREAS = [
      '(count(up == 0) or vector(0))'
      ' + (sum(rate(otelcol_exporter_sent_log_records_total{component_id="otelcol.exporter.otlphttp.loki"}[5m])) < bool 0.01 or vector(1))'
      ' + (sum(rate(grafana_alerting_rule_evaluations_total[10m])) < bool 0.001 or vector(1))'
-     ' + (count(count by (job) (up{job=~"kube-state-metrics|node-exporter|blackbox|argocd-metrics|infrastructure-cert-manager|observability/external-secrets|infrastructure-ingress-nginx-controller-metrics|kubelet"} == 1)) < bool 8 or vector(1))',
+     ' + (count(count by (job) (up{job=~"kube-state-metrics|node-exporter|blackbox|argocd-metrics|infrastructure-cert-manager|observability/external-secrets|infrastructure-traefik-metrics|kubelet"} == 1)) < bool 8 or vector(1))',
      "the monitoring itself: scrape targets down + logs not shipping + Grafana not evaluating alert rules"
      " + a core exporter missing entirely (its tiles would otherwise read OK for lack of data)"),
     ("5xx rate",
-     '(sum(rate(nginx_ingress_controller_requests{status=~"5.."}[15m])) / sum(rate(nginx_ingress_controller_requests[15m])) > bool 0.05) or vector(0)',
-     "1 when more than 5% of all requests through ingress-nginx were answered with 5xx in the last 15m"),
+     '(sum(rate(traefik_router_requests_total{code=~"5.."}[15m])) / sum(rate(traefik_router_requests_total[15m])) > bool 0.05) or vector(0)',
+     "1 when more than 5% of all requests through the ingress (Traefik) were answered with 5xx in the last 15m"),
 ]
 OK_MAP = [{"type": "value", "options": {"0": {"text": "OK", "color": "green"}}}]
 
@@ -1173,7 +1173,7 @@ def overview() -> Board:
            thresholds=RED_IF_ABOVE_0, w=4)
     b.stat("Pods crash-looping", 'count(kube_pod_container_status_waiting_reason{reason=~"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError"}) or vector(0)', thresholds=RED_IF_ABOVE_0, w=4)
     b.stat("Restarts (1h)", 'sum(increase(kube_pod_container_status_restarts_total[1h])) or vector(0)', thresholds=ORANGE_RED, w=4, decimals=0)
-    b.stat("Ingress 5xx (1h)", '(sum(rate(nginx_ingress_controller_requests{status=~"5.."}[1h])) or vector(0)) / sum(rate(nginx_ingress_controller_requests[1h]))', unit="percentunit", decimals=2,
+    b.stat("Ingress 5xx (1h)", '(sum(rate(traefik_router_requests_total{code=~"5.."}[1h])) or vector(0)) / sum(rate(traefik_router_requests_total[1h]))', unit="percentunit", decimals=2,
            thresholds=[{"color": "green", "value": None}, {"color": "orange", "value": 0.01}, {"color": "red", "value": 0.05}], w=4)
     b.stat("Firing alerts", '(count(ALERTS{alertstate="firing", alertname!~"Watchdog|InfoInhibitor"}) or vector(0)) + (sum(grafana_alerting_alerts{state="alerting"}) or vector(0))',
            thresholds=ORANGE_RED, w=4, desc="Grafana-managed (folder Alerts) + Prometheus (kube-prometheus-stack) alerts")
@@ -1185,7 +1185,7 @@ def overview() -> Board:
     b.row("Failure rates")
     b.ts("Error-level log lines by service", [('topk(15, sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+"} | detected_level=~"error|fatal|critical" [$__auto]))) or vector(0)', "{{k8s_namespace_name}}/{{service_name}}")],
          ds=LOKI, bars=True, stack=True, w=12)
-    b.ts("Ingress 5xx / s by ingress", [('sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[$__rate_interval])) or vector(0)', "{{exported_namespace}}/{{ingress}}")], unit="reqps", w=12)
+    b.ts("Ingress 5xx / s by ingress", [('sum by (exported_namespace, ingress) (rate(traefik_router_requests_total{code=~"5.."}[$__rate_interval])) or vector(0)', "{{exported_namespace}}/{{ingress}}")], unit="reqps", w=12)
     b.ts("Container restarts by pod", [('sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total[10m])) > 0 or vector(0)', "{{namespace}}/{{pod}}")], bars=True, w=12)
     b.ts("Probe failures", [('count by (probe, target_namespace, target_service) (probe_success == 0) or vector(0)', "{{probe}} {{target_namespace}}/{{target_service}}")], bars=True, w=12)
     b.table("CronJobs: time since last success", [('sort_desc(time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time))', "")], w=12,

@@ -78,7 +78,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: 100 * (sum(rate(nginx_ingress_controller_requests{exported_namespace="homepage", status=~"5.."}[5m])) or vector(0)) / (sum(rate(nginx_ingress_controller_requests{exported_namespace="homepage"}[5m])) > 0)
+            expr: 100 * (sum(rate(traefik_router_requests_total{exported_namespace="homepage", code=~"5.."}[5m])) or vector(0)) / (sum(rate(traefik_router_requests_total{exported_namespace="homepage"}[5m])) > 0)
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -116,7 +116,7 @@ data:
           namespace: homepage
         annotations:
           summary: More than 10% of homepage requests return 5xx
-          description: 'Ported monitor: nginx 5xx / total * 100 > 10 over 5m. Source is now the ingress-nginx metrics.'
+          description: 'Ported monitor: ingress 5xx / total * 100 > 10 over 5m, from the Traefik router metrics.'
           dashboard: https://logs.tkuipers.ca/d/svc-homepage-homepage
         isPaused: false
       - uid: dd-argocd-server-health
@@ -223,8 +223,8 @@ data:
           description: Ported monitor (critical > 2, warning > 1). See Argo CD dashboard > 'Applications not Synced/Healthy'.
           dashboard: https://logs.tkuipers.ca/d/svc-argocd-argocd-server
         isPaused: false
-      - uid: dd-ingress-nginx-health
-        title: Ingress NGINX health
+      - uid: dd-traefik-health
+        title: Traefik ingress health
         condition: C
         data:
         - refId: A
@@ -234,7 +234,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: sum(kube_deployment_status_replicas_available{namespace="ingress-nginx", deployment="infrastructure-ingress-nginx-controller"})
+            expr: sum(kube_deployment_status_replicas_available{namespace="traefik", deployment="infrastructure-traefik"})
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -269,11 +269,11 @@ data:
         for: 5m
         labels:
           severity: critical
-          namespace: ingress-nginx
+          namespace: traefik
         annotations:
-          summary: ingress-nginx/infrastructure-ingress-nginx-controller has no available replicas
+          summary: traefik/infrastructure-traefik has no available replicas
           description: Check the service dashboard (Kubernetes events + logs rows) for why pods are not ready.
-          dashboard: https://logs.tkuipers.ca/d/svc-ingress-nginx-infrastructur-15969e20
+          dashboard: https://logs.tkuipers.ca/d/svc-traefik-infrastructure-traefik
         isPaused: false
       - uid: dd-cert-manager-health
         title: cert-manager health
@@ -695,7 +695,7 @@ data:
           service: '{{ $$labels.target_service }}'
         annotations:
           summary: '{{ $labels.instance }} is not reachable (DNS / ingress / TLS / Authelia)'
-          description: 'The public hostname fails while the app''s own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), ingress-nginx, cert-manager or Authelia. Each host must answer like its class (blackbox module): http_public = 2xx after redirects, http_authelia = 302 to auth.tkuipers.ca (or to agent.tkuipers.ca/study while the Professor redirects it); a 404 usually means the Ingress is gone.'
+          description: 'The public hostname fails while the app''s own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), the ingress (Traefik), cert-manager or Authelia. Each host must answer like its class (blackbox module): http_public = 2xx after redirects, http_authelia = 302 to auth.tkuipers.ca (or to agent.tkuipers.ca/study while the Professor redirects it); a 404 usually means the Ingress is gone.'
           dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.target_namespace }}
         isPaused: false
       - uid: hl-authelia-failed-logins
@@ -761,7 +761,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: (sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests{status=~"5.."}[5m])) / sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests[5m]) > 0.01))
+            expr: (sum by (exported_namespace, ingress) (rate(traefik_router_requests_total{code=~"5.."}[5m])) / sum by (exported_namespace, ingress) (rate(traefik_router_requests_total[5m]) > 0.01))
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200
@@ -800,7 +800,7 @@ data:
           service: '{{ $$labels.ingress }}'
         annotations:
           summary: '{{ $labels.exported_namespace }}/{{ $labels.ingress }}: more than 10% 5xx'
-          description: Ingress NGINX dashboard > 'Top 5xx paths' shows which paths fail; the service dashboard shows its logs.
+          description: Traefik dashboard > 'Top 5xx paths' shows which paths fail; the service dashboard shows its logs.
           dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.exported_namespace }}
         isPaused: false
       - uid: hl-crashloop
@@ -920,7 +920,7 @@ data:
           datasourceUid: loki
           model:
             refId: A
-            expr: (sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!="access_nginx" [10m])) > 50) unless on (k8s_namespace_name, service_name) (3 * sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!="access_nginx" [10m] offset 1d)) >= sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!="access_nginx" [10m])))
+            expr: (sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!~"access_nginx|access_traefik" [10m])) > 50) unless on (k8s_namespace_name, service_name) (3 * sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!~"access_nginx|access_traefik" [10m] offset 1d)) >= sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!~"access_nginx|access_traefik" [10m])))
             queryType: instant
             intervalMs: 60000
             maxDataPoints: 43200
@@ -973,7 +973,7 @@ data:
           datasourceUid: loki
           model:
             refId: A
-            expr: sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!="access_nginx" [1h]))
+            expr: sum by (k8s_namespace_name, service_name) (count_over_time({k8s_namespace_name=~".+", service_name!="kubernetes-events"} | detected_level=~"error|fatal|critical" | log_format!~"access_nginx|access_traefik" [1h]))
             queryType: instant
             intervalMs: 60000
             maxDataPoints: 43200
@@ -1079,7 +1079,7 @@ data:
           datasourceUid: prometheus
           model:
             refId: A
-            expr: (sum by (k8s_namespace_name, service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", status_code="STATUS_CODE_ERROR", service!="ingress-nginx"}[15m])) > 0.5 / 60) / sum by (k8s_namespace_name, service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", service!="ingress-nginx"}[15m]))
+            expr: (sum by (k8s_namespace_name, service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", status_code="STATUS_CODE_ERROR", service!~"ingress-nginx|traefik"}[15m])) > 0.5 / 60) / sum by (k8s_namespace_name, service) (rate(traces_spanmetrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", service!~"ingress-nginx|traefik"}[15m]))
             instant: true
             intervalMs: 60000
             maxDataPoints: 43200

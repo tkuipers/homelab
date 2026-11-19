@@ -447,7 +447,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "(sum(rate(nginx_ingress_controller_requests{status=~\"5..\"}[1h])) or vector(0)) / sum(rate(nginx_ingress_controller_requests[1h]))",
+     "expr": "(sum(rate(traefik_router_requests_total{code=~\"5..\"}[1h])) or vector(0)) / sum(rate(traefik_router_requests_total[1h]))",
      "instant": true,
      "legendFormat": "__auto",
      "range": false,
@@ -719,7 +719,7 @@
       "type": "prometheus",
       "uid": "prometheus"
      },
-     "expr": "sum by (exported_namespace, ingress) (rate(nginx_ingress_controller_requests{status=~\"5..\"}[$__rate_interval])) or vector(0)",
+     "expr": "sum by (exported_namespace, ingress) (rate(traefik_router_requests_total{code=~\"5..\"}[$__rate_interval])) or vector(0)",
      "instant": false,
      "legendFormat": "{{exported_namespace}}/{{ingress}}",
      "range": true,

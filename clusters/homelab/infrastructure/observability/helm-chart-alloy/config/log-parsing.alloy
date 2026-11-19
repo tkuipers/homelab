@@ -8,7 +8,7 @@
 //   1. JSON           -> all keys become fields, msg/message/event/... -> line
 //   2. logfmt         -> same
 //   3. klog           -> k8s components (I1011 12:00:00.000 1 file.go:1] "msg" k=v)
-//   4. access logs    -> nginx (JSON, see ingress-nginx values), combined,
+//   4. access logs    -> Traefik / nginx (JSON), combined,
 //                        uvicorn; method/path/status/... fields + level by status
 //   5. known app formats (arr/NLog, jellyfin, HA, postgres, mysql, redis, ...)
 //   6. anything else  -> raw line, best-effort level detection
@@ -128,6 +128,24 @@ otelcol.processor.transform "logs" {
 			`set(attributes["log.format"], "access_json") where attributes["log.format"] == "json" and attributes["method"] != nil and attributes["path"] != nil and attributes["status"] != nil and (attributes["msg"] == nil and attributes["message"] == nil or attributes["event"] == "http_request")`,
 			`delete_key(attributes, "event") where attributes["log.format"] == "access_json" and attributes["event"] == "http_request"`,
 			`set(attributes["log.format"], "access_nginx") where attributes["log.format"] == "json" and attributes["ingress"] != nil and attributes["upstream_addr"] != nil`,
+			// Traefik (the ingress since 2026-11-19) JSON access log -> the field names the
+			// ingress-nginx log used, so dashboards and queries (host, path, status, remote_addr,
+			// upstream, ingress, ingress_namespace) keep working. RouterName looks like
+			// <ns>-<len>-<ingress>-<len>-rule-<n>-path-<m>[-tls]@kubernetesingressnginx
+			`set(attributes["log.format"], "access_traefik") where attributes["log.format"] == "json" and attributes["RouterName"] != nil and attributes["DownstreamStatus"] != nil`,
+			`set(attributes["method"], attributes["RequestMethod"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["host"], attributes["RequestHost"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["path"], attributes["RequestPath"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["protocol"], attributes["RequestProtocol"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["status"], attributes["DownstreamStatus"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["upstream_status"], attributes["OriginStatus"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["remote_addr"], attributes["ClientHost"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["upstream_addr"], attributes["ServiceAddr"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["upstream"], attributes["ServiceName"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["http_user_agent"], attributes["request_User-Agent"]) where attributes["log.format"] == "access_traefik"`,
+			`set(attributes["referer"], attributes["request_Referer"]) where attributes["log.format"] == "access_traefik"`,
+			`merge_maps(attributes, ExtractPatterns(attributes["RouterName"], "^(?P<ingress_namespace>.+?)-[0-9]+-(?P<ingress>.+?)-[0-9]+-rule-"), "insert") where attributes["log.format"] == "access_traefik" and IsString(attributes["RouterName"])`,
+			`delete_matching_keys(attributes, "^(RequestMethod|RequestHost|RequestPath|RequestProtocol|RequestScheme|RequestAddr|RequestPort|DownstreamStatus|OriginStatus|ClientHost|ClientAddr|ClientPort|ClientUsername|ServiceAddr|ServiceName|ServiceURL|request_User-Agent|request_Referer|msg)$") where attributes["log.format"] == "access_traefik"`,
 
 			// split ?query off access-log paths so path="/x" matches every request to /x
 			`merge_maps(attributes, ExtractPatterns(attributes["path"], "^(?P<path_only>[^?]*)\\?(?P<query>.*)$"), "insert") where IsMatch(attributes["log.format"], "^access_") and IsString(attributes["path"]) and IsMatch(attributes["path"], "\\?")`,
@@ -153,6 +171,7 @@ otelcol.processor.transform "logs" {
 
 			// access logs get a readable synthetic message
 			`set(body, Concat([attributes["method"], attributes["path"], attributes["status"]], " ")) where IsMatch(attributes["log.format"], "^access_(combined|uvicorn|json)$")`,
+			`set(body, Concat([attributes["method"], " ", attributes["host"], attributes["path"], " ", String(attributes["status"])], "")) where attributes["log.format"] == "access_traefik"`,
 
 			// access logs: level from HTTP status
 			`set(severity_text, "error") where IsMatch(attributes["log.format"], "^access_") and Int(attributes["status"]) >= 500`,
