@@ -26,7 +26,7 @@ spec:
       runtimeClassName: nvidia
       containers:
         - name: exporter
-          image: utkuozdemir/nvidia_gpu_exporter:1.19.0
+          image: utkuozdemir/nvidia_gpu_exporter:2.0.0
           env:
             - name: NVIDIA_VISIBLE_DEVICES
               value: all
