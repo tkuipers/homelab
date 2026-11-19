@@ -7,6 +7,9 @@ loki:
   fullnameOverride: loki
 
   loki:
+    # chart 7.7.0 still defaults to 3.6.11 although its appVersion is 3.6.20
+    image:
+      tag: 3.6.20
     auth_enabled: false
     # no usage reports to stats.grafana.org (AdGuard blocks it; the retries were
     # its top blocked domain, ~7k lookups a day)
