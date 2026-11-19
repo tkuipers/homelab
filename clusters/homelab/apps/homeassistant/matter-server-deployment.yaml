@@ -21,23 +21,34 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         kubernetes.io/hostname: dell-r620
+      # matterjs-server runs as UID 1000 (python-matter-server ran as root). On the
+      # first start it migrates the Python data files (chip.json, <fabric>.json) and
+      # keeps <fabric>.json updated, so the Python server could run again on them.
+      # The cold copy below is the python-matter-server data as it was.
+      initContainers:
+        - name: data-copy-and-owner
+          image: busybox:1.38.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              [ -d /persist/matter-server-data.bak-python ] || cp -a /persist/matter-server-data /persist/matter-server-data.bak-python
+              chown -R 1000:1000 /persist/matter-server-data
+          volumeMounts:
+            - name: persist
+              mountPath: /persist
       containers:
         - name: matter-server
+          # python-matter-server is archived (8.1.0 was its last image); matterjs-server
+          # is its drop-in replacement (same WebSocket API, same data dir)
           # renovate: datasource=docker
-          image: ghcr.io/home-assistant-libs/python-matter-server:8.1.0
+          image: ghcr.io/matter-js/matterjs-server:1.6.0
           args:
             - --storage-path
             - /data
-            - --paa-root-cert-dir
-            - /data/credentials
           ports:
             - containerPort: 5580
               name: ws
-          securityContext:
-            capabilities:
-              add:
-                - NET_ADMIN
-                - NET_RAW
           volumeMounts:
             - name: data
               mountPath: /data
@@ -63,3 +74,7 @@ spec:
           hostPath:
             path: /var/persist/matter-server-data
             type: DirectoryOrCreate
+        - name: persist
+          hostPath:
+            path: /var/persist
+            type: Directory
