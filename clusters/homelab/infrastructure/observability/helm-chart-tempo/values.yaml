@@ -30,11 +30,8 @@ tempo:
               dimensions: [k8s.namespace.name]
             service_graphs:
               dimensions: [k8s.namespace.name]
-    # The chart's defaults have an empty `opencensus:` receiver. Helm 3 dropped
-    # it; Helm 4 (Argo CD 3.5+) renders `opencensus: null`, which Tempo 2.9
-    # rejects ("unknown type") at startup. An explicit null removes it.
+    # (the chart's empty `opencensus:` default is dropped in `config` below)
     receivers:
-      opencensus: null
       otlp:
         protocols:
           grpc:
@@ -72,3 +69,54 @@ tempo:
 
   serviceMonitor:
     enabled: true
+
+  # The chart 1.24.4 config template, except that receivers go through `omit`:
+  # its defaults have an empty `opencensus:` receiver that Helm 3 dropped, but
+  # Helm 4 (Argo CD 3.5+) renders as `opencensus: null`, which Tempo rejects at
+  # startup ("unknown type"). A null override doesn't remove it under Helm 4.2.
+  config: |
+      memberlist:
+        cluster_label: "{{ .Release.Name }}.{{ .Release.Namespace }}"
+      multitenancy_enabled: {{ .Values.tempo.multitenancyEnabled }}
+      usage_report:
+        reporting_enabled: {{ .Values.tempo.reportingEnabled }}
+      compactor:
+        compaction:
+          block_retention: {{ .Values.tempo.retention }}
+      distributor:
+        receivers:
+          {{- toYaml (omit .Values.tempo.receivers "opencensus") | nindent 8 }}
+      ingester:
+        {{- toYaml .Values.tempo.ingester | nindent 6 }}
+      server:
+        {{- toYaml .Values.tempo.server | nindent 6 }}
+      storage:
+        {{- toYaml .Values.tempo.storage | nindent 6 }}
+      querier:
+        {{- toYaml .Values.tempo.querier | nindent 6 }}
+      query_frontend:
+        {{- toYaml .Values.tempo.queryFrontend | nindent 6 }}
+      overrides:
+        {{- toYaml .Values.tempo.overrides | nindent 6 }}
+        {{- if .Values.tempo.metricsGenerator.enabled }}
+      metrics_generator:
+        {{- if .Values.tempo.metricsGenerator.processor }}
+        processor:
+          {{- toYaml .Values.tempo.metricsGenerator.processor | nindent 8 }}
+        {{- end }}
+        {{- if .Values.tempo.metricsGenerator.registry }}
+        registry:
+          {{- toYaml .Values.tempo.metricsGenerator.registry | nindent 8 }}
+        {{- end }}
+        storage:
+          path: {{ .Values.tempo.metricsGenerator.storage.path | quote }}
+          {{- if .Values.tempo.metricsGenerator.storage.remote_write }}
+          remote_write:
+            {{- toYaml .Values.tempo.metricsGenerator.storage.remote_write | nindent 10 }}
+          {{- else }}
+          remote_write:
+            - url: {{ .Values.tempo.metricsGenerator.remoteWriteUrl }}
+          {{- end }}
+        traces_storage:
+          path: {{ .Values.tempo.metricsGenerator.traces_storage.path | quote }}
+        {{- end }}
