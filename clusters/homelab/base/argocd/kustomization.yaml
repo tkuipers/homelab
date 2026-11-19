@@ -8,7 +8,7 @@ namespace: argocd
 
 resources:
   - argocd-namespace.yaml
-  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.8/manifests/install.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.2/manifests/install.yaml
   - argocd-ingress.yaml
   - argocd-externalsecret-git-ssh.yaml
   - argocd-externalsecret-oidc.yaml
