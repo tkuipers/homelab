@@ -18,8 +18,11 @@ ingress-nginx:
       enabled: true
       patch:
         enabled: true
+      # cert-manager issues the webhook cert. Since chart 4.13 the certgen hook Jobs
+      # have a hard-coded ttlSecondsAfterFinished: 0, so they vanish before Argo CD
+      # sees them complete and every sync hangs on "waiting for completion of hook".
       certManager:
-        enabled: false
+        enabled: true
       annotations:
         nginx.ingress.kubernetes.io/enable-annotation-validation: "false"
       failurePolicy: Ignore
