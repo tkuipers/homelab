@@ -14,5 +14,5 @@ dependencies:
   # alias here + a block in values.yaml (see README.md).
   - name: gha-runner-scale-set
     alias: homelab-agent
-    version: "0.15.0"
+    version: "0.15.1"
     repository: "oci://ghcr.io/actions/actions-runner-controller-charts"
