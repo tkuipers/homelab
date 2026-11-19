@@ -175,7 +175,7 @@ HOMELAB = [
          'min by (target_namespace, target_service, instance) (probe_success{probe="external"})', "lt", 1, for_="5m", severity="critical",
          ns="target_namespace", svc="target_service", no_data="Alerting",
          summary="{{ $labels.instance }} is not reachable (DNS / ingress / TLS / Authelia)",
-         description="The public hostname fails while the app's own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), ingress-nginx, cert-manager or Authelia. Each host must answer like its class (blackbox module): http_public = 2xx after redirects, http_authelia = 302 to auth.tkuipers.ca; a 404 usually means the Ingress is gone."),
+         description="The public hostname fails while the app's own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), ingress-nginx, cert-manager or Authelia. Each host must answer like its class (blackbox module): http_public = 2xx after redirects, http_authelia = 302 to auth.tkuipers.ca (or to agent.tkuipers.ca/study while the Professor redirects it); a 404 usually means the Ingress is gone."),
     rule("hl-authelia-failed-logins", "Authelia: many failed logins",
          'sum(increase(authelia_authn{success="false"}[15m]))', "gt", 10, for_="0s", static_ns="authelia",
          summary="{{ $values.B }} failed Authelia logins in 15m",

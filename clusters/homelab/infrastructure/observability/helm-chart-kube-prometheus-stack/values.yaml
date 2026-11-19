@@ -492,7 +492,10 @@ prometheus-blackbox-exporter:
         http:
           preferred_ip_protocol: ip4
           follow_redirects: true
-      http_authelia:        # behind Authelia: the redirect to the login portal
+      # behind Authelia: the redirect to the login portal, or the Professor's
+      # deliberate temporal-redirect to the Study page (homelab-agent
+      # src/professor/effects/kube.ts), which nginx answers before auth.
+      http_authelia:
         prober: http
         timeout: 10s
         http:
@@ -501,7 +504,7 @@ prometheus-blackbox-exporter:
           valid_status_codes: [302]
           fail_if_header_not_matches:
             - header: Location
-              regexp: '^https://auth\.tkuipers\.ca/'
+              regexp: '^https://(auth\.tkuipers\.ca/|agent\.tkuipers\.ca/study$)'
       http_401:             # API that requires credentials (k8s API proxy)
         prober: http
         timeout: 10s

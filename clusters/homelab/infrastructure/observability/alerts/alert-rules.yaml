@@ -695,7 +695,7 @@ data:
           service: '{{ $$labels.target_service }}'
         annotations:
           summary: '{{ $labels.instance }} is not reachable (DNS / ingress / TLS / Authelia)'
-          description: 'The public hostname fails while the app''s own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), ingress-nginx, cert-manager or Authelia. Each host must answer like its class (blackbox module): http_public = 2xx after redirects, http_authelia = 302 to auth.tkuipers.ca; a 404 usually means the Ingress is gone.'
+          description: 'The public hostname fails while the app''s own health check may still pass - suspect DNS (adguard, external-dns, aws-ip-updater), ingress-nginx, cert-manager or Authelia. Each host must answer like its class (blackbox module): http_public = 2xx after redirects, http_authelia = 302 to auth.tkuipers.ca (or to agent.tkuipers.ca/study while the Professor redirects it); a 404 usually means the Ingress is gone.'
           dashboard: https://logs.tkuipers.ca/dashboards?tag={{ $labels.target_namespace }}
         isPaused: false
       - uid: hl-authelia-failed-logins
