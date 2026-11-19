@@ -7,6 +7,9 @@ metadata:
     app: anki
 spec:
   replicas: 1
+  # one server at a time on the SQLite collections in the hostPath
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: anki
@@ -17,10 +20,20 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
+      # one-time cold copy of the 25.09 server data before 26.09
+      initContainers:
+        - name: data-copy-pre-26
+          image: busybox:1.38.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - '[ -d /persist/anki-data.bak-25.09 ] || cp -a /persist/anki-data /persist/anki-data.bak-25.09'
+          volumeMounts:
+            - name: persist
+              mountPath: /persist
       containers:
         - name: anki
           # renovate: datasource=docker
-          image: neilalcoseba/anki-sync:25.09
+          image: neilalcoseba/anki-sync:26.09.4
           ports:
             - containerPort: 8084
               name: http
@@ -59,3 +72,7 @@ spec:
           hostPath:
             path: /var/persist/anki-data
             type: DirectoryOrCreate
+        - name: persist
+          hostPath:
+            path: /var/persist
+            type: Directory
