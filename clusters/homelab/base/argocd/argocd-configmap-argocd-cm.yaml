@@ -7,14 +7,8 @@ metadata:
     app.kubernetes.io/name: argocd-cm
     app.kubernetes.io/part-of: argocd
 data:
-  # Repository configuration
-  repositories: |
-    - url: ssh://git@github.com/tkuipers/homelab.git
-      sshPrivateKeySecret:
-        name: argocd-git-ssh
-        key: sshPrivateKey
-      name: homelab
-      type: git
+  # The homelab repository is the Secret argocd-git-ssh (secret-type: repository,
+  # built by argocd-externalsecret-git-ssh.yaml).
 
   # Resource tracking method
   application.resourceTrackingMethod: annotation
@@ -38,12 +32,34 @@ data:
     enableUserInfoGroups: true
     userInfoPath: /api/oidc/userinfo
 
-  # Exclude resources from being managed
+  # Argo CD 3.x's default exclusions (high-churn, controller-made kinds), minus
+  # core Endpoints: ingress-nginx/k8s-api-proxy.yaml manages one by hand. No
+  # Cilium or Kyverno here, so their entries are left out.
   resource.exclusions: |
     - apiGroups:
-        - cilium.io
+        - discovery.k8s.io
       kinds:
-        - CiliumIdentity
-      clusters:
-        - "*"
+        - EndpointSlice
+    - apiGroups:
+        - coordination.k8s.io
+      kinds:
+        - Lease
+    - apiGroups:
+        - authentication.k8s.io
+        - authorization.k8s.io
+      kinds:
+        - SelfSubjectReview
+        - TokenReview
+        - LocalSubjectAccessReview
+        - SelfSubjectAccessReview
+        - SelfSubjectRulesReview
+        - SubjectAccessReview
+    - apiGroups:
+        - certificates.k8s.io
+      kinds:
+        - CertificateSigningRequest
+    - apiGroups:
+        - cert-manager.io
+      kinds:
+        - CertificateRequest
 
