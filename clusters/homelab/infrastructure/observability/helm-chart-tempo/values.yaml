@@ -5,6 +5,8 @@ tempo:
   fullnameOverride: tempo
 
   tempo:
+    # The single-binary chart is frozen at 1.24.4 (appVersion 2.9.0); keep the 2.9 patches.
+    tag: "2.9.5"
     reportingEnabled: false
     # 8Gi budget (PV), 5 days. Check tempo disk use on the Tempo dashboard.
     retention: 120h
