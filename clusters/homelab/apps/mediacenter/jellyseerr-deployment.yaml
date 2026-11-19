@@ -17,9 +17,26 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: dell-r620
+      # Seerr (the merged Jellyseerr/Overseerr, v3) runs as node (UID 1000); the
+      # Jellyseerr image ran as root, so the config dir needs chowning once. The first
+      # start also keeps a copy of the Jellyseerr config (taken while nothing runs).
+      initContainers:
+      - name: config-owner
+        image: busybox:1.38.0
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          set -e
+          [ -d /persist/jellyseerr-config.bak-pre-seerr ] || cp -a /persist/jellyseerr-config /persist/jellyseerr-config.bak-pre-seerr
+          chown -R 1000:1000 /persist/jellyseerr-config
+        volumeMounts:
+        - name: persist
+          mountPath: /persist
       containers:
       - name: jellyseerr
-        image: fallenbagel/jellyseerr:latest
+        # Jellyseerr was deprecated (last image 2.7.3, 2026-10); Seerr migrates its
+        # config automatically on first start.
+        image: ghcr.io/seerr-team/seerr:v3.5.2
         ports:
         - containerPort: 5055
           name: http
@@ -43,3 +60,7 @@ spec:
         hostPath:
           path: /var/persist/jellyseerr-config
           type: DirectoryOrCreate
+      - name: persist
+        hostPath:
+          path: /var/persist
+          type: Directory
