@@ -1,10 +1,14 @@
 # ingress-nginx controller configuration
 ingress-nginx:
   controller:
+    # Retired 2026-11-19: Traefik (infrastructure/traefik) serves these Ingresses on
+    # 10.0.0.70 now. Kept scaled to 0 for a quick rollback (replicaCount 1, IP
+    # 10.0.0.70, auth-url back to /api/authz/auth-request), then to be removed.
+    replicaCount: 0
     # LoadBalancer service with static IP from MetalLB
     service:
       type: LoadBalancer
-      loadBalancerIP: 10.0.0.70
+      loadBalancerIP: 10.0.0.73
       externalTrafficPolicy: Local
 
     # Ingress class configuration
@@ -14,8 +18,9 @@ ingress-nginx:
       default: true
 
     # Admission webhooks
+    # off while the controller is scaled to 0 (every Ingress change would wait on it)
     admissionWebhooks:
-      enabled: true
+      enabled: false
       patch:
         enabled: true
       # cert-manager issues the webhook cert. Since chart 4.13 the certgen hook Jobs

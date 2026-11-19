@@ -19,9 +19,9 @@ traefik:
       enabled: true
       ingressClass: nginx
       controllerClass: k8s.io/ingress-nginx
-      # Ingress status (external-dns reads it) stays with ingress-nginx until cutover.
+      # Ingress status = this Service's IP
       publishService:
-        enabled: false
+        enabled: true
       # resume.tkuipers.ca proxies to S3 through an ExternalName Service
       disableSvcExternalName: false
 
@@ -48,7 +48,8 @@ traefik:
       # keep client source IPs (rate limits, Authelia's network rules)
       externalTrafficPolicy: Local
     annotations:
-      metallb.universe.tf/loadBalancerIPs: "10.0.0.72"
+      # the router forwards public 80/443 here
+      metallb.universe.tf/loadBalancerIPs: "10.0.0.70"
 
   # dell-r620, like ingress-nginx so far (omen-worker1 reboots more often)
   nodeSelector:
