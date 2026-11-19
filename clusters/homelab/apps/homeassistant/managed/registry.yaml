@@ -119,6 +119,7 @@ matter_devices:
     area: "Utilities Room"
     entities:
       "IdentifyButton-3-1": { id: button.utilities_water_leak_identify, hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.utilities_water_leak_battery_low, hidden: true }
       "PowerSource-47-12": { id: sensor.utilities_water_leak_battery }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.utilities_water_leak_battery_type, hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.utilities_water_leak_battery_voltage, hidden: true }
@@ -129,6 +130,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.garage_door_contact, name: "Garage Door Contact", hidden: true }
       "IdentifyButton-3-1": { id: button.garage_door_contact_identify, name: "Garage Door Contact Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.garage_door_contact_battery_low, name: "Garage Door Contact Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.garage_door_contact_battery, name: "Garage Door Contact Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.garage_door_contact_battery_type, name: "Garage Door Contact Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.garage_door_contact_battery_voltage, name: "Garage Door Contact Battery Voltage", hidden: true }
@@ -138,6 +140,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.back_door, name: "Back Door" }
       "IdentifyButton-3-1": { id: button.back_door_identify, name: "Back Door Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.back_door_battery_low, name: "Back Door Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.back_door_battery, name: "Back Door Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.back_door_battery_type, name: "Back Door Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.back_door_battery_voltage, name: "Back Door Battery Voltage", hidden: true }
@@ -147,6 +150,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.garage_entrance_door, name: "Garage Entrance Door" }
       "IdentifyButton-3-1": { id: button.garage_entrance_door_identify, name: "Garage Entrance Door Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.garage_entrance_door_battery_low, name: "Garage Entrance Door Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.garage_entrance_door_battery, name: "Garage Entrance Door Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.garage_entrance_door_battery_type, name: "Garage Entrance Door Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.garage_entrance_door_battery_voltage, name: "Garage Entrance Door Battery Voltage", hidden: true }
@@ -156,6 +160,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.dining_room_window, name: "Dining Room Window" }
       "IdentifyButton-3-1": { id: button.dining_room_window_identify, name: "Dining Room Window Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.dining_room_window_battery_low, name: "Dining Room Window Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.dining_room_window_battery, name: "Dining Room Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.dining_room_window_battery_type, name: "Dining Room Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.dining_room_window_battery_voltage, name: "Dining Room Window Battery Voltage", hidden: true }
@@ -165,6 +170,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.main_common_space_window, name: "Main Common Space Window" }
       "IdentifyButton-3-1": { id: button.main_common_space_window_identify, name: "Main Common Space Window Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.main_common_space_window_battery_low, name: "Main Common Space Window Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.main_common_space_window_battery, name: "Main Common Space Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.main_common_space_window_battery_type, name: "Main Common Space Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.main_common_space_window_battery_voltage, name: "Main Common Space Window Battery Voltage", hidden: true }
@@ -174,6 +180,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.main_entrance_door, name: "Main Entrance Door" }
       "IdentifyButton-3-1": { id: button.main_entrance_door_identify, name: "Main Entrance Door Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.main_entrance_door_battery_low, name: "Main Entrance Door Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.main_entrance_door_battery, name: "Main Entrance Door Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.main_entrance_door_battery_type, name: "Main Entrance Door Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.main_entrance_door_battery_voltage, name: "Main Entrance Door Battery Voltage", hidden: true }
@@ -183,6 +190,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.upstairs_common_room_window, name: "Upstairs Common Room Window" }
       "IdentifyButton-3-1": { id: button.upstairs_common_room_window_identify, name: "Upstairs Common Room Window Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.upstairs_common_room_window_battery_low, name: "Upstairs Common Room Window Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.upstairs_common_room_window_battery, name: "Upstairs Common Room Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.upstairs_common_room_window_battery_type, name: "Upstairs Common Room Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.upstairs_common_room_window_battery_voltage, name: "Upstairs Common Room Window Battery Voltage", hidden: true }
@@ -192,6 +200,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.main_bedroom_window, name: "Main Bedroom Window" }
       "IdentifyButton-3-1": { id: button.main_bedroom_window_identify, name: "Main Bedroom Window Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.main_bedroom_window_battery_low, name: "Main Bedroom Window Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.main_bedroom_window_battery, name: "Main Bedroom Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.main_bedroom_window_battery_type, name: "Main Bedroom Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.main_bedroom_window_battery_voltage, name: "Main Bedroom Window Battery Voltage", hidden: true }
@@ -201,6 +210,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.main_bedroom_small_window, name: "Main Bedroom Small Window" }
       "IdentifyButton-3-1": { id: button.main_bedroom_small_window_identify, name: "Main Bedroom Small Window Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.main_bedroom_small_window_battery_low, name: "Main Bedroom Small Window Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.main_bedroom_small_window_battery, name: "Main Bedroom Small Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.main_bedroom_small_window_battery_type, name: "Main Bedroom Small Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.main_bedroom_small_window_battery_voltage, name: "Main Bedroom Small Window Battery Voltage", hidden: true }
@@ -210,6 +220,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.ensuite_window, name: "Ensuite Window" }
       "IdentifyButton-3-1": { id: button.ensuite_window_identify, name: "Ensuite Window Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.ensuite_window_battery_low, name: "Ensuite Window Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.ensuite_window_battery, name: "Ensuite Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.ensuite_window_battery_type, name: "Ensuite Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.ensuite_window_battery_voltage, name: "Ensuite Window Battery Voltage", hidden: true }
@@ -219,6 +230,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.vacuum_room_window, name: "Vacuum Room Window" }
       "IdentifyButton-3-1": { id: button.vacuum_room_window_identify, name: "Vacuum Room Window Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.vacuum_room_window_battery_low, name: "Vacuum Room Window Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.vacuum_room_window_battery, name: "Vacuum Room Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.vacuum_room_window_battery_type, name: "Vacuum Room Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.vacuum_room_window_battery_voltage, name: "Vacuum Room Window Battery Voltage", hidden: true }
@@ -228,6 +240,7 @@ matter_devices:
     entities:
       "ContactSensor-69-0": { id: binary_sensor.spare_bedroom_window, name: "Spare Bedroom Window" }
       "IdentifyButton-3-1": { id: button.spare_bedroom_window_identify, name: "Spare Bedroom Window Identify", hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.spare_bedroom_window_battery_low, name: "Spare Bedroom Window Battery Low", hidden: true }
       "PowerSource-47-12": { id: sensor.spare_bedroom_window_battery, name: "Spare Bedroom Window Battery" }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.spare_bedroom_window_battery_type, name: "Spare Bedroom Window Battery Type", hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.spare_bedroom_window_battery_voltage, name: "Spare Bedroom Window Battery Voltage", hidden: true }
@@ -239,6 +252,7 @@ matter_devices:
       "IdentifyButton-3-1": { id: button.garage_entrance_identify, hidden: true }
       "LockActuatorEnabledSensor-257-2": { id: binary_sensor.garage_entrance_actuator, hidden: true }
       "MatterLock-257-0": { id: lock.garage_entrance }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.garage_entrance_battery_low, hidden: true }
       "PowerSource-47-12": { id: sensor.garage_entrance_battery }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.garage_entrance_battery_type, hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.garage_entrance_battery_voltage, hidden: true }
@@ -250,6 +264,7 @@ matter_devices:
       "IdentifyButton-3-1": { id: button.main_entrance_identify, hidden: true }
       "LockActuatorEnabledSensor-257-2": { id: binary_sensor.main_entrance_actuator, hidden: true }
       "MatterLock-257-0": { id: lock.main_entrance }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.main_entrance_battery_low, hidden: true }
       "PowerSource-47-12": { id: sensor.main_entrance_battery }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.main_entrance_battery_type, hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.main_entrance_battery_voltage, hidden: true }
@@ -271,6 +286,7 @@ matter_devices:
       "HumiditySensor-1029-0": { id: sensor.attic_humidity }
       "IdentifyButton-3-1#0": { id: button.attic_sensor_identify, hidden: true }
       "IdentifyButton-3-1#1": { id: button.attic_sensor_identify_2, hidden: true }
+      "BatteryChargeLevel-47-14": { id: binary_sensor.attic_sensor_battery_low, hidden: true }
       "PowerSource-47-12": { id: sensor.attic_sensor_battery }
       "PowerSourceBatReplacementDescription-47-19": { id: sensor.attic_sensor_battery_type, hidden: true }
       "PowerSourceBatVoltage-47-11": { id: sensor.attic_sensor_battery_voltage, hidden: true }
@@ -314,6 +330,7 @@ matter_devices:
       "on_off_transition_time-8-16": { id: number.h7057_on_off_transition_time, hidden: true }
       "on_transition_time-8-18": { id: number.h7057_on_transition_time, hidden: true }
       "power_on_level-8-16384": { id: number.h7057_power_on_level, hidden: true }
+      "power_on_color_temperature-768-16400": { id: number.h7057_power_on_color_temperature, hidden: true }
       "WiFiDiagnosticsRssi-54-4": { id: sensor.h7057_wi_fi_rssi, hidden: true }
 
 unique_id_entities:
