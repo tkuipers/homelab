@@ -20,13 +20,27 @@ spec:
       # no DNS on :53).
       nodeSelector:
         kubernetes.io/hostname: dell-r620
+      # one-time cold copy of the v0.107 config before v1.0 (same config schema, per
+      # the release notes); busybox is already cached on dell-r620
+      initContainers:
+        - name: config-copy-pre-v1
+          image: busybox:1.38.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - '[ -d /persist/adguard-home-config.bak-v0.107 ] || cp -a /persist/adguard-home-config /persist/adguard-home-config.bak-v0.107'
+          volumeMounts:
+            - name: persist
+              mountPath: /persist
       containers:
         - name: adguard-home
           # Pinned + IfNotPresent on purpose: the nodes use this pod as their
           # upstream DNS (10.0.0.71), so a forced re-pull after an outage
           # deadlocks — no DNS means no image pull means no DNS.
           # A cached image lets AdGuard restart with no network dependency.
-          image: adguard/adguardhome:v0.107.80
+          # To upgrade: pre-pull the new tag on dell-r620 first (a Job with that
+          # image), then bump it here.
+          image: adguard/adguardhome:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: dns-tcp
@@ -69,3 +83,7 @@ spec:
           hostPath:
             path: /var/persist/adguard-home-work
             type: DirectoryOrCreate
+        - name: persist
+          hostPath:
+            path: /var/persist
+            type: Directory
