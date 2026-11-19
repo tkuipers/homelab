@@ -21,7 +21,7 @@ spec:
         kubernetes.io/hostname: omen-worker1
       containers:
         - name: postgres
-          image: postgres:16
+          image: postgres:16.16
           ports:
             - containerPort: 5432
               name: postgres
@@ -72,7 +72,7 @@ spec:
         # Prometheus metrics (connections, transactions, locks, db size);
         # scraped by the "app-exporters" PodMonitor in infrastructure/observability
         - name: postgres-exporter
-          image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+          image: quay.io/prometheuscommunity/postgres-exporter:v0.21.1
           env:
             - name: PGDB
               valueFrom:

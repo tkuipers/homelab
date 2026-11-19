@@ -21,7 +21,7 @@ spec:
         kubernetes.io/hostname: omen-worker1
       containers:
         - name: nats
-          image: nats:2-alpine
+          image: nats:2.12.15-alpine
           args:
             - -js
             - -sd
@@ -47,7 +47,7 @@ spec:
         # Prometheus metrics incl. JetStream stream/consumer lag (pending,
         # ack pending, redelivered) - the "is the pipeline moving" signal
         - name: nats-exporter
-          image: natsio/prometheus-nats-exporter:0.20.1
+          image: natsio/prometheus-nats-exporter:0.20.3
           args:
             - -varz
             - -connz
