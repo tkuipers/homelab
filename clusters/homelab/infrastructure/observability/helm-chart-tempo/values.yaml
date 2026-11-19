@@ -30,7 +30,11 @@ tempo:
               dimensions: [k8s.namespace.name]
             service_graphs:
               dimensions: [k8s.namespace.name]
+    # The chart's defaults have an empty `opencensus:` receiver. Helm 3 dropped
+    # it; Helm 4 (Argo CD 3.5+) renders `opencensus: null`, which Tempo 2.9
+    # rejects ("unknown type") at startup. An explicit null removes it.
     receivers:
+      opencensus: null
       otlp:
         protocols:
           grpc:
