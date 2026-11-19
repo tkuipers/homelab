@@ -8,5 +8,5 @@ dependencies:
   # DaemonSet: traces HTTP/gRPC/SQL/Redis of selected namespaces from the kernel,
   # no code changes. Our own services use OpenTelemetry SDKs instead.
   - name: beyla
-    version: "1.16.11"
+    version: "1.16.19"
     repository: "https://grafana.github.io/helm-charts"
