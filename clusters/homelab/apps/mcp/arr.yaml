@@ -138,7 +138,7 @@ spec:
       # fail on Talos), so the server never sees the rest of the *arr config
       initContainers:
         - name: api-keys
-          image: ghcr.io/aplaceforallmystuff/mcp-arr@sha256:ace72c56448e8695e1d2d060e7437470e3f883fcc9316f1294e3a7f682e1efa1
+          image: ghcr.io/aplaceforallmystuff/mcp-arr@sha256:f9ebc0ecf14cb89ff0a2702062d4ff8b0bf06a258e9fc9f0278acf418d9768e6
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -164,7 +164,7 @@ spec:
       containers:
         - name: mcp-arr
           # 1.7.3
-          image: ghcr.io/aplaceforallmystuff/mcp-arr@sha256:ace72c56448e8695e1d2d060e7437470e3f883fcc9316f1294e3a7f682e1efa1
+          image: ghcr.io/aplaceforallmystuff/mcp-arr@sha256:f9ebc0ecf14cb89ff0a2702062d4ff8b0bf06a258e9fc9f0278acf418d9768e6
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
