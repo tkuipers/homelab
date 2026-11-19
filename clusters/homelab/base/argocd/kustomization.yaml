@@ -1,15 +1,24 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Argo CD manages itself through the infrastructure-argocd Application
+# (base/root/applications). Upgrade = bump the install.yaml version below, one
+# minor at a time, after reading docs/operator-manual/upgrading/<from>-<to>.md.
 namespace: argocd
 
 resources:
   - argocd-namespace.yaml
   - https://raw.githubusercontent.com/argoproj/argo-cd/v2.13.2/manifests/install.yaml
-  - argocd-configmap-argocd-cm.yaml
-  - argocd-configmap-argocd-cmd-params-cm.yaml
-  - argocd-configmap-argocd-rbac-cm.yaml
   - argocd-ingress.yaml
   - argocd-externalsecret-git-ssh.yaml
   - argocd-externalsecret-oidc.yaml
 
+# install.yaml already defines these ConfigMaps; merge our settings into them
+# (listing them as resources is an ID conflict).
+patches:
+  - path: argocd-configmap-argocd-cm.yaml
+    target: {kind: ConfigMap, name: argocd-cm}
+  - path: argocd-configmap-argocd-cmd-params-cm.yaml
+    target: {kind: ConfigMap, name: argocd-cmd-params-cm}
+  - path: argocd-configmap-argocd-rbac-cm.yaml
+    target: {kind: ConfigMap, name: argocd-rbac-cm}

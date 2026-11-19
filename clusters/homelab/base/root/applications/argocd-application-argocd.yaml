@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infrastructure-argocd
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  # Deliberately no resources-finalizer: deleting this Application must never
+  # cascade-delete Argo CD itself.
+spec:
+  project: infrastructure
+
+  # Argo CD managing itself (install.yaml + our config, see base/argocd).
+  source:
+    repoURL: ssh://git@github.com/tkuipers/homelab.git
+    targetRevision: main
+    path: clusters/homelab/base/argocd
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      # Never let a bad render delete parts of Argo CD; remove leftovers by hand.
+      prune: false
+      selfHeal: true
+    syncOptions:
+      # Required since 3.3 (ApplicationSet CRD is too big for client-side apply)
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
