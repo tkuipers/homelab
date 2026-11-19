@@ -6,4 +6,6 @@ metadata:
 data:
   my.cnf: |
     [mysqld]
-    default_authentication_plugin=mysql_native_password
+    # MySQL 8.4 removed default_authentication_plugin and turns this plugin off by
+    # default; the stocker and grafana_ro users still use it.
+    mysql_native_password=ON

@@ -19,9 +19,21 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
+      # 8.0 -> 8.4 upgrades the data dictionary in place (no way back): keep a cold
+      # copy of the 8.0 data dir, taken while MySQL is stopped (Recreate).
+      initContainers:
+        - name: datadir-copy-pre-84
+          image: busybox:1.38.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - '[ -d /persist/stock-guesser-mysql.bak-8.0 ] || cp -a /persist/stock-guesser-mysql /persist/stock-guesser-mysql.bak-8.0'
+          volumeMounts:
+            - name: persist
+              mountPath: /persist
       containers:
         - name: mysql
-          image: mysql:8.0.46
+          # 8.0 reached end of life in April 2026; 8.4 is the LTS line
+          image: mysql:8.4.13
           ports:
             - containerPort: 3306
               name: mysql
@@ -96,3 +108,7 @@ spec:
         - name: mysql-config
           configMap:
             name: mysql-config
+        - name: persist
+          hostPath:
+            path: /var/persist
+            type: Directory
