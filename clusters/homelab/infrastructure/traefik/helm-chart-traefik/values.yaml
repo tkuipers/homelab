@@ -49,7 +49,7 @@ traefik:
       externalTrafficPolicy: Local
     annotations:
       # the router forwards public 80/443 here
-      metallb.universe.tf/loadBalancerIPs: "10.0.0.70"
+      metallb.io/loadBalancerIPs: "10.0.0.70"
 
   # dell-r620, like ingress-nginx so far (omen-worker1 reboots more often)
   nodeSelector:
@@ -86,6 +86,17 @@ traefik:
         enabled: true
       serviceMonitor:
         enabled: true
+        # router "<ns>-<len>-<ingress>-<len>-rule-..." -> the exported_namespace / ingress
+        # labels the dashboards and alerts group by (as with ingress-nginx's metrics)
+        metricRelabelings:
+          - sourceLabels: [router]
+            regex: "(.+?)-[0-9]+-(.+?)-[0-9]+-rule-.*"
+            targetLabel: exported_namespace
+            replacement: "$1"
+          - sourceLabels: [router]
+            regex: "(.+?)-[0-9]+-(.+?)-[0-9]+-rule-.*"
+            targetLabel: ingress
+            replacement: "$2"
 
   tracing:
     serviceName: traefik
