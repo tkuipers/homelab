@@ -4009,6 +4009,8 @@ data:
     deleteRules:
     - orgId: 1
       uid: hl-probe-down
+    - orgId: 1
+      uid: dd-ingress-nginx-health
   homelab-notifications.yaml: |
     apiVersion: 1
     contactPoints:

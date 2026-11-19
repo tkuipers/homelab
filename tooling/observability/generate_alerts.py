@@ -496,7 +496,7 @@ NOTIFICATIONS = {
     }],
 }
 
-RETIRED_UIDS = ["hl-probe-down"]
+RETIRED_UIDS = ["hl-probe-down", "dd-ingress-nginx-health"]
 
 
 def _literal(dumper, data):
