@@ -1,0 +1,104 @@
+# Traefik replaces ingress-nginx (archived upstream in March 2026, no more nginx
+# security fixes). Its kubernetesIngressNGINX provider serves the existing
+# Ingresses (class "nginx") and translates their nginx.ingress.kubernetes.io/*
+# annotations, so apps keep their Ingress manifests. See README.md.
+traefik:
+  deployment:
+    replicas: 1
+
+  # The "nginx" IngressClass stays (see ../ingressclass.yaml); Traefik's own class is unused.
+  ingressClass:
+    enabled: false
+
+  providers:
+    kubernetesCRD:
+      enabled: false
+    kubernetesIngress:
+      enabled: false
+    kubernetesIngressNGINX:
+      enabled: true
+      ingressClass: nginx
+      controllerClass: k8s.io/ingress-nginx
+      # Ingress status (external-dns reads it) stays with ingress-nginx until cutover.
+      publishService:
+        enabled: false
+      # resume.tkuipers.ca proxies to S3 through an ExternalName Service
+      disableSvcExternalName: false
+
+  ports:
+    web:
+      # same client IPs as before: no proxy in front, so never trust X-Forwarded-*
+      forwardedHeaders:
+        insecure: false
+      transport:
+        respondingTimeouts:
+          # Traefik's default 60s cap on reading a whole request breaks big uploads
+          # (nginx only times out between reads); per-Ingress proxy timeouts still apply.
+          readTimeout: 3600s
+    websecure:
+      forwardedHeaders:
+        insecure: false
+      transport:
+        respondingTimeouts:
+          readTimeout: 3600s
+
+  service:
+    spec:
+      type: LoadBalancer
+      # keep client source IPs (rate limits, Authelia's network rules)
+      externalTrafficPolicy: Local
+    annotations:
+      metallb.universe.tf/loadBalancerIPs: "10.0.0.72"
+
+  # dell-r620, like ingress-nginx so far (omen-worker1 reboots more often)
+  nodeSelector:
+    kubernetes.io/hostname: dell-r620
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+  log:
+    format: json
+    level: INFO
+  # JSON access log on stdout -> Alloy parses it (log_format=access_traefik)
+  accessLog:
+    enabled: true
+    format: json
+    fields:
+      headers:
+        defaultMode: drop
+        names:
+          User-Agent: keep
+          Referer: keep
+
+  metrics:
+    prometheus:
+      # per-Ingress request metrics (router label = <ns>-<len>-<ingress>-<len>-rule-...)
+      addRoutersLabels: true
+      addServicesLabels: true
+      addEntryPointsLabels: true
+      service:
+        enabled: true
+      serviceMonitor:
+        enabled: true
+
+  tracing:
+    serviceName: traefik
+    otlp:
+      enabled: true
+      grpc:
+        enabled: true
+        endpoint: alloy.observability.svc.cluster.local:4317
+        insecure: true
+
+  # no dashboard (nothing would protect it; the CRD provider that exposes it is off anyway)
+  api:
+    dashboard: false
+
+  global:
+    checkNewVersion: false
+    sendAnonymousUsage: false

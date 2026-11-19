@@ -1,0 +1,10 @@
+apiVersion: v2
+name: traefik
+description: Traefik ingress controller (replaces the archived ingress-nginx)
+type: application
+version: 1.0.0
+
+dependencies:
+  - name: traefik
+    version: "42.4.1"
+    repository: "https://traefik.github.io/charts"
