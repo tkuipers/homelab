@@ -1,5 +1,9 @@
 # SMB CSI Driver configuration
 csi-driver-smb:
+  # Chart default since ~1.17 adds "Ephemeral" to the CSIDriver's volumeLifecycleModes,
+  # an immutable field. No pod uses inline SMB volumes, so keep it Persistent-only.
+  feature:
+    enableInlineVolume: false
   controller:
     replicas: 1
   
