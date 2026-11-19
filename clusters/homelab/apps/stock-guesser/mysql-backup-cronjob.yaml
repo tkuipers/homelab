@@ -46,7 +46,10 @@ spec:
                   echo "Starting backup: ${BACKUP_FILE}"
                   
                   # Create backup (--no-tablespaces to avoid PROCESS privilege requirement)
-                  mysqldump -h mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" \
+                  # MySQL's auto-generated TLS cert is self-signed; MariaDB 11.4+ clients
+                  # (alpine 3.21+) verify it by default. Still encrypted, as before.
+                  mariadb-dump -h mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" \
+                    --skip-ssl-verify-server-cert \
                     --single-transaction --routines --triggers --no-tablespaces \
                     "$MYSQL_DATABASE" | gzip > "/tmp/${BACKUP_FILE}"
                   
