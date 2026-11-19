@@ -24,7 +24,7 @@ spec:
       containers:
         - name: matter-server
           # renovate: datasource=docker
-          image: ghcr.io/home-assistant-libs/python-matter-server:stable
+          image: ghcr.io/home-assistant-libs/python-matter-server:8.1.2
           args:
             - --storage-path
             - /data
