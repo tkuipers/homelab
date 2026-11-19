@@ -67,7 +67,7 @@ spec:
         - name: config
           mountPath: /config
       - name: export-api-key
-        image: busybox:1.36
+        image: busybox:1.38.0
         command:
         - sh
         - -c
@@ -170,7 +170,7 @@ spec:
       # Exportarr sidecar for Prometheus metrics (API key copied from the app's config by
       # the export-api-key init container; exportarr only parses *arr config.xml itself)
       - name: exportarr
-        image: ghcr.io/onedr0p/exportarr:v2.0
+        image: ghcr.io/onedr0p/exportarr:v2.3.0
         args:
           - sabnzbd
         env:

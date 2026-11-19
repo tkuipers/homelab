@@ -20,7 +20,7 @@ spec:
       # Enable Jellyfin metrics on startup
       initContainers:
       - name: enable-metrics
-        image: busybox:1.36
+        image: busybox:1.38.0
         command:
         - sh
         - -c
@@ -37,7 +37,7 @@ spec:
           mountPath: /config
       containers:
       - name: jellyfin
-        image: jellyfin/jellyfin:12.2
+        image: jellyfin/jellyfin:12.4
         ports:
         - containerPort: 8096
           name: http
