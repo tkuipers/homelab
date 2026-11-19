@@ -30,8 +30,12 @@ ingress-nginx:
     # Controller config
     config:
       strict-validate-path-type: "false"
-      use-forwarded-headers: "true"
-      compute-full-forwarded-for: "true"
+      # Clients connect directly (router port-forward, externalTrafficPolicy Local
+      # keeps their IPs), so never trust a client-sent X-Forwarded-For: with
+      # "true" it became $remote_addr and the XFF sent to Authelia, and
+      # "X-Forwarded-For: 10.244.0.1" matched the cluster-network ^/api bypass rule.
+      use-forwarded-headers: "false"
+      compute-full-forwarded-for: "false"
       # Default is one worker per core (48 on dell-r620). Peak traffic is <10 req/s,
       # and every worker re-resolves ExternalName backends (resume S3) in Lua each
       # time the 1-5s TTL expires; 48 workers made ~20 DNS queries/s and logged each
