@@ -2,6 +2,11 @@
 # Minimal config - most setup happens via CRDs after install
 
 metallb:
+  # L2 only (no BGPPeers), so no BGP backend at all: chart 0.16 would otherwise
+  # add the frr-k8s DaemonSet (its new default) for nothing.
+  frrk8s:
+    enabled: false
+
   # Controller configuration
   controller:
     resources:
