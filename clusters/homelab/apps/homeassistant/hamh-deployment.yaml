@@ -34,6 +34,15 @@ spec:
         - name: hamh
           # renovate: datasource=docker
           image: ghcr.io/riddix/home-assistant-matter-hub:2.0.60
+          # Since 2.0.60 the web UI answers 403 to any Host header that isn't an
+          # IP, localhost or a .local/.lan-style name. The env var takes only one
+          # value, so the ingress host and the Service name (blackbox probe) go
+          # in as flags.
+          command:
+            - home-assistant-matter-hub
+            - start
+            - --http-allowed-hosts=hamh.tkuipers.ca
+            - --http-allowed-hosts=hamh.homeassistant.svc
           env:
             - name: HAMH_HOME_ASSISTANT_URL
               value: "http://homeassistant.homeassistant.svc.cluster.local:8123"
