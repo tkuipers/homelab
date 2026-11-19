@@ -102,3 +102,6 @@ traefik:
   global:
     checkNewVersion: false
     sendAnonymousUsage: false
+    # Drop request headers that alias another (X_Auth_User for X-Auth-User), as
+    # nginx did (underscores_in_headers off): backends must not see spoofed copies.
+    aliasHeadersStrategy: delete
