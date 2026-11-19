@@ -190,7 +190,7 @@ spec:
       containers:
         - name: playwright
           # pinned by digest; bump both together
-          image: mcr.microsoft.com/playwright/mcp:v0.0.83@sha256:690763cbb437ee7233f538a953bb5390bf03791eb5c965b471e59d17a6132fcb
+          image: mcr.microsoft.com/playwright/mcp:v0.0.86@sha256:2dfc17e08e8db54678ec965ce9ffb4100be0aa68135774d761bac9035ceb6668
           # the image's entrypoint already runs headless Chromium without its sandbox (the container is the sandbox)
           args:
             - --host=127.0.0.1  # only the gate reaches it
