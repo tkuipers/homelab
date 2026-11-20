@@ -27,11 +27,11 @@ UI: **https://logs.tkuipers.ca** (Authelia SSO; local admin at `/login?disableAu
    needed in queries:
    ```logql
    {k8s_namespace_name="mediacenter", service_name="sonarr"} | detected_level="error"
-   {service_name="infrastructure-ingress-nginx-controller"} | status >= 500 | host="jellyfin.tkuipers.ca"
+   {service_name="infrastructure-traefik"} | status >= 500 | host="jellyfin.tkuipers.ca"
    {k8s_namespace_name="stocks"} | path="/api/orders" | status >= 400
    {service_name="kubernetes-events", k8s_namespace_name="stocks"} | type="Warning"
    ```
-4. Traces: every request through ingress-nginx is a span in Tempo; ingress
+4. Traces: every request through the ingress (Traefik) is a span in Tempo; ingress
    log lines carry `trace_id`, which links to the trace (Loki derived field).
    Own services (stocks, polymarket-bot) send OpenTelemetry spans that join
    the ingress trace (and follow NATS events across stocks services); their
@@ -63,7 +63,7 @@ JetStream lag), Jellyfin's built-in /metrics. Scrape configs:
 `helm-chart-alloy/config/node.alloy` (collection, k8s metadata, export) and
 `helm-chart-alloy/config/log-parsing.alloy` (the parsers). Every line ends up
 with the message as the log line, `detected_level`, and the rest as fields:
-JSON, logfmt, klog, nginx/uvicorn/combined/anki access logs (method, path,
+JSON, logfmt, klog, Traefik/uvicorn/combined/anki access logs (method, path,
 status, latency, upstream, ...; level derived from status), *arr (NLog),
 Jellyfin/Kavita (Serilog), Home Assistant/Python logging, sabnzbd, bazarr,
 Postgres, MySQL, Redis, NATS, gluetun, zap console, Rust tracing, CoreDNS.
