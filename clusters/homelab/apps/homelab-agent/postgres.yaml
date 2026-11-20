@@ -97,7 +97,7 @@ spec:
         # Create the read-only role after Postgres is ready. A native sidecar (restartPolicy: Always) so it
         # runs alongside Postgres: a plain init container would wait for a server that can't start until it exits.
         - name: create-reader
-          image: postgres:16
+          image: postgres:19
           restartPolicy: Always
           command:
             - sh
@@ -132,7 +132,7 @@ spec:
                   key: password
       containers:
         - name: postgres
-          image: postgres:16
+          image: postgres:19
           ports:
             - containerPort: 5432
               name: postgres
@@ -260,7 +260,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: backup
-              image: postgres:16
+              image: postgres:19
               command:
                 - /bin/bash
                 - -c
