@@ -15,4 +15,4 @@ images:
   - name: ghcr.io/tkuipers/workspace-mcp
     digest: sha256:488207838e42a7aaf1e8352d75adb8c084b4d31052e354d8dd251e3d66d78b8f
   - name: ghcr.io/tkuipers/whatsapp-mcp
-    digest: sha256:eafb9ccf5d16950f32d44c8ae9ef101e42bd4ef5aa4a71dad530484b1bd3d15a
+    digest: sha256:e079e35b48b55bd9d5a5b8b3a0306852a584ce2d7dec3d216009c3fbba895992
