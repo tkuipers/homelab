@@ -1047,7 +1047,8 @@ CATALOG: List[Svc] = [
     S("argocd", "argocd-dex-server", "Argo CD dex", folder="Argo CD"),
     S("argocd", "argocd-redis", "Argo CD redis", folder="Argo CD", quiet=True),
 
-    S("kube-system", "coredns", "CoreDNS", folder="Kubernetes", extras=[coredns_panels]),
+    # not just "CoreDNS": kube-prometheus-stack ships a dashboard with that title in the same folder
+    S("kube-system", "coredns", "CoreDNS service", folder="Kubernetes", extras=[coredns_panels]),
     S("kube-system", "kube-apiserver", "kube-apiserver", kind="static", folder="Kubernetes", extras=[apiserver_panels]),
     S("kube-system", "kube-controller-manager", "kube-controller-manager", kind="static", folder="Kubernetes"),
     S("kube-system", "kube-scheduler", "kube-scheduler", kind="static", folder="Kubernetes"),

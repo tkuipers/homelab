@@ -1305,6 +1305,6 @@
   "to": "now"
  },
  "timezone": "browser",
- "title": "CoreDNS",
+ "title": "CoreDNS service",
  "uid": "svc-kube-system-coredns"
 }
