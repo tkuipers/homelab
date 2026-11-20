@@ -19,12 +19,22 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: omen-worker1
+      # one-time cold copy of the MinIO data before the switch to SILO
+      initContainers:
+        - name: data-copy-pre-silo
+          image: busybox:1.38.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - '[ -d /persist/stocks-minio.bak-minio ] || cp -a /persist/stocks-minio /persist/stocks-minio.bak-minio'
+          volumeMounts:
+            - name: persist
+              mountPath: /persist
       containers:
         - name: minio
-          image: minio/minio:latest
-          # MinIO no longer publishes minio/minio images, so a re-pull of
-          # :latest fails (ImagePullBackOff). Use the copy cached on the node.
-          # TODO: pin to an image that still exists / build our own.
+          # minio/minio is archived (last image RELEASE.2025-09-07, no more security
+          # fixes). SILO is PGSTY's maintained MinIO fork: same data format, CLI and
+          # MINIO_* env (https://github.com/pgsty/minio).
+          image: pgsty/silo:RELEASE.2026-11-12T00-00-00Z
           imagePullPolicy: IfNotPresent
           args:
             - server
@@ -74,3 +84,7 @@ spec:
           hostPath:
             path: /var/persist/stocks-minio
             type: DirectoryOrCreate
+        - name: persist
+          hostPath:
+            path: /var/persist
+            type: Directory
