@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - ingress-nginx-namespace.yaml
+  - ingressclass.yaml
   - external-access-rbac.yaml
   - external-kubectl-access-pushsecret.yaml
   - k8s-api-proxy.yaml

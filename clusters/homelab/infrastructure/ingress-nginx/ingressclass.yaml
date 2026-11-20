@@ -1,0 +1,12 @@
+# The class every Ingress here uses. Traefik's kubernetesIngressNGINX provider
+# (infrastructure/traefik) serves it; the ingress-nginx controller that used to
+# define it is gone (archived upstream, removed 2026-11-20). Name and controller
+# value stay so no Ingress has to change.
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: nginx
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "true"
+spec:
+  controller: k8s.io/ingress-nginx

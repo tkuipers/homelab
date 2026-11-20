@@ -6,7 +6,8 @@ traefik:
   deployment:
     replicas: 1
 
-  # The "nginx" IngressClass stays (see ../ingressclass.yaml); Traefik's own class is unused.
+  # The "nginx" IngressClass lives in infrastructure/ingress-nginx/ingressclass.yaml;
+  # Traefik's own class is unused.
   ingressClass:
     enabled: false
 

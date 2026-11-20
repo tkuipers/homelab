@@ -9,18 +9,13 @@ metadata:
     argocd.argoproj.io/sync-wave: "-2"
 spec:
   project: infrastructure
-  sources:
-    # Helm chart for ingress-nginx
-    - repoURL: ssh://git@github.com/tkuipers/homelab.git
-      targetRevision: main
-      path: clusters/homelab/infrastructure/ingress-nginx/helm-chart-ingress-nginx
-      helm:
-        valueFiles:
-          - values.yaml
-    # Additional resources (namespace)
-    - repoURL: ssh://git@github.com/tkuipers/homelab.git
-      targetRevision: main
-      path: clusters/homelab/infrastructure/ingress-nginx
+  # The ingress-nginx controller is gone (Traefik serves the Ingresses). What's left
+  # in its namespace: the "nginx" IngressClass, the k8s.tkuipers.ca API proxy Ingress,
+  # and the external kubectl access RBAC + token PushSecret.
+  source:
+    repoURL: ssh://git@github.com/tkuipers/homelab.git
+    targetRevision: main
+    path: clusters/homelab/infrastructure/ingress-nginx
   destination:
     server: https://kubernetes.default.svc
     namespace: ingress-nginx
@@ -37,4 +32,3 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-
