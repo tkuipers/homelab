@@ -239,6 +239,11 @@ otelcol.processor.transform "logs" {
 			// runner exceptions (renewjob, results upload, ... all retried) log every stack frame
 			// as its own ERR line; keep the exception lines at error and count the frames as warn
 			`set(severity_text, "warn") where resource.attributes["k8s.namespace.name"] == "arc-runners" and resource.attributes["k8s.container.name"] == "runner" and IsMatch(body, "^\\[(RUNNER|WORKER) [^\\]]+ ERR +[A-Za-z]+\\] +(at |--- End of |#####|Object name: )")`,
+			// Authelia logs a 408 at error whenever a connection sends no request within its 6s
+			// read timeout. Traefik's transport dials extra forward-auth connections during
+			// request bursts (scanners hitting a protected host) and leaves the surplus unused,
+			// so each burst gives a few of these ~6s later (~50/day since the 2026-11-19 switch)
+			`set(severity_text, "warn") where resource.attributes["k8s.container.name"] == "authelia" and body == "Request timeout occurred while handling request from client." and IsString(attributes["error"]) and IsMatch(attributes["error"], "^read tcp .*: i/o timeout$")`,
 			// TEMPORARY (remove after 2026-12-10, when 60d retention has aged them out):
 			// stale index refs left by the 2026-10-11 migration delete request make
 			// queries touching 2026-10-11 <06:04Z log "failed to load chunk ... no such
