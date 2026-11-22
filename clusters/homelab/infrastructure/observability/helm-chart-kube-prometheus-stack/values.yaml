@@ -512,14 +512,6 @@ prometheus-blackbox-exporter:
           preferred_ip_protocol: ip4
           follow_redirects: false
           valid_status_codes: [401]
-      http_anki_sync:       # anki sync server: no page at /, its sync API answers 400 to an empty POST
-        prober: http
-        timeout: 10s
-        http:
-          preferred_ip_protocol: ip4
-          method: POST
-          follow_redirects: false
-          valid_status_codes: [400]
       http_twilio_hook:     # Twilio webhook: an unsigned POST is refused (403) by the app itself
         prober: http
         timeout: 10s
@@ -584,9 +576,9 @@ prometheus-blackbox-exporter:
         target_namespace: homelab-agent
         target_service: homelab-agent
     - name: anki-tkuipers-ca
-      url: https://anki.tkuipers.ca/sync/hostKey
+      url: https://anki.tkuipers.ca/health
 
-      module: http_anki_sync
+      module: http_public
       additionalMetricsRelabels:
         probe: external
         target_namespace: anki
